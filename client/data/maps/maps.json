@@ -1,0 +1,17 @@
+{
+  "defaultMap": "village",
+  "maps": {
+    "village": {
+      "file": "village.txt",
+      "name": "新手村"
+    },
+    "forest": {
+      "file": "forest.txt",
+      "name": "幽暗森林"
+    }
+  },
+  "teleports": {
+    "village:12,6": { "map": "forest", "x": 9, "y": 3 },
+    "forest:9,3": { "map": "village", "x": 12, "y": 6 }
+  }
+}

@@ -1,0 +1,46 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: dejebu-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: dejebu
+      POSTGRES_USER: dejebu
+      POSTGRES_PASSWORD: dejebu
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./server/data/pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dejebu -d dejebu"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    logging:
+      driver: "none"
+
+  dejebu-server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    image: dejebu-server:latest
+    container_name: dejebu-server
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_APPLICATION_NAME: dejebu-server
+      DEJEBU_LOGS_PATH: src/main/logs
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: dejebu
+      POSTGRES_USER: dejebu
+      POSTGRES_PASSWORD: dejebu
+    volumes:
+      - ./server/src/main/logs:/app/src/main/logs
+    logging:
+      driver: "none"
+

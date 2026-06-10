@@ -1,0 +1,270 @@
+package com.dejebu.websocket;
+
+import com.dejebu.entity.User;
+import com.dejebu.game.CharacterStats;
+import com.dejebu.game.Element;
+import com.dejebu.protocol.GameMessage;
+import com.dejebu.protocol.MessageType;
+import com.dejebu.game.MapTeleportTarget;
+import com.dejebu.service.AuthService;
+import com.dejebu.service.BattleService;
+import com.dejebu.service.EncounterService;
+import com.dejebu.service.MapService;
+import com.dejebu.service.ProgressionService;
+import com.dejebu.service.SessionService;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+import org.springframework.web.socket.CloseStatus;
+import org.springframework.web.socket.TextMessage;
+import org.springframework.web.socket.WebSocketSession;
+import org.springframework.web.socket.handler.TextWebSocketHandler;
+
+import java.io.IOException;
+import java.util.Optional;
+import java.util.concurrent.ThreadLocalRandom;
+
+@Component
+public class GameWebSocketHandler extends TextWebSocketHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GameWebSocketHandler.class);
+
+    private final ObjectMapper objectMapper;
+    private final SessionService sessionService;
+    private final AuthService authService;
+    private final BattleService battleService;
+    private final EncounterService encounterService;
+    private final MapService mapService;
+
+    public GameWebSocketHandler(ObjectMapper objectMapper,
+                                SessionService sessionService,
+                                AuthService authService,
+                                BattleService battleService,
+                                EncounterService encounterService,
+                                MapService mapService) {
+        this.objectMapper = objectMapper;
+        this.sessionService = sessionService;
+        this.authService = authService;
+        this.battleService = battleService;
+        this.encounterService = encounterService;
+        this.mapService = mapService;
+    }
+
+    @Override
+    public void afterConnectionEstablished(WebSocketSession session) {
+        sessionService.register(session);
+        log.info("Client connected: {}", session.getId());
+    }
+
+    @Override
+    protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
+        GameMessage incoming = objectMapper.readValue(message.getPayload(), GameMessage.class);
+        log.debug("Received {} from {}", incoming.getType(), session.getId());
+
+        GameMessage response = switch (incoming.getType()) {
+            case PING -> pong();
+            case LOGIN -> handleLogin(session, incoming.getPayload());
+            case MOVE -> handleMove(session, incoming.getPayload());
+            case BATTLE_START -> handleBattleStart(session);
+            case BATTLE_ACTION -> handleBattleAction(session, incoming.getPayload());
+            default -> error("Unsupported message type: " + incoming.getType());
+        };
+
+        send(session, response);
+    }
+
+    @Override
+    public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
+        encounterService.clearEncounter(session.getId());
+        sessionService.unregister(session);
+        log.info("Client disconnected: {} ({})", session.getId(), status);
+    }
+
+    private GameMessage pong() {
+        ObjectNode payload = objectMapper.createObjectNode();
+        payload.put("message", "pong");
+        return new GameMessage(MessageType.PONG, payload);
+    }
+
+    private GameMessage handleLogin(WebSocketSession session, JsonNode payload) {
+        String token = payload.path("token").asText("");
+        if (token.isBlank()) {
+            return error("請先登入取得 token");
+        }
+
+        Optional<User> userOptional = authService.validateToken(token);
+        if (userOptional.isEmpty()) {
+            return error("登入已失效，請重新登入");
+        }
+
+        User user = userOptional.get();
+        if (!user.isHasCharacter() || user.getElement() == null) {
+            return error("請先創建角色");
+        }
+
+        sessionService.bindUser(session, user.getId(), user.getDisplayName());
+
+        ObjectNode response = objectMapper.createObjectNode();
+        response.put("token", token);
+        response.put("playerId", user.getId());
+        response.put("playerName", user.getDisplayName());
+        response.put("playerX", user.getPlayerX());
+        response.put("playerY", user.getPlayerY());
+        response.put("playerMapId", user.getPlayerMapId());
+        response.put("playerLevel", user.getLevel());
+        response.put("playerExp", user.getExp());
+        response.put("expToNextLevel", ProgressionService.expToNextLevel(user.getLevel()));
+        response.put("skillPoints", user.getSkillPoints());
+        response.put("playerElement", user.getElement().getCode());
+        response.put("playerElementName", user.getElement().getDisplayName());
+        if (user.getAppearance() != null) {
+            response.put("playerAppearance", user.getAppearance().getCode());
+        }
+        if (user.isHasCharacter()) {
+            response.set("playerStats", CharacterStats.fromUser(user).toJsonNode(objectMapper));
+            response.put("playerCurrentHp", user.resolveCurrentHp());
+            response.put("playerMaxHp", user.resolveMaxHp());
+        }
+        response.put("sessionId", session.getId());
+        response.put("onlineCount", sessionService.getOnlineCount());
+        response.put("message", "歡迎回來，" + user.getDisplayName());
+        return new GameMessage(MessageType.LOGIN_OK, response);
+    }
+
+    private GameMessage handleMove(WebSocketSession session, JsonNode payload) {
+        if (!sessionService.isAuthenticated(session)) {
+            return error("尚未登入");
+        }
+
+        int x = payload.path("x").asInt();
+        int y = payload.path("y").asInt();
+        String direction = payload.path("direction").asText("down");
+        String mapId = payload.path("mapId").asText(mapService.getDefaultMapId());
+
+        if (!mapService.mapExists(mapId)) {
+            return error("未知地圖: " + mapId);
+        }
+        if (!mapService.isWalkable(mapId, x, y)) {
+            return error("無法移動至該位置");
+        }
+
+        String resultMapId = mapId;
+        int resultX = x;
+        int resultY = y;
+        boolean mapChanged = false;
+
+        Optional<MapTeleportTarget> teleport = mapService.resolveTeleport(mapId, x, y);
+        if (teleport.isPresent()) {
+            MapTeleportTarget target = teleport.get();
+            if (!mapService.mapExists(target.mapId()) || !mapService.isWalkable(target.mapId(), target.x(), target.y())) {
+                return error("傳點目標無效");
+            }
+            resultMapId = target.mapId();
+            resultX = target.x();
+            resultY = target.y();
+            mapChanged = true;
+        }
+
+        Optional<Long> userIdOptional = sessionService.getUserId(session);
+        String finalMapId = resultMapId;
+        int finalX = resultX;
+        int finalY = resultY;
+        userIdOptional.ifPresent(userId -> authService.updatePlayerPosition(userId, finalMapId, finalX, finalY));
+
+        ObjectNode response = objectMapper.createObjectNode();
+        response.put("x", resultX);
+        response.put("y", resultY);
+        response.put("mapId", resultMapId);
+        response.put("mapChanged", mapChanged);
+        response.put("direction", direction);
+        response.put("playerName", sessionService.getPlayerName(session).orElse("旅人"));
+
+        if (mapChanged) {
+            response.put("message", "傳送至 " + mapService.getMapName(resultMapId));
+            response.put("encounter", false);
+            encounterService.clearEncounter(session.getId());
+            return new GameMessage(MessageType.MOVE_OK, response);
+        }
+
+        boolean encounter = (x + y) % 5 == 0 && x != 0 && y != 0;
+        response.put("encounter", encounter);
+        if (encounter) {
+            int playerLevel = userIdOptional
+                    .flatMap(authService::findUserLevel)
+                    .orElse(1);
+            ObjectNode encounterData = encounterService.createEncounter(
+                    session.getId(),
+                    playerLevel,
+                    ThreadLocalRandom.current()
+            );
+            response.set("wildMonsters", encounterData.get("wildMonsters"));
+            response.put("message", "遭遇野生怪物！");
+        } else {
+            encounterService.clearEncounter(session.getId());
+        }
+
+        return new GameMessage(MessageType.MOVE_OK, response);
+    }
+
+    private GameMessage handleBattleStart(WebSocketSession session) {
+        if (!sessionService.isAuthenticated(session)) {
+            return error("尚未登入");
+        }
+
+        try {
+            Long userId = sessionService.getUserId(session)
+                    .orElseThrow(() -> new IllegalStateException("尚未登入"));
+            String playerName = sessionService.getPlayerName(session).orElse("旅人");
+            Element playerElement = authService.findUserElement(userId).orElse(Element.FIRE);
+            CharacterStats playerStats = authService.findUserStats(userId).orElse(CharacterStats.zeroBase());
+            int playerLevel = authService.findUserLevel(userId).orElse(1);
+
+            ObjectNode battle = battleService.startBattle(
+                    session.getId(),
+                    userId,
+                    playerName,
+                    playerElement,
+                    playerStats,
+                    playerLevel
+            );
+            ObjectNode response = objectMapper.createObjectNode();
+            response.set("battle", battle);
+            response.put("message", "進入戰鬥！");
+            return new GameMessage(MessageType.BATTLE_START, response);
+        } catch (RuntimeException ex) {
+            log.warn("Battle start failed: {}", ex.getMessage());
+            return error(ex.getMessage() != null ? ex.getMessage() : "戰鬥啟動失敗");
+        }
+    }
+
+    private GameMessage handleBattleAction(WebSocketSession session, JsonNode payload) {
+        if (!sessionService.isAuthenticated(session)) {
+            return error("尚未登入");
+        }
+
+        try {
+            String action = payload.path("action").asText();
+            Integer targetId = payload.has("targetId") ? payload.get("targetId").asInt() : null;
+            Integer actorId = payload.has("actorId") ? payload.get("actorId").asInt() : null;
+            Long skillId = payload.has("skillId") ? payload.get("skillId").asLong() : null;
+            ObjectNode result = battleService.resolveAction(session.getId(), action, targetId, actorId, skillId);
+            return new GameMessage(MessageType.BATTLE_RESULT, result);
+        } catch (IllegalStateException | IllegalArgumentException ex) {
+            return error(ex.getMessage());
+        }
+    }
+
+    private GameMessage error(String message) {
+        ObjectNode payload = objectMapper.createObjectNode();
+        payload.put("message", message);
+        return new GameMessage(MessageType.ERROR, payload);
+    }
+
+    private void send(WebSocketSession session, GameMessage message) throws IOException {
+        String json = objectMapper.writeValueAsString(message);
+        session.sendMessage(new TextMessage(json));
+    }
+}

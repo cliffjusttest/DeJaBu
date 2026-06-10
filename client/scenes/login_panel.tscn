@@ -1,0 +1,80 @@
+[gd_scene load_steps=2 format=3 uid="uid://dejebu_login_panel"]
+
+[ext_resource type="Script" path="res://scripts/ui/login_panel.gd" id="1_login"]
+
+[node name="LoginPanel" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_login")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.08, 0.1, 0.14, 0.88)
+
+[node name="Panel" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -220.0
+offset_top = -150.0
+offset_right = 220.0
+offset_bottom = 150.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 24
+
+[node name="VBox" type="VBoxContainer" parent="Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="TitleLabel" type="Label" parent="Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+text = "DeJaBu 登入"
+horizontal_alignment = 1
+
+[node name="UsernameInput" type="LineEdit" parent="Panel/Margin/VBox"]
+layout_mode = 2
+placeholder_text = "帳號（英數、底線，3-32 字）"
+
+[node name="PasswordInput" type="LineEdit" parent="Panel/Margin/VBox"]
+layout_mode = 2
+placeholder_text = "密碼（至少 6 字）"
+
+[node name="MessageLabel" type="Label" parent="Panel/Margin/VBox"]
+layout_mode = 2
+autowrap_mode = 2
+text = "請登入或註冊新帳號"
+
+[node name="ButtonRow" type="HBoxContainer" parent="Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="LoginButton" type="Button" parent="Panel/Margin/VBox/ButtonRow"]
+layout_mode = 2
+text = "登入"
+
+[node name="RegisterButton" type="Button" parent="Panel/Margin/VBox/ButtonRow"]
+layout_mode = 2
+text = "註冊"
+
+[node name="HTTPRequest" type="HTTPRequest" parent="."]

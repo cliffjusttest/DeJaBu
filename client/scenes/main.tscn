@@ -1,0 +1,110 @@
+[gd_scene load_steps=9 format=3 uid="uid://dejebu_main_scene"]
+
+[ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
+[ext_resource type="Script" path="res://scripts/world/world_map.gd" id="2_world_map"]
+[ext_resource type="Script" path="res://scripts/world/player_controller.gd" id="3_player"]
+[ext_resource type="PackedScene" uid="uid://dejebu_battle_scene" path="res://scenes/battle.tscn" id="5_battle"]
+[ext_resource type="PackedScene" uid="uid://dejebu_login_panel" path="res://scenes/login_panel.tscn" id="6_login"]
+[ext_resource type="PackedScene" uid="uid://dejebu_character_create" path="res://scenes/character_create_panel.tscn" id="7_create"]
+[ext_resource type="PackedScene" uid="uid://dejebu_skill_tree" path="res://scenes/skill_tree_panel.tscn" id="8_skill_tree"]
+[ext_resource type="PackedScene" uid="uid://dejebu_companion_panel" path="res://scenes/companion_panel.tscn" id="9_companion"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_player"]
+radius = 10.0
+
+[node name="Main" type="Node2D"]
+script = ExtResource("1_main")
+
+[node name="World" type="Node2D" parent="."]
+y_sort_enabled = true
+
+[node name="WorldMap" type="Node2D" parent="World"]
+script = ExtResource("2_world_map")
+
+[node name="Ground" type="Sprite2D" parent="World/WorldMap"]
+
+[node name="Props" type="Node2D" parent="World/WorldMap"]
+y_sort_enabled = true
+
+[node name="Obstacles" type="StaticBody2D" parent="World/WorldMap"]
+
+[node name="Player" type="CharacterBody2D" parent="World"]
+motion_mode = 1
+script = ExtResource("3_player")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="World/Player"]
+shape = SubResource("CircleShape2D_player")
+
+[node name="Shadow" type="Sprite2D" parent="World/Player"]
+modulate = Color(1, 1, 1, 0.85)
+z_index = -1
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="World/Player"]
+offset = Vector2(0, -12)
+
+[node name="Camera2D" type="Camera2D" parent="World/Player"]
+zoom = Vector2(1.2, 1.2)
+position_smoothing_enabled = true
+position_smoothing_speed = 8.0
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="StatusLabel" type="Label" parent="UI"]
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 900.0
+offset_bottom = 50.0
+theme_override_font_sizes/font_size = 20
+text = "DeJaBu - 請登入"
+
+[node name="HelpLabel" type="Label" parent="UI"]
+offset_left = 20.0
+offset_top = 55.0
+offset_right = 900.0
+offset_bottom = 100.0
+text = "探索: WASD / 點擊移動 | 技能 K / 夥伴 P | 戰鬥: 1 攻擊 / 4 捕捉（擇一）/ 2 防禦 / 3 逃跑"
+
+[node name="LogLabel" type="RichTextLabel" parent="UI"]
+offset_left = 20.0
+offset_top = 110.0
+offset_right = 420.0
+offset_bottom = 320.0
+bbcode_enabled = true
+text = ""
+
+[node name="SkillsButton" type="Button" parent="UI"]
+offset_left = 20.0
+offset_top = 330.0
+offset_right = 120.0
+offset_bottom = 365.0
+text = "技能"
+
+[node name="CompanionsButton" type="Button" parent="UI"]
+offset_left = 130.0
+offset_top = 330.0
+offset_right = 230.0
+offset_bottom = 365.0
+text = "夥伴"
+
+[node name="BattleLayer" type="CanvasLayer" parent="."]
+
+[node name="BattleScene" parent="BattleLayer" instance=ExtResource("5_battle")]
+
+[node name="LoginLayer" type="CanvasLayer" parent="."]
+
+[node name="LoginPanel" parent="LoginLayer" instance=ExtResource("6_login")]
+
+[node name="CharacterCreateLayer" type="CanvasLayer" parent="."]
+
+[node name="CharacterCreatePanel" parent="CharacterCreateLayer" instance=ExtResource("7_create")]
+visible = false
+
+[node name="SkillTreeLayer" type="CanvasLayer" parent="."]
+
+[node name="SkillTreePanel" parent="SkillTreeLayer" instance=ExtResource("8_skill_tree")]
+visible = false
+
+[node name="CompanionLayer" type="CanvasLayer" parent="."]
+
+[node name="CompanionPanel" parent="CompanionLayer" instance=ExtResource("9_companion")]
+visible = false

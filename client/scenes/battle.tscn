@@ -1,0 +1,163 @@
+[gd_scene load_steps=3 format=3 uid="uid://dejebu_battle_scene"]
+
+[ext_resource type="Script" path="res://scripts/battle/battle_scene.gd" id="1_battle"]
+
+[node name="BattleScene" type="CanvasLayer"]
+layer = 10
+script = ExtResource("1_battle")
+
+[node name="DimOverlay" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0.55)
+
+[node name="FormationRoot" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="CenterColumn" type="VBoxContainer" parent="FormationRoot"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -280.0
+offset_top = -220.0
+offset_right = 280.0
+offset_bottom = 120.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 20
+
+[node name="EnemySection" type="VBoxContainer" parent="FormationRoot/CenterColumn"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="EnemyTitle" type="Label" parent="FormationRoot/CenterColumn/EnemySection"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "敵方陣型"
+horizontal_alignment = 1
+
+[node name="EnemyGrid" type="GridContainer" parent="FormationRoot/CenterColumn/EnemySection"]
+layout_mode = 2
+theme_override_constants/h_separation = 8
+theme_override_constants/v_separation = 8
+columns = 5
+
+[node name="AllySection" type="VBoxContainer" parent="FormationRoot/CenterColumn"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="AllyTitle" type="Label" parent="FormationRoot/CenterColumn/AllySection"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "我方陣型"
+horizontal_alignment = 1
+
+[node name="AllyGrid" type="GridContainer" parent="FormationRoot/CenterColumn/AllySection"]
+layout_mode = 2
+theme_override_constants/h_separation = 8
+theme_override_constants/v_separation = 8
+columns = 5
+
+[node name="BattleUI" type="PanelContainer" parent="."]
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = -200.0
+offset_right = -20.0
+offset_bottom = -20.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="Margin" type="MarginContainer" parent="BattleUI"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 12
+
+[node name="VBox" type="VBoxContainer" parent="BattleUI/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="BattleTitle" type="Label" parent="BattleUI/Margin/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "回合戰鬥"
+
+[node name="StatsRow" type="HBoxContainer" parent="BattleUI/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="PlayerHpLabel" type="Label" parent="BattleUI/Margin/VBox/StatsRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "玩家 HP: - / -"
+
+[node name="EnemyHpLabel" type="Label" parent="BattleUI/Margin/VBox/StatsRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "敵方 HP: - / -"
+
+[node name="PlayerStatsLabel" type="Label" parent="BattleUI/Margin/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "武力 -  智力 -  體力 -  防禦 -  精神 -  幸運 -"
+
+[node name="HintLabel" type="Label" parent="BattleUI/Margin/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "點選我方單位切換控制 | 1 攻擊 / 4 捕捉（角色限定）/ 2 防禦 / 3 逃跑"
+
+[node name="LogLabel" type="RichTextLabel" parent="BattleUI/Margin/VBox"]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+bbcode_enabled = true
+text = ""
+
+[node name="SkillsRow" type="HBoxContainer" parent="BattleUI/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="ActionsRow" type="HBoxContainer" parent="BattleUI/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="AttackButton" type="Button" parent="BattleUI/Margin/VBox/ActionsRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "1 - 攻擊"
+
+[node name="DefendButton" type="Button" parent="BattleUI/Margin/VBox/ActionsRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "2 - 防禦"
+
+[node name="FleeButton" type="Button" parent="BattleUI/Margin/VBox/ActionsRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "3 - 逃跑"
+
+[node name="CaptureButton" type="Button" parent="BattleUI/Margin/VBox/ActionsRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "4 - 捕捉"
+
+[connection signal="pressed" from="BattleUI/Margin/VBox/ActionsRow/AttackButton" to="." method="_on_attack_pressed"]
+[connection signal="pressed" from="BattleUI/Margin/VBox/ActionsRow/DefendButton" to="." method="_on_defend_pressed"]
+[connection signal="pressed" from="BattleUI/Margin/VBox/ActionsRow/FleeButton" to="." method="_on_flee_pressed"]
+[connection signal="pressed" from="BattleUI/Margin/VBox/ActionsRow/CaptureButton" to="." method="_on_capture_pressed"]

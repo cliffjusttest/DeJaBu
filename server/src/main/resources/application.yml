@@ -1,0 +1,33 @@
+server:
+  port: 8080
+
+dejebu:
+  logs:
+    path: src/main/logs
+  auth:
+    token-expire-days: 7
+
+spring:
+  application:
+    name: dejebu-server
+  main:
+    banner-mode: off
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:dejebu}
+    username: ${POSTGRES_USER:dejebu}
+    password: ${POSTGRES_PASSWORD:dejebu}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+
+logging:
+  config: classpath:logback-spring.xml
+  level:
+    com.dejebu: DEBUG
