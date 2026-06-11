@@ -87,6 +87,18 @@ public record CharacterStats(
         return Math.min(0.85, 0.35 + luck * 0.02);
     }
 
+    public CharacterStats withBonus(CharacterStats bonus) {
+        return new CharacterStats(
+                Math.min(MAX_VALUE, might + bonus.might()),
+                Math.min(MAX_VALUE, intelligence + bonus.intelligence()),
+                Math.min(MAX_VALUE, vitality + bonus.vitality()),
+                Math.min(MAX_VALUE, defense + bonus.defense()),
+                Math.min(MAX_VALUE, spirit + bonus.spirit()),
+                Math.min(MAX_VALUE, luck + bonus.luck()),
+                Math.min(MAX_VALUE, agility + bonus.agility())
+        );
+    }
+
     public ObjectNode toJsonNode(ObjectMapper objectMapper) {
         ObjectNode node = objectMapper.createObjectNode();
         node.put("might", might);

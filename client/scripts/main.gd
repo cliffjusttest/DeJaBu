@@ -17,9 +17,12 @@ extends Node2D
 @onready var dialogue_layer: CanvasLayer = $DialogueLayer
 @onready var quest_log_panel: Control = $QuestLayer/QuestLogPanel
 @onready var quest_layer: CanvasLayer = $QuestLayer
+@onready var equipment_panel: Control = $EquipmentLayer/EquipmentPanel
+@onready var equipment_layer: CanvasLayer = $EquipmentLayer
 @onready var skills_button: Button = $UI/SkillsButton
 @onready var companions_button: Button = $UI/CompanionsButton
 @onready var quests_button: Button = $UI/QuestsButton
+@onready var equipment_button: Button = $UI/EquipmentButton
 @onready var world: Node2D = $World
 @onready var ui: CanvasLayer = $UI
 
@@ -41,9 +44,11 @@ func _ready() -> void:
 	dialogue_panel.choice_made.connect(_on_dialogue_choice_made)
 	dialogue_panel.dialogue_closed.connect(_on_dialogue_closed)
 	quest_log_panel.closed.connect(_on_quest_log_closed)
+	equipment_panel.closed.connect(_on_equipment_panel_closed)
 	skills_button.pressed.connect(_on_skills_button_pressed)
 	companions_button.pressed.connect(_on_companions_button_pressed)
 	quests_button.pressed.connect(_on_quests_button_pressed)
+	equipment_button.pressed.connect(_on_equipment_button_pressed)
 	NetworkClient.connected.connect(_on_connected)
 	NetworkClient.disconnected.connect(_on_disconnected)
 	NetworkClient.connection_failed.connect(_on_connection_failed)
@@ -52,6 +57,7 @@ func _ready() -> void:
 	skills_button.hide()
 	companions_button.hide()
 	quests_button.hide()
+	equipment_button.hide()
 	status_label.text = "DeJaBu - 請登入"
 
 func _on_login_authenticated(auth_data: Dictionary) -> void:
@@ -120,7 +126,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if GameState.mode != GameState.Mode.EXPLORE:
 		return
 
-	if skill_tree_layer.visible or companion_layer.visible or quest_layer.visible:
+	if skill_tree_layer.visible or companion_layer.visible or quest_layer.visible or equipment_layer.visible:
 		return
 
 	if event is InputEventKey and event.pressed and not event.echo:
@@ -135,6 +141,10 @@ func _unhandled_input(event: InputEvent) -> void:
 				return
 			KEY_J:
 				_toggle_quest_log()
+				get_viewport().set_input_as_handled()
+				return
+			KEY_E:
+				_toggle_equipment_panel()
 				get_viewport().set_input_as_handled()
 				return
 			KEY_F:
@@ -258,6 +268,7 @@ func _handle_login_ok(payload: Dictionary) -> void:
 	companion_layer.hide()
 	dialogue_layer.hide()
 	quest_layer.hide()
+	equipment_layer.hide()
 	_log(payload.get("message", "登入成功"))
 
 	if not GameState.player_appearance.is_empty():
@@ -490,6 +501,7 @@ func _set_gameplay_visible(visible: bool) -> void:
 	skills_button.visible = visible
 	companions_button.visible = visible
 	quests_button.visible = visible
+	equipment_button.visible = visible
 
 func _on_skills_button_pressed() -> void:
 	_toggle_skill_tree()
@@ -530,12 +542,32 @@ func _on_companion_panel_closed() -> void:
 func _on_skill_tree_updated() -> void:
 	_update_status()
 
+func _on_equipment_button_pressed() -> void:
+	_toggle_equipment_panel()
+
+func _toggle_equipment_panel() -> void:
+	if equipment_layer.visible:
+		equipment_panel.hide()
+		equipment_layer.hide()
+	else:
+		skill_tree_layer.hide()
+		companion_layer.hide()
+		quest_layer.hide()
+		equipment_layer.show()
+		equipment_panel.open()
+
+func _on_equipment_panel_closed() -> void:
+	equipment_panel.hide()
+	equipment_layer.hide()
+	_update_status()
+
 func _show_login_screen(message: String = "") -> void:
 	character_create_layer.hide()
 	skill_tree_layer.hide()
 	companion_layer.hide()
 	dialogue_layer.hide()
 	quest_layer.hide()
+	equipment_layer.hide()
 	login_layer.show()
 	login_panel.show()
 	login_panel.set_status(message if not message.is_empty() else "請登入或註冊新帳號")

@@ -12,6 +12,7 @@ import com.dejebu.service.EncounterService;
 import com.dejebu.service.MapService;
 import com.dejebu.service.NpcService;
 import com.dejebu.service.ProgressionService;
+import com.dejebu.service.EquipmentService;
 import com.dejebu.service.QuestService;
 import com.dejebu.service.SessionService;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -45,6 +46,7 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
     private final MapService mapService;
     private final NpcService npcService;
     private final QuestService questService;
+    private final EquipmentService equipmentService;
 
     public GameWebSocketHandler(ObjectMapper objectMapper,
                                 SessionService sessionService,
@@ -53,7 +55,8 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
                                 EncounterService encounterService,
                                 MapService mapService,
                                 NpcService npcService,
-                                QuestService questService) {
+                                QuestService questService,
+                                EquipmentService equipmentService) {
         this.objectMapper = objectMapper;
         this.sessionService = sessionService;
         this.authService = authService;
@@ -62,6 +65,7 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
         this.mapService = mapService;
         this.npcService = npcService;
         this.questService = questService;
+        this.equipmentService = equipmentService;
     }
 
     @Override
@@ -234,7 +238,9 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
                     .orElseThrow(() -> new IllegalStateException("尚未登入"));
             String playerName = sessionService.getPlayerName(session).orElse("旅人");
             Element playerElement = authService.findUserElement(userId).orElse(Element.FIRE);
-            CharacterStats playerStats = authService.findUserStats(userId).orElse(CharacterStats.zeroBase());
+            CharacterStats baseStats = authService.findUserStats(userId).orElse(CharacterStats.zeroBase());
+            CharacterStats equipBonus = equipmentService.getTotalEquipmentBonus(userId);
+            CharacterStats playerStats = baseStats.withBonus(equipBonus);
             int playerLevel = authService.findUserLevel(userId).orElse(1);
 
             ObjectNode battle = battleService.startBattle(
