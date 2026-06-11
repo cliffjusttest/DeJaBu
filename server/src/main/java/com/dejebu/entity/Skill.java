@@ -61,6 +61,9 @@ public class Skill {
     @Column(name = "target_range", nullable = false, length = 32)
     private SkillTargetRange targetRange = SkillTargetRange.SINGLE;
 
+    @Column(name = "combo_eligible", nullable = false)
+    private boolean comboEligible = true;
+
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "skill_prerequisites",
@@ -161,6 +164,14 @@ public class Skill {
 
     public void setTargetRange(SkillTargetRange targetRange) {
         this.targetRange = targetRange;
+    }
+
+    public boolean isComboEligible() {
+        return comboEligible;
+    }
+
+    public void setComboEligible(boolean comboEligible) {
+        this.comboEligible = comboEligible;
     }
 
     public Set<Skill> getPrerequisites() {

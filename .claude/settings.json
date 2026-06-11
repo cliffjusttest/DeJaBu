@@ -8,7 +8,10 @@
       "Bash(git -C /Users/cliff/other-project/DeJaBu diff HEAD)",
       "Bash(git -C /Users/cliff/other-project/DeJaBu add README.md client/scripts/game/character_stats.gd server/Dockerfile server/src/main/java/com/dejebu/entity/MonsterTemplateEntity.java server/src/main/java/com/dejebu/entity/User.java server/src/main/java/com/dejebu/entity/UserCompanion.java server/src/main/java/com/dejebu/game/CharacterStats.java server/src/main/java/com/dejebu/game/MonsterStatsFactory.java server/src/main/java/com/dejebu/service/BattleService.java server/src/main/java/com/dejebu/service/CompanionService.java server/src/test/java/com/dejebu/game/CharacterStatsTest.java server/src/main/resources/db/migration/V18__stat_agility.sql start-server.sh)",
       "Bash(git -C /Users/cliff/other-project/DeJaBu commit -m ' *)",
-      "Bash(git -C /Users/cliff/other-project/DeJaBu add .claude/settings.json client/scripts/ui/dialogue_panel.gd.uid client/scripts/ui/quest_log_panel.gd.uid)"
+      "Bash(git -C /Users/cliff/other-project/DeJaBu add .claude/settings.json client/scripts/ui/dialogue_panel.gd.uid client/scripts/ui/quest_log_panel.gd.uid)",
+      "Bash(grep -E \"\\\\.java$\")",
+      "Bash(git show *)",
+      "Bash(./mvnw compile *)"
     ]
   }
 }

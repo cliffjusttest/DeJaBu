@@ -130,6 +130,10 @@ public class BattleUnit {
         this.hp = Math.max(0, Math.min(maxHp, hp));
     }
 
+    public void setHpRaw(int hp) {
+        this.hp = Math.min(maxHp, hp); // allow negative (combo overflow)
+    }
+
     public String getTemplateId() {
         return templateId;
     }

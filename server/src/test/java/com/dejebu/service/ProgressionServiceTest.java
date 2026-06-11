@@ -2,6 +2,7 @@ package com.dejebu.service;
 
 import com.dejebu.entity.User;
 import com.dejebu.game.WildMonsterInstance;
+import com.dejebu.repository.UserCompanionRepository;
 import com.dejebu.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,11 +27,14 @@ class ProgressionServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private UserCompanionRepository userCompanionRepository;
+
     private ProgressionService progressionService;
 
     @BeforeEach
     void setUp() {
-        progressionService = new ProgressionService(userRepository);
+        progressionService = new ProgressionService(userRepository, userCompanionRepository);
     }
 
     @Test

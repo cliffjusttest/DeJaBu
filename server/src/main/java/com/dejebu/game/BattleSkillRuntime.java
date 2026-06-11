@@ -18,6 +18,7 @@ public class BattleSkillRuntime {
     private final int cooldownTurns;
     private final SkillTargetSide targetSide;
     private final SkillTargetRange targetRange;
+    private final boolean comboEligible;
     private int cooldownRemaining;
 
     private BattleSkillRuntime(
@@ -30,7 +31,8 @@ public class BattleSkillRuntime {
             int maxLevel,
             int cooldownTurns,
             SkillTargetSide targetSide,
-            SkillTargetRange targetRange
+            SkillTargetRange targetRange,
+            boolean comboEligible
     ) {
         this.skillId = skillId;
         this.name = name;
@@ -42,6 +44,7 @@ public class BattleSkillRuntime {
         this.cooldownTurns = cooldownTurns;
         this.targetSide = targetSide;
         this.targetRange = targetRange;
+        this.comboEligible = comboEligible;
     }
 
     public static BattleSkillRuntime from(Skill skill, int skillLevel) {
@@ -55,7 +58,8 @@ public class BattleSkillRuntime {
                 skill.getMaxLevel(),
                 skill.getCooldownTurns(),
                 skill.getTargetSide(),
-                skill.getTargetRange()
+                skill.getTargetRange(),
+                skill.isComboEligible()
         );
     }
 
@@ -99,6 +103,10 @@ public class BattleSkillRuntime {
         return targetRange;
     }
 
+    public boolean isComboEligible() {
+        return comboEligible;
+    }
+
     public int getCooldownRemaining() {
         return cooldownRemaining;
     }
@@ -139,6 +147,7 @@ public class BattleSkillRuntime {
         node.put("targetRangeName", targetRange.getDisplayName());
         node.put("canUse", isReady());
         node.put("heal", isHealSkill());
+        node.put("comboEligible", comboEligible);
         return node;
     }
 }

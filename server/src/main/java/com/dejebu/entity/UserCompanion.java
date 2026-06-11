@@ -63,6 +63,9 @@ public class UserCompanion {
     @Column(name = "max_hp", nullable = false)
     private int maxHp;
 
+    @Column(nullable = false)
+    private int exp = 0;
+
     @Column(name = "party_slot")
     private Integer partySlot;
 
@@ -182,6 +185,14 @@ public class UserCompanion {
 
     public void setMaxHp(int maxHp) {
         this.maxHp = maxHp;
+    }
+
+    public int getExp() {
+        return exp;
+    }
+
+    public void setExp(int exp) {
+        this.exp = exp;
     }
 
     public Integer getPartySlot() {
