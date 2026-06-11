@@ -1,6 +1,6 @@
 extends Node
 
-enum Mode { EXPLORE, BATTLE }
+enum Mode { EXPLORE, BATTLE, DIALOGUE }
 
 var player_name := ""
 var player_id := 0
@@ -24,6 +24,9 @@ var mode := Mode.EXPLORE
 var battle_data: Dictionary = {}
 var last_message := ""
 var companions: Array = []
+var active_quests: Array = []
+var dialogue_npc_id := ""
+var dialogue_node_key := ""
 
 func apply_auth(data: Dictionary) -> void:
 	auth_token = str(data.get("token", ""))
@@ -59,8 +62,16 @@ func clear_auth() -> void:
 	player_current_hp = 50
 	player_max_hp = 50
 	companions = []
+	active_quests = []
+	dialogue_npc_id = ""
+	dialogue_node_key = ""
 	is_authenticated = false
 
 func reset_battle() -> void:
 	battle_data = {}
+	mode = Mode.EXPLORE
+
+func reset_dialogue() -> void:
+	dialogue_npc_id = ""
+	dialogue_node_key = ""
 	mode = Mode.EXPLORE

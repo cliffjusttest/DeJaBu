@@ -10,5 +10,10 @@ public enum MessageType {
     BATTLE_START,
     BATTLE_ACTION,
     BATTLE_RESULT,
+    NPC_INTERACT,
+    NPC_INTERACT_OK,
+    DIALOGUE_CHOICE,
+    QUEST_LIST,
+    QUEST_LIST_OK,
     ERROR
 }

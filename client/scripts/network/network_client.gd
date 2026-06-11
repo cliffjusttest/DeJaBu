@@ -104,3 +104,12 @@ func battle_action(action: String, target_id: int = -1, actor_id: int = -1, skil
 	if skill_id > 0:
 		payload["skillId"] = skill_id
 	send_message("BATTLE_ACTION", payload)
+
+func npc_interact(npc_id: String, map_id: String) -> void:
+	send_message("NPC_INTERACT", {"npcId": npc_id, "mapId": map_id})
+
+func dialogue_choice(npc_id: String, node_key: String, choice_index: int) -> void:
+	send_message("DIALOGUE_CHOICE", {"npcId": npc_id, "nodeKey": node_key, "choiceIndex": choice_index})
+
+func request_quest_list() -> void:
+	send_message("QUEST_LIST")

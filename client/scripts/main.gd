@@ -13,8 +13,13 @@ extends Node2D
 @onready var skill_tree_layer: CanvasLayer = $SkillTreeLayer
 @onready var companion_panel: Control = $CompanionLayer/CompanionPanel
 @onready var companion_layer: CanvasLayer = $CompanionLayer
+@onready var dialogue_panel: Control = $DialogueLayer/DialoguePanel
+@onready var dialogue_layer: CanvasLayer = $DialogueLayer
+@onready var quest_log_panel: Control = $QuestLayer/QuestLogPanel
+@onready var quest_layer: CanvasLayer = $QuestLayer
 @onready var skills_button: Button = $UI/SkillsButton
 @onready var companions_button: Button = $UI/CompanionsButton
+@onready var quests_button: Button = $UI/QuestsButton
 @onready var world: Node2D = $World
 @onready var ui: CanvasLayer = $UI
 
@@ -33,8 +38,12 @@ func _ready() -> void:
 	skill_tree_panel.closed.connect(_on_skill_tree_closed)
 	skill_tree_panel.tree_updated.connect(_on_skill_tree_updated)
 	companion_panel.closed.connect(_on_companion_panel_closed)
+	dialogue_panel.choice_made.connect(_on_dialogue_choice_made)
+	dialogue_panel.dialogue_closed.connect(_on_dialogue_closed)
+	quest_log_panel.closed.connect(_on_quest_log_closed)
 	skills_button.pressed.connect(_on_skills_button_pressed)
 	companions_button.pressed.connect(_on_companions_button_pressed)
+	quests_button.pressed.connect(_on_quests_button_pressed)
 	NetworkClient.connected.connect(_on_connected)
 	NetworkClient.disconnected.connect(_on_disconnected)
 	NetworkClient.connection_failed.connect(_on_connection_failed)
@@ -42,6 +51,7 @@ func _ready() -> void:
 	_set_gameplay_visible(false)
 	skills_button.hide()
 	companions_button.hide()
+	quests_button.hide()
 	status_label.text = "DeJaBu - 請登入"
 
 func _on_login_authenticated(auth_data: Dictionary) -> void:
@@ -95,6 +105,7 @@ func _process(_delta: float) -> void:
 	if not _game_started or not NetworkClient.is_server_connected() or GameState.mode != GameState.Mode.EXPLORE:
 		player.set_input_direction(Vector2.ZERO)
 		return
+	_check_nearby_npc()
 
 	player.set_input_direction(_read_movement_input())
 	GameState.player_world_position = player.global_position
@@ -103,10 +114,13 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not _game_started or not NetworkClient.is_server_connected():
 		return
 
+	if GameState.mode == GameState.Mode.DIALOGUE:
+		return
+
 	if GameState.mode != GameState.Mode.EXPLORE:
 		return
 
-	if skill_tree_layer.visible or companion_layer.visible:
+	if skill_tree_layer.visible or companion_layer.visible or quest_layer.visible:
 		return
 
 	if event is InputEventKey and event.pressed and not event.echo:
@@ -117,6 +131,14 @@ func _unhandled_input(event: InputEvent) -> void:
 				return
 			KEY_P:
 				_toggle_companion_panel()
+				get_viewport().set_input_as_handled()
+				return
+			KEY_J:
+				_toggle_quest_log()
+				get_viewport().set_input_as_handled()
+				return
+			KEY_F:
+				_try_npc_interact()
 				get_viewport().set_input_as_handled()
 				return
 
@@ -172,6 +194,8 @@ func _on_disconnected() -> void:
 	character_create_layer.hide()
 	skill_tree_layer.hide()
 	companion_layer.hide()
+	dialogue_layer.hide()
+	quest_layer.hide()
 	_show_login_screen("與伺服器斷線，請重新登入")
 
 func _on_connection_failed(reason: String) -> void:
@@ -189,6 +213,10 @@ func _on_message_received(type: String, payload: Dictionary) -> void:
 			_handle_battle_start(payload)
 		"BATTLE_RESULT":
 			_handle_battle_result(payload)
+		"NPC_INTERACT_OK":
+			_handle_npc_interact_ok(payload)
+		"QUEST_LIST_OK":
+			_handle_quest_list_ok(payload)
 		"ERROR":
 			var err_msg := str(payload.get("message", "未知錯誤"))
 			_log("錯誤: %s" % err_msg)
@@ -228,6 +256,8 @@ func _handle_login_ok(payload: Dictionary) -> void:
 	character_create_layer.hide()
 	skill_tree_layer.hide()
 	companion_layer.hide()
+	dialogue_layer.hide()
+	quest_layer.hide()
 	_log(payload.get("message", "登入成功"))
 
 	if not GameState.player_appearance.is_empty():
@@ -310,6 +340,7 @@ func _handle_battle_result(payload: Dictionary) -> void:
 		_sync_player_hp_from_battle(GameState.battle_data)
 		if payload.get("victory", false):
 			_apply_progression(payload)
+			_apply_quest_progress(payload)
 		else:
 			_log("戰鬥失敗...")
 		_end_battle()
@@ -345,6 +376,19 @@ func _apply_progression(payload: Dictionary) -> void:
 			]
 		)
 
+func _apply_quest_progress(payload: Dictionary) -> void:
+	var progress_list: Variant = payload.get("questProgress", [])
+	if typeof(progress_list) != TYPE_ARRAY:
+		return
+	for kp in progress_list:
+		var q_name := str(kp.get("questName", ""))
+		var prog := int(kp.get("progress", 0))
+		var req := int(kp.get("requiredCount", 1))
+		if bool(kp.get("readyToClaim", false)):
+			_log("任務進度：%s（%d/%d）— 可回去領取報酬！" % [q_name, prog, req])
+		else:
+			_log("任務進度：%s（%d/%d）" % [q_name, prog, req])
+
 func _end_battle() -> void:
 	GameState.reset_battle()
 	battle_scene.hide_battle()
@@ -367,11 +411,85 @@ func _on_battle_action_requested(
 	battle_scene.set_actions_enabled(false)
 	NetworkClient.battle_action(action, target_id, actor_id, skill_id)
 
+func _handle_npc_interact_ok(payload: Dictionary) -> void:
+	if payload.get("finished", false):
+		_on_dialogue_finished(payload)
+		return
+
+	GameState.mode = GameState.Mode.DIALOGUE
+	GameState.dialogue_npc_id = str(payload.get("npcId", ""))
+	GameState.dialogue_node_key = str(payload.get("nodeKey", ""))
+	var npc_name := str(payload.get("npcName", "NPC"))
+	var text := str(payload.get("text", ""))
+	var choices: Array = payload.get("choices", [])
+	dialogue_layer.show()
+	dialogue_panel.show_dialogue(npc_name, text, choices)
+
+func _handle_quest_list_ok(payload: Dictionary) -> void:
+	var quests: Array = payload.get("quests", [])
+	GameState.active_quests = quests
+	quest_log_panel.populate(quests)
+
+func _on_dialogue_choice_made(choice_index: int) -> void:
+	if GameState.dialogue_npc_id.is_empty():
+		return
+	NetworkClient.dialogue_choice(GameState.dialogue_npc_id, GameState.dialogue_node_key, choice_index)
+
+func _on_dialogue_closed() -> void:
+	GameState.reset_dialogue()
+	dialogue_layer.hide()
+	_update_status()
+
+func _on_dialogue_finished(payload: Dictionary) -> void:
+	var rewards: Array = payload.get("questRewards", [])
+	for reward in rewards:
+		var quest_name := str(reward.get("questName", ""))
+		var exp_gained := int(reward.get("expGained", 0))
+		var sp_gained := int(reward.get("skillPointsGained", 0))
+		_log("任務完成：%s！獲得 %d EXP 和 %d 技能點" % [quest_name, exp_gained, sp_gained])
+		GameState.player_exp += exp_gained
+		GameState.skill_points += sp_gained
+
+	dialogue_panel.hide_dialogue()
+	GameState.reset_dialogue()
+	dialogue_layer.hide()
+	_update_status()
+
+func _try_npc_interact() -> void:
+	var npc := MapRegistry.get_adjacent_npc(GameState.player_map_id, GameState.player_x, GameState.player_y)
+	if npc.is_empty():
+		return
+	NetworkClient.npc_interact(str(npc.get("id", "")), GameState.player_map_id)
+
+func _check_nearby_npc() -> void:
+	var npc := MapRegistry.get_adjacent_npc(GameState.player_map_id, GameState.player_x, GameState.player_y)
+	var hint_text := " | [F] 與 %s 對話" % str(npc.get("name", "")) if not npc.is_empty() else ""
+	GameState.last_message = hint_text
+
+func _toggle_quest_log() -> void:
+	if quest_layer.visible:
+		quest_log_panel.hide()
+		quest_layer.hide()
+	else:
+		skill_tree_layer.hide()
+		companion_layer.hide()
+		quest_layer.show()
+		quest_log_panel.open()
+
+func _on_quests_button_pressed() -> void:
+	_toggle_quest_log()
+
+func _on_quest_log_closed() -> void:
+	quest_log_panel.hide()
+	quest_layer.hide()
+	_update_status()
+
 func _set_gameplay_visible(visible: bool) -> void:
 	world.visible = visible
 	ui.visible = visible
 	skills_button.visible = visible
 	companions_button.visible = visible
+	quests_button.visible = visible
 
 func _on_skills_button_pressed() -> void:
 	_toggle_skill_tree()
@@ -416,19 +534,25 @@ func _show_login_screen(message: String = "") -> void:
 	character_create_layer.hide()
 	skill_tree_layer.hide()
 	companion_layer.hide()
+	dialogue_layer.hide()
+	quest_layer.hide()
 	login_layer.show()
 	login_panel.show()
 	login_panel.set_status(message if not message.is_empty() else "請登入或註冊新帳號")
 	status_label.text = "DeJaBu - 請登入"
 
 func _update_status() -> void:
-	var mode_text := "戰鬥" if GameState.mode == GameState.Mode.BATTLE else "探索"
+	var mode_text: String
+	match GameState.mode:
+		GameState.Mode.BATTLE: mode_text = "戰鬥"
+		GameState.Mode.DIALOGUE: mode_text = "對話"
+		_: mode_text = "探索"
 	var pos := GameState.player_world_position
 	var element_name := ElementData.display_name(GameState.player_element) if not GameState.player_element.is_empty() else ""
 	var stats_text := CharacterStatsData.compact_text(GameState.player_stats)
 	var name_with_element := "%s（%s）" % [GameState.player_name, element_name] if not element_name.is_empty() else GameState.player_name
 	var map_name := world_map.get_map_name() if world_map.get_current_map_id() == GameState.player_map_id else MapRegistry.get_map_name(GameState.player_map_id)
-	status_label.text = "%s | %s | Lv.%d | HP %d/%d | EXP %d/%d | 技能點 %d | 夥伴 %d | %s | X: %.0f  Y: %.0f | 模式: %s" % [
+	status_label.text = "%s | %s | Lv.%d | HP %d/%d | EXP %d/%d | 技能點 %d | 夥伴 %d | 任務 %d | %s | X: %.0f  Y: %.0f | 模式: %s%s" % [
 		name_with_element,
 		stats_text,
 		GameState.player_level,
@@ -438,10 +562,12 @@ func _update_status() -> void:
 		GameState.exp_to_next_level,
 		GameState.skill_points,
 		GameState.companions.size(),
+		GameState.active_quests.size(),
 		map_name,
 		pos.x,
 		pos.y,
-		mode_text
+		mode_text,
+		GameState.last_message
 	]
 
 func _log(text: String) -> void:

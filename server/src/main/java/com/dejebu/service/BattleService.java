@@ -224,6 +224,12 @@ public class BattleService {
         if (isBattleOver(state)) {
             if (!hasAliveEnemies(state)) {
                 result.put("victory", true);
+                ArrayNode killedTemplates = objectMapper.createArrayNode();
+                state.enemies.stream()
+                        .map(BattleUnit::getTemplateId)
+                        .filter(id -> id != null && !id.isEmpty())
+                        .forEach(killedTemplates::add);
+                result.set("killedTemplateIds", killedTemplates);
                 appendProgressionResult(result, progressionService.applyVictoryExp(state.userId, state.victoryExpReward));
             } else {
                 result.put("victory", false);

@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3 uid="uid://dejebu_main_scene"]
+[gd_scene load_steps=11 format=3 uid="uid://dejebu_main_scene"]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/world/world_map.gd" id="2_world_map"]
@@ -8,6 +8,8 @@
 [ext_resource type="PackedScene" uid="uid://dejebu_character_create" path="res://scenes/character_create_panel.tscn" id="7_create"]
 [ext_resource type="PackedScene" uid="uid://dejebu_skill_tree" path="res://scenes/skill_tree_panel.tscn" id="8_skill_tree"]
 [ext_resource type="PackedScene" uid="uid://dejebu_companion_panel" path="res://scenes/companion_panel.tscn" id="9_companion"]
+[ext_resource type="PackedScene" uid="uid://dejebu_dialogue_panel" path="res://scenes/dialogue_panel.tscn" id="10_dialogue"]
+[ext_resource type="PackedScene" uid="uid://dejebu_quest_log_panel" path="res://scenes/quest_log_panel.tscn" id="11_quest_log"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_player"]
 radius = 10.0
@@ -62,7 +64,7 @@ offset_left = 20.0
 offset_top = 55.0
 offset_right = 900.0
 offset_bottom = 100.0
-text = "探索: WASD / 點擊移動 | 技能 K / 夥伴 P | 戰鬥: 1 攻擊 / 4 捕捉（擇一）/ 2 防禦 / 3 逃跑"
+text = "探索: WASD / 點擊移動 | 技能 K / 夥伴 P / 任務 J / 對話 F | 戰鬥: 1 攻擊 / 4 捕捉（擇一）/ 2 防禦 / 3 逃跑"
 
 [node name="LogLabel" type="RichTextLabel" parent="UI"]
 offset_left = 20.0
@@ -86,6 +88,13 @@ offset_right = 230.0
 offset_bottom = 365.0
 text = "夥伴"
 
+[node name="QuestsButton" type="Button" parent="UI"]
+offset_left = 240.0
+offset_top = 330.0
+offset_right = 340.0
+offset_bottom = 365.0
+text = "任務"
+
 [node name="BattleLayer" type="CanvasLayer" parent="."]
 
 [node name="BattleScene" parent="BattleLayer" instance=ExtResource("5_battle")]
@@ -107,4 +116,16 @@ visible = false
 [node name="CompanionLayer" type="CanvasLayer" parent="."]
 
 [node name="CompanionPanel" parent="CompanionLayer" instance=ExtResource("9_companion")]
+visible = false
+
+[node name="DialogueLayer" type="CanvasLayer" parent="."]
+visible = false
+
+[node name="DialoguePanel" parent="DialogueLayer" instance=ExtResource("10_dialogue")]
+visible = false
+
+[node name="QuestLayer" type="CanvasLayer" parent="."]
+visible = false
+
+[node name="QuestLogPanel" parent="QuestLayer" instance=ExtResource("11_quest_log")]
 visible = false

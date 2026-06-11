@@ -10,10 +10,13 @@ import com.dejebu.service.AuthService;
 import com.dejebu.service.BattleService;
 import com.dejebu.service.EncounterService;
 import com.dejebu.service.MapService;
+import com.dejebu.service.NpcService;
 import com.dejebu.service.ProgressionService;
+import com.dejebu.service.QuestService;
 import com.dejebu.service.SessionService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,6 +27,8 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -38,19 +43,25 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
     private final BattleService battleService;
     private final EncounterService encounterService;
     private final MapService mapService;
+    private final NpcService npcService;
+    private final QuestService questService;
 
     public GameWebSocketHandler(ObjectMapper objectMapper,
                                 SessionService sessionService,
                                 AuthService authService,
                                 BattleService battleService,
                                 EncounterService encounterService,
-                                MapService mapService) {
+                                MapService mapService,
+                                NpcService npcService,
+                                QuestService questService) {
         this.objectMapper = objectMapper;
         this.sessionService = sessionService;
         this.authService = authService;
         this.battleService = battleService;
         this.encounterService = encounterService;
         this.mapService = mapService;
+        this.npcService = npcService;
+        this.questService = questService;
     }
 
     @Override
@@ -70,6 +81,9 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
             case MOVE -> handleMove(session, incoming.getPayload());
             case BATTLE_START -> handleBattleStart(session);
             case BATTLE_ACTION -> handleBattleAction(session, incoming.getPayload());
+            case NPC_INTERACT -> handleNpcInteract(session, incoming.getPayload());
+            case DIALOGUE_CHOICE -> handleDialogueChoice(session, incoming.getPayload());
+            case QUEST_LIST -> handleQuestList(session);
             default -> error("Unsupported message type: " + incoming.getType());
         };
 
@@ -189,7 +203,8 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
             return new GameMessage(MessageType.MOVE_OK, response);
         }
 
-        boolean encounter = (x + y) % 5 == 0 && x != 0 && y != 0;
+        boolean encounter = (x + y) % 5 == 0 && x != 0 && y != 0
+                && !npcService.hasNpcAt(resultMapId, resultX, resultY);
         response.put("encounter", encounter);
         if (encounter) {
             int playerLevel = userIdOptional
@@ -251,10 +266,81 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
             Integer actorId = payload.has("actorId") ? payload.get("actorId").asInt() : null;
             Long skillId = payload.has("skillId") ? payload.get("skillId").asLong() : null;
             ObjectNode result = battleService.resolveAction(session.getId(), action, targetId, actorId, skillId);
+
+            if (result.path("battleOver").asBoolean() && result.path("victory").asBoolean()) {
+                Optional<Long> userIdOpt = sessionService.getUserId(session);
+                if (userIdOpt.isPresent()) {
+                    JsonNode killedNode = result.get("killedTemplateIds");
+                    if (killedNode != null && killedNode.isArray()) {
+                        List<String> templateIds = new ArrayList<>();
+                        for (JsonNode id : killedNode) templateIds.add(id.asText());
+                        List<QuestService.KillProgress> progress = questService.recordKills(userIdOpt.get(), templateIds);
+                        if (!progress.isEmpty()) {
+                            ArrayNode progressArray = objectMapper.createArrayNode();
+                            for (QuestService.KillProgress kp : progress) {
+                                ObjectNode kpNode = objectMapper.createObjectNode();
+                                kpNode.put("questName", kp.questName());
+                                kpNode.put("progress", kp.progress());
+                                kpNode.put("requiredCount", kp.requiredCount());
+                                kpNode.put("readyToClaim", kp.readyToClaim());
+                                progressArray.add(kpNode);
+                            }
+                            result.set("questProgress", progressArray);
+                        }
+                    }
+                }
+            }
+
             return new GameMessage(MessageType.BATTLE_RESULT, result);
         } catch (IllegalStateException | IllegalArgumentException ex) {
             return error(ex.getMessage());
         }
+    }
+
+    private GameMessage handleNpcInteract(WebSocketSession session, JsonNode payload) {
+        if (!sessionService.isAuthenticated(session)) {
+            return error("尚未登入");
+        }
+        try {
+            String npcId = payload.path("npcId").asText("");
+            if (npcId.isBlank()) return error("未指定 NPC");
+            Long userId = sessionService.getUserId(session)
+                    .orElseThrow(() -> new IllegalStateException("尚未登入"));
+            String mapId = payload.path("mapId").asText("village");
+            ObjectNode result = npcService.interact(userId, npcId, mapId);
+            return new GameMessage(MessageType.NPC_INTERACT_OK, result);
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            return error(ex.getMessage());
+        }
+    }
+
+    private GameMessage handleDialogueChoice(WebSocketSession session, JsonNode payload) {
+        if (!sessionService.isAuthenticated(session)) {
+            return error("尚未登入");
+        }
+        try {
+            String npcId = payload.path("npcId").asText("");
+            String nodeKey = payload.path("nodeKey").asText("");
+            int choiceIndex = payload.path("choiceIndex").asInt(0);
+            if (npcId.isBlank() || nodeKey.isBlank()) return error("對話參數不完整");
+            Long userId = sessionService.getUserId(session)
+                    .orElseThrow(() -> new IllegalStateException("尚未登入"));
+            ObjectNode result = npcService.choose(userId, npcId, nodeKey, choiceIndex);
+            return new GameMessage(MessageType.NPC_INTERACT_OK, result);
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            return error(ex.getMessage());
+        }
+    }
+
+    private GameMessage handleQuestList(WebSocketSession session) {
+        if (!sessionService.isAuthenticated(session)) {
+            return error("尚未登入");
+        }
+        Long userId = sessionService.getUserId(session).orElse(null);
+        if (userId == null) return error("尚未登入");
+        ObjectNode response = objectMapper.createObjectNode();
+        response.set("quests", questService.getPlayerQuestsJson(userId));
+        return new GameMessage(MessageType.QUEST_LIST_OK, response);
     }
 
     private GameMessage error(String message) {

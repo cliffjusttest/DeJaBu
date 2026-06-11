@@ -6,6 +6,7 @@ const MAPS_DIR := "res://data/maps/"
 
 static var _maps: Dictionary = {}
 static var _teleports: Dictionary = {}
+static var _npcs: Dictionary = {}
 static var _default_map_id := "village"
 static var _loaded := false
 
@@ -31,6 +32,7 @@ static func ensure_loaded() -> void:
 	_default_map_id = str(data.get("defaultMap", "village"))
 	_maps = data.get("maps", {})
 	_teleports = data.get("teleports", {})
+	_npcs = data.get("npcs", {})
 	_loaded = true
 
 static func get_default_map_id() -> String:
@@ -65,3 +67,25 @@ static func get_teleport_target(map_id: String, grid_x: int, grid_y: int) -> Dic
 
 static func is_teleport_tile(ch: String) -> bool:
 	return ch == "@"
+
+static func get_npcs(map_id: String) -> Array:
+	ensure_loaded()
+	var map_npcs: Variant = _npcs.get(map_id)
+	if typeof(map_npcs) == TYPE_ARRAY:
+		return map_npcs
+	return []
+
+static func get_npc_at(map_id: String, grid_x: int, grid_y: int) -> Dictionary:
+	for npc in get_npcs(map_id):
+		if int(npc.get("x", -1)) == grid_x and int(npc.get("y", -1)) == grid_y:
+			return npc
+	return {}
+
+static func get_adjacent_npc(map_id: String, grid_x: int, grid_y: int) -> Dictionary:
+	for npc in get_npcs(map_id):
+		var nx := int(npc.get("x", -1))
+		var ny := int(npc.get("y", -1))
+		var dist := absi(nx - grid_x) + absi(ny - grid_y)
+		if dist <= 1:
+			return npc
+	return {}

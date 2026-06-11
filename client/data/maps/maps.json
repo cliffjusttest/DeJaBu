@@ -13,5 +13,13 @@
   "teleports": {
     "village:12,6": { "map": "forest", "x": 9, "y": 3 },
     "forest:9,3": { "map": "village", "x": 12, "y": 6 }
+  },
+  "npcs": {
+    "village": [
+      { "id": "village_elder", "name": "村長", "x": 5, "y": 8, "spriteKey": "elder" }
+    ],
+    "forest": [
+      { "id": "forest_merchant", "name": "行商", "x": 12, "y": 5, "spriteKey": "merchant" }
+    ]
   }
 }

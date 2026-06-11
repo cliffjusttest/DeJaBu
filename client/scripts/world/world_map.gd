@@ -121,6 +121,51 @@ func _build_props() -> void:
 				"@":
 					_add_prop(IsoGroundRendererScript.create_portal_texture(), pos, Vector2(0, -14))
 
+	_build_npc_sprites()
+
+func _build_npc_sprites() -> void:
+	var npcs := MapRegistry.get_npcs(_current_map_id)
+	var npc_tex := _create_npc_texture()
+	for npc in npcs:
+		var x := int(npc.get("x", 0))
+		var y := int(npc.get("y", 0))
+		var pos := grid_to_world(x, y)
+		var sprite := Sprite2D.new()
+		sprite.texture = npc_tex
+		sprite.position = pos
+		sprite.offset = Vector2(0, -20)
+		sprite.z_index = 1
+		props.add_child(sprite)
+
+		var label := Label.new()
+		label.text = str(npc.get("name", "NPC"))
+		label.position = pos + Vector2(-24, -42)
+		label.add_theme_font_size_override("font_size", 11)
+		label.modulate = Color(1.0, 0.95, 0.6)
+		props.add_child(label)
+
+func _create_npc_texture() -> ImageTexture:
+	var image := Image.create(28, 40, false, Image.FORMAT_RGBA8)
+	image.fill(Color(0, 0, 0, 0))
+	# Body (torso)
+	for py in range(16, 32):
+		for px in range(8, 20):
+			image.set_pixel(px, py, Color(0.30, 0.55, 0.85, 1.0))
+	# Head
+	for py in range(2, 16):
+		for px in range(9, 19):
+			var dx := absf(px - 14.0) / 5.0
+			var dy := absf(py - 9.0) / 7.0
+			if dx * dx + dy * dy <= 1.0:
+				image.set_pixel(px, py, Color(0.92, 0.78, 0.62, 1.0))
+	# Legs
+	for py in range(32, 40):
+		for px in range(8, 13):
+			image.set_pixel(px, py, Color(0.22, 0.28, 0.48, 1.0))
+		for px in range(15, 20):
+			image.set_pixel(px, py, Color(0.22, 0.28, 0.48, 1.0))
+	return ImageTexture.create_from_image(image)
+
 func _add_prop(texture: Texture2D, position: Vector2, offset: Vector2) -> void:
 	var sprite := Sprite2D.new()
 	sprite.texture = texture

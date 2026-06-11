@@ -1,6 +1,6 @@
 # DeJaBu
 
-2D 等距視角回合制 RPG，採用 **Godot 4 客戶端** + **Java Spring Boot 伺服器** 分離架構。多地圖探索、隨機遇敵、5×2 陣型隊伍戰鬥、元素克制、技能樹、怪物捕捉與夥伴養成。
+2D 等距視角回合制 RPG，採用 **Godot 4 客戶端** + **Java Spring Boot 伺服器** 分離架構。多地圖探索、隨機遇敵、5×2 陣型隊伍戰鬥、元素克制、技能樹、怪物捕捉與夥伴養成、NPC 對話樹、任務系統。
 
 ## 架構概覽
 
@@ -21,6 +21,8 @@ flowchart LR
         Map[MapService]
         Encounter[EncounterService]
         Companion[CompanionService]
+        NPC[NpcService]
+        Quest[QuestService]
         DB[(PostgreSQL)]
     end
 
@@ -33,15 +35,20 @@ flowchart LR
     WS --> Map
     WS --> Encounter
     WS --> Battle
+    WS --> NPC
+    WS --> Quest
     Battle --> Companion
+    Battle --> Quest
     Battle --> DB
     Companion --> DB
+    NPC --> DB
+    Quest --> DB
 ```
 
 | 層級 | 職責 |
 |------|------|
-| **客戶端** | 等距地圖渲染、輸入、動畫、UI 呈現（登入、創角、技能樹、夥伴、戰鬥） |
-| **伺服器** | 帳號驗證、角色與技能持久化、地圖碰撞驗證、傳送、遇敵、戰鬥結算（權威邏輯） |
+| **客戶端** | 等距地圖渲染、輸入、動畫、UI 呈現（登入、創角、技能樹、夥伴、戰鬥、對話、任務日誌） |
+| **伺服器** | 帳號驗證、角色與技能持久化、地圖碰撞驗證、傳送、遇敵、戰鬥結算、NPC 對話、任務進度（全部為權威邏輯） |
 | **通訊** | REST（登入／創角／技能／夥伴）+ WebSocket（探索／戰鬥）+ JSON 封包 |
 | **資料庫** | PostgreSQL 16，Flyway 管理 schema |
 
@@ -57,21 +64,23 @@ DeJaBu/
 │   │   ├── character_create_panel.tscn
 │   │   ├── skill_tree_panel.tscn
 │   │   ├── companion_panel.tscn
+│   │   ├── dialogue_panel.tscn     # NPC 對話框
+│   │   ├── quest_log_panel.tscn    # 任務日誌
 │   │   └── battle.tscn
 │   ├── scripts/
 │   │   ├── main.gd                 # 遊戲主流程、輸入、訊息分派
 │   │   ├── network/network_client.gd
 │   │   ├── battle/                 # 戰鬥場景、陣型格、技能施放
-│   │   ├── world/                  # 等距地圖、碰撞、傳送
+│   │   ├── world/                  # 等距地圖、碰撞、傳送、NPC 渲染
 │   │   ├── game/
 │   │   │   ├── game_state.gd       # 全域狀態（Autoload）
 │   │   │   ├── element.gd          # 角色元素
 │   │   │   ├── skill_element.gd    # 技能元素
 │   │   │   ├── character_stats.gd
 │   │   │   └── character_appearance.gd
-│   │   └── ui/                     # 登入、創角、技能樹、夥伴面板
+│   │   └── ui/                     # 登入、創角、技能樹、夥伴、對話、任務面板
 │   ├── data/maps/
-│   │   ├── maps.json               # 地圖清單與傳送點設定
+│   │   ├── maps.json               # 地圖清單、傳送點、NPC 位置
 │   │   ├── village.txt
 │   │   └── forest.txt
 │   └── assets/
@@ -82,14 +91,14 @@ DeJaBu/
 │   └── src/main/
 │       ├── java/com/dejebu/
 │       │   ├── controller/         # Auth、Character、Skill、Companion REST API
-│       │   ├── entity/             # User、Skill、UserSkill、AuthToken、Companion 等
+│       │   ├── entity/             # User、Skill、AuthToken、Companion、Npc、Quest 等
 │       │   ├── game/               # Element、BattleFormation、SkillCombatCalculator 等
-│       │   ├── service/            # Auth、Battle、Skill、Session、Companion、Map、Encounter
+│       │   ├── service/            # Auth、Battle、Skill、Session、Companion、Map、Encounter、Npc、Quest
 │       │   └── websocket/
 │       ├── resources/
 │       │   ├── application.yml
 │       │   ├── maps/               # 伺服器端地圖（碰撞與傳送驗證）
-│       │   └── db/migration/       # Flyway V1–V16
+│       │   └── db/migration/       # Flyway V1–V17
 │       └── logs/
 │
 ├── docker-compose.yml              # PostgreSQL + 伺服器容器
@@ -179,6 +188,10 @@ DeJaBu/
   "teleports": {
     "village:12,6": { "map": "forest", "x": 9, "y": 3 },
     "forest:9,3": { "map": "village", "x": 12, "y": 6 }
+  },
+  "npcs": {
+    "village": [{ "id": "village_elder", "name": "村長", "x": 5, "y": 8, "spriteKey": "elder" }],
+    "forest":  [{ "id": "forest_merchant", "name": "行商", "x": 12, "y": 5, "spriteKey": "merchant" }]
   }
 }
 ```
@@ -203,7 +216,81 @@ DeJaBu/
 
 **傳送**：踩到 `maps.json` 設定的傳送座標時，`MOVE_OK` 帶 `mapChanged: true`，伺服器更新 DB 中的地圖 ID 與座標，客戶端重新載入地圖。傳送點不觸發遇敵。
 
-**遇敵**：`(x + y) % 5 == 0` 且 `x != 0`、`y != 0` 時觸發，`MOVE_OK` 帶 `encounter: true` 與 `wildMonsters` 預覽資料。
+**遇敵**：`(x + y) % 5 == 0` 且 `x != 0`、`y != 0` 時觸發，`MOVE_OK` 帶 `encounter: true` 與 `wildMonsters` 預覽資料。**踩到 NPC 格時不觸發遇敵。**
+
+**NPC**：位置由 `maps.json` 的 `npcs` 區塊定義，客戶端在地圖載入時自動渲染人物圖示與名稱標籤。靠近 NPC（Manhattan 距離 ≤ 1）時狀態列顯示 `[F] 與 xxx 對話` 提示。
+
+### NPC 與對話
+
+NPC 定義於資料庫 `npcs` 表，對話樹節點存於 `dialogue_nodes` 表（每個節點的選項以 JSON 陣列儲存）。
+
+**互動流程**
+
+```
+靠近 NPC（距離 ≤ 1 格）→ 按 F（或觸發 NPC_INTERACT）
+  → 伺服器依玩家任務狀態決定起始節點
+    ├─ 有任務可領取  → quest_complete 節點
+    ├─ 任務進行中    → quest_already 節點
+    └─ 無任務（預設）→ root 節點
+  → 客戶端顯示對話框（NPC 名稱 + 文字 + 選項按鈕）
+  → 玩家點選選項 → 送出 DIALOGUE_CHOICE
+  → 伺服器：執行選項副作用（接受任務 / 領取報酬）→ 回傳下一節點
+  → nextKey 為 null → 對話結束，回到探索模式
+```
+
+**節點選項 JSON 格式**
+
+```json
+[
+  { "text": "接受任務（初試身手）", "nextKey": "quest_accepted", "questAccept": 1 },
+  { "text": "領取報酬",              "nextKey": null,             "questComplete": 1 },
+  { "text": "再見",                  "nextKey": null }
+]
+```
+
+| 欄位 | 說明 |
+|------|------|
+| `text` | 選項顯示文字 |
+| `nextKey` | 下一個節點 key；`null` 表示對話結束 |
+| `questAccept` | 接受指定 ID 的任務 |
+| `questComplete` | 領取指定 ID 的任務報酬（需任務進度達標） |
+
+**現有 NPC**
+
+| NPC ID | 名稱 | 地圖 | 座標 | 給予任務 |
+|--------|------|------|------|----------|
+| `village_elder` | 村長 | 新手村 | (5, 8) | 初試身手 |
+| `forest_merchant` | 行商 | 幽暗森林 | (12, 5) | 黑霧調查 |
+
+### 任務系統
+
+任務定義於 `quests` 表，玩家進度存於 `player_quests` 表。
+
+**任務類型**
+
+| 類型 | 觸發進度方式 | 領取報酬方式 |
+|------|-------------|-------------|
+| `KILL` | 戰鬥勝利後自動統計擊殺的怪物模板 ID | 回到任務給予 NPC 對話，選「領取報酬」 |
+| `TALK`（預留） | 與目標 NPC 對話時自動完成 | — |
+
+**任務狀態流程（KILL 任務）**
+
+```
+接受任務（IN_PROGRESS, progress=0）
+  → 每次戰鬥勝利，伺服器比對 killedTemplateIds，更新 progress
+  → progress ≥ requiredCount → 任務「可領取」
+  → 回到 NPC 對話，伺服器自動導向 quest_complete 節點
+  → 選「領取報酬」→ 發放 EXP + 技能點，status → COMPLETED
+```
+
+**現有任務**
+
+| ID | 名稱 | 類型 | 目標 | 數量 | 給予者 | 報酬 |
+|----|------|------|------|------|--------|------|
+| 1 | 初試身手 | KILL | wild_wolf | 3 | 村長 | 60 EXP + 1 技能點 |
+| 2 | 黑霧調查 | KILL | shadow_wisp | 2 | 行商 | 80 EXP + 1 技能點 |
+
+戰鬥勝利時，`BATTLE_RESULT` 帶有 `questProgress` 陣列，客戶端在戰鬥日誌顯示進度提示（含「可回去領取報酬！」訊息）。
 
 ### 戰鬥
 
@@ -379,7 +466,6 @@ hpFactor = 1 - 當前HP/最大HP（血量越低越容易）
 ### 尚未實作
 
 - 道具、裝備、金幣、背包
-- NPC、對話、任務
 - 多人同地圖可見（伺服器僅追蹤連線數，無位置廣播）
 
 ## 客戶端模組說明
@@ -387,14 +473,15 @@ hpFactor = 1 - 當前HP/最大HP（血量越低越容易）
 ### Autoload 單例
 
 - **NetworkClient** — 管理 WebSocket 連線，負責送收 JSON 封包
-- **GameState** — 保存 token、玩家名稱、座標、地圖、元素、能力、技能點、探索／戰鬥模式等
+- **GameState** — 保存 token、玩家名稱、座標、地圖、元素、能力、技能點、探索／戰鬥／對話模式、任務列表等
 
 ### 世界地圖（WorldMap）
 
 - 從 `data/maps/*.txt` 讀取 ASCII 地圖，以等距投影渲染（`iso_coords.gd`、`iso_ground_renderer.gd`）
 - 地形烘焙為貼圖，樹木／牆壁／傳送門以 sprite 呈現
+- NPC 根據 `maps.json` 的 `npcs` 區塊自動渲染為人物圖示 + 名稱標籤
 - 提供 `is_walkable()`、`grid_to_world()` 等格子座標轉換
-- 透過 `map_registry.gd` 讀取 `maps.json` 管理多地圖切換
+- 透過 `map_registry.gd` 讀取 `maps.json` 管理多地圖切換，`get_adjacent_npc()` 偵測相鄰 NPC
 
 ### 遊戲流程
 
@@ -403,8 +490,11 @@ hpFactor = 1 - 當前HP/最大HP（血量越低越容易）
   → WebSocket 登入 → 探索模式（WASD / 點擊移動）
     → 開啟技能樹（K）→ REST 查詢／學習／升級技能
     → 開啟夥伴面板（P）→ REST 管理出戰隊伍／升級夥伴技能
+    → 開啟任務日誌（J 或 UI 按鈕）→ 查看進行中任務
+    → 靠近 NPC → 按 F 對話 → 接受任務
     → 遇敵 → 戰鬥模式（指定所有單位行動 → 一起執行 → 敵方全員反擊）
-      → 結算（EXP、升級）→ 回到探索
+      → 結算（EXP、升級、任務進度）→ 回到探索
+    → 回 NPC 對話 → 任務進度達標時可選「領取報酬」
 ```
 
 ## 伺服器模組說明
@@ -440,17 +530,24 @@ ws://localhost:8080/ws/game
 | C→S | `MOVE` | 移動，帶 `x`、`y`、`direction`、`mapId` |
 | C→S | `BATTLE_START` | 開始戰鬥 |
 | C→S | `BATTLE_ACTION` | 戰鬥指令（`attack`／`defend`／`flee`／`capture`／`skill`） |
+| C→S | `NPC_INTERACT` | 與 NPC 開始對話，帶 `npcId`、`mapId` |
+| C→S | `DIALOGUE_CHOICE` | 選擇對話選項，帶 `npcId`、`nodeKey`、`choiceIndex` |
+| C→S | `QUEST_LIST` | 取得目前任務日誌 |
 | C→S | `PING` | 心跳 |
 | S→C | `LOGIN_OK` | 登入成功，回傳角色座標、地圖、元素、能力、HP 等 |
 | S→C | `MOVE_OK` | 移動確認，可能帶 `encounter`、`mapChanged`、`wildMonsters` |
 | S→C | `BATTLE_START` | 戰鬥開始，回傳雙方陣型、HP、元素、技能 |
-| S→C | `BATTLE_RESULT` | 回合結算結果；`roundExecuted: false` 表示仍在指定行動階段 |
+| S→C | `BATTLE_RESULT` | 回合結算；勝利時帶 `questProgress` 陣列 |
+| S→C | `NPC_INTERACT_OK` | 對話節點（`finished: false`）或對話結束（`finished: true`）；帶 `questRewards` |
+| S→C | `QUEST_LIST_OK` | 玩家任務列表 |
 | S→C | `PONG` | 心跳回應 |
 | S→C | `ERROR` | 錯誤訊息 |
 
 `BATTLE_ACTION` 額外欄位：`actorId`（行動單位）、`targetId`（目標格）、`skillId`（技能施放時）。
 
-`BATTLE_RESULT` 當 `roundExecuted: false` 時僅更新 `battle.plannedActorIds`；`roundExecuted: true` 時包含完整 `attackEvents`、`message`、`battleOver` 等。
+`BATTLE_RESULT` 當 `roundExecuted: false` 時僅更新 `battle.plannedActorIds`；`roundExecuted: true` 時包含完整 `attackEvents`、`message`、`battleOver`，勝利時附帶 `questProgress: [{questName, progress, requiredCount, readyToClaim}]`。
+
+`NPC_INTERACT_OK` 對話進行中欄位：`npcId`、`npcName`、`nodeKey`、`text`、`choices: [{index, text}]`；對話結束（`finished: true`）時帶 `message` 與 `questRewards: [{questName, expGained, skillPointsGained}]`。
 
 ### 服務分層
 
@@ -460,8 +557,10 @@ ws://localhost:8080/ws/game
 - **MapService** — 地圖載入、可走性驗證、傳送點解析
 - **EncounterService** — 野外遭遇生成與暫存
 - **SessionService** — WebSocket session 與玩家管理
-- **BattleService** — 回合制戰鬥邏輯（指定→執行兩段式、傷害、元素克制、技能、捕捉、勝負、EXP 結算）
+- **BattleService** — 回合制戰鬥邏輯（指定→執行兩段式、傷害、元素克制、技能、捕捉、勝負、EXP 結算、勝利時附帶 killedTemplateIds）
 - **ProgressionService** — EXP 計算、升級判定、技能點發放
+- **NpcService** — NPC 互動、對話樹節點解析、依任務狀態動態決定起始節點、任務接受／報酬觸發
+- **QuestService** — 任務接受、擊殺進度記錄、報酬發放、任務日誌查詢
 - **GameWebSocketHandler** — 封包解析與路由
 
 ### 資料表（摘要）
@@ -477,6 +576,10 @@ ws://localhost:8080/ws/game
 | `monster_template_skills` | 怪物模板預設技能 |
 | `user_companions` | 已捕捉夥伴與出戰狀態 |
 | `companion_skills` | 夥伴已學技能與等級 |
+| `npcs` | NPC 定義（地圖 ID、格子座標、名稱、起始對話節點） |
+| `dialogue_nodes` | 對話樹節點（文字 + 選項 JSON） |
+| `quests` | 任務定義（類型、目標、所需數量、報酬、給予者 NPC） |
+| `player_quests` | 玩家任務進度（狀態、進度值） |
 
 ## 快速開始
 
@@ -513,6 +616,8 @@ ws://localhost:8080/ws/game
 | 探索移動 | WASD 或方向鍵；滑鼠左鍵點擊 |
 | 技能樹 | 畫面「技能」按鈕或 `K` |
 | 夥伴面板 | 畫面「夥伴」按鈕或 `P` |
+| 任務日誌 | 畫面「任務」按鈕或 `J` |
+| 與 NPC 對話 | 靠近 NPC 後按 `F` |
 | 攻擊 | `1` → 點選敵方單位 |
 | 防禦 | `2` |
 | 逃跑 | `3` |
@@ -534,15 +639,17 @@ Docker 容器透過 volume 掛載此目錄，並停用 Docker 自身的 log driv
 
 - 客戶端 WebSocket 位址：`client/scripts/network/network_client.gd` 的 `SERVER_URL`
 - REST API 位址：各 UI 面板腳本內的 `http://localhost:8080/api/...`
-- 遇敵規則由伺服器判定（`x + y` 為 5 的倍數且非原點）；傳送點不觸發遇敵
+- 遇敵規則由伺服器判定（`x + y` 為 5 的倍數且非原點）；傳送點與 NPC 格不觸發遇敵
 - 移動與碰撞以伺服器 `MapService` 為準，客戶端僅送出本地判定為可走的格子
 - 戰鬥邏輯以伺服器為準，客戶端僅負責顯示與輸入
 - 技能學習／升級以 REST 為準；戰鬥技能施放以 WebSocket 為準
+- 新增 NPC：同時在 `maps.json`（`npcs` 區塊）與資料庫 `V17__npc_quest.sql`（或新 migration）新增記錄
+- 新增任務：在 migration 中插入 `quests` 與 `dialogue_nodes` 記錄（對話節點 `questAccept`／`questComplete` 欄位指定任務 ID）
 - 地圖修改：同時編輯客戶端與伺服器兩份 `.txt`，並在 `maps.json` 設定傳送點後重啟
 - Schema 變更：新增 Flyway migration 至 `server/src/main/resources/db/migration/`
 
 ## 後續規劃方向
 
 - [ ] 道具、裝備、商店
-- [ ] NPC、對話、任務
+- [ ] 更豐富的任務類型（TALK、FETCH、多段任務鏈）
 - [ ] 多人同地圖可見
