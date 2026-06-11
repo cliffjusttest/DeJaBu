@@ -7,8 +7,9 @@ const VITALITY := "vitality"
 const DEFENSE := "defense"
 const SPIRIT := "spirit"
 const LUCK := "luck"
+const AGILITY := "agility"
 
-const ALL: Array[String] = [MIGHT, INTELLIGENCE, VITALITY, DEFENSE, SPIRIT, LUCK]
+const ALL: Array[String] = [MIGHT, INTELLIGENCE, VITALITY, DEFENSE, SPIRIT, LUCK, AGILITY]
 
 const DISPLAY_NAMES := {
 	MIGHT: "武力",
@@ -17,6 +18,7 @@ const DISPLAY_NAMES := {
 	DEFENSE: "防禦",
 	SPIRIT: "精神",
 	LUCK: "幸運",
+	AGILITY: "敏捷",
 }
 
 const BASE_VALUE := 0
@@ -33,6 +35,7 @@ static func zero_base() -> Dictionary:
 		DEFENSE: BASE_VALUE,
 		SPIRIT: BASE_VALUE,
 		LUCK: BASE_VALUE,
+		AGILITY: BASE_VALUE,
 	}
 
 static func from_payload(payload: Variant) -> Dictionary:
@@ -47,6 +50,7 @@ static func from_payload(payload: Variant) -> Dictionary:
 		DEFENSE: int(data.get(DEFENSE, BASE_VALUE)),
 		SPIRIT: int(data.get(SPIRIT, BASE_VALUE)),
 		LUCK: int(data.get(LUCK, BASE_VALUE)),
+		AGILITY: int(data.get(AGILITY, BASE_VALUE)),
 	}
 
 static func total_points(stats: Dictionary) -> int:
@@ -68,11 +72,12 @@ static func summary_text(stats: Dictionary) -> String:
 	return "  ".join(parts)
 
 static func compact_text(stats: Dictionary) -> String:
-	return "武%d 智%d 體%d 防%d 精%d 幸%d" % [
+	return "武%d 智%d 體%d 防%d 精%d 幸%d 敏%d" % [
 		int(stats.get(MIGHT, BASE_VALUE)),
 		int(stats.get(INTELLIGENCE, BASE_VALUE)),
 		int(stats.get(VITALITY, BASE_VALUE)),
 		int(stats.get(DEFENSE, BASE_VALUE)),
 		int(stats.get(SPIRIT, BASE_VALUE)),
 		int(stats.get(LUCK, BASE_VALUE)),
+		int(stats.get(AGILITY, BASE_VALUE)),
 	]

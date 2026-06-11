@@ -183,6 +183,7 @@ public class CompanionService {
         companion.setStatDefense(stats.defense());
         companion.setStatSpirit(stats.spirit());
         companion.setStatLuck(stats.luck());
+        companion.setStatAgility(stats.agility());
         companion.setMaxHp(monster.getMaxHp());
         companion.setCurrentHp(monster.getHp());
         companion.setPartySlot(resolvePartySlot(user.getId()));

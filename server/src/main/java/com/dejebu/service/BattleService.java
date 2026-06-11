@@ -189,17 +189,27 @@ public class BattleService {
         ObjectNode result = objectMapper.createObjectNode();
         result.put("roundExecuted", true);
 
-        // Execute all ally planned actions in unit-ID order
-        for (BattleUnit ally : aliveAlliesInActionOrder(state)) {
-            PlannedAction plan = state.pendingActions.get(ally.getId());
-            if (plan == null || !ally.isAlive()) continue;
+        // All combatants act in agility order (highest first)
+        for (BattleUnit unit : buildRoundActionOrder(state)) {
+            if (!unit.isAlive() || isBattleOver(state)) break;
 
             ObjectNode actionResult = objectMapper.createObjectNode();
-            executeAllyAction(state, ally, plan, random, actionResult);
+            if (isAllyUnit(state, unit)) {
+                PlannedAction plan = state.pendingActions.get(unit.getId());
+                if (plan == null) continue;
+                executeAllyAction(state, unit, plan, random, actionResult);
+            } else {
+                List<BattleUnit> aliveAllies = state.allies.stream().filter(BattleUnit::isAlive).toList();
+                EnemyBattleAi.EnemyAction action = EnemyBattleAi.chooseAction(unit, aliveAllies, random);
+                if (action == null) continue;
+                if ("skill".equals(action.type())) {
+                    resolveSkill(state, unit, action.skillId(), action.targetId(), random, actionResult);
+                } else {
+                    resolveEnemyBasicAttack(state, unit, action.targetId(), random, actionResult);
+                }
+            }
             mergeResult(result, actionResult);
-
             if (result.path("escaped").asBoolean()) break;
-            if (isBattleOver(state)) break;
         }
 
         state.pendingActions.clear();
@@ -215,7 +225,6 @@ public class BattleService {
 
         if (!isBattleOver(state)) {
             tickAllSkillCooldowns(state);
-            executeAllEnemyTurns(state, random, result);
         }
 
         state.defendingUnits.clear();
@@ -283,23 +292,6 @@ public class BattleService {
         }
     }
 
-    private void executeAllEnemyTurns(BattleState state, ThreadLocalRandom random, ObjectNode result) {
-        List<BattleUnit> enemies = state.enemies.stream().filter(BattleUnit::isAlive).toList();
-        for (BattleUnit enemy : enemies) {
-            if (!hasAliveAllies(state)) break;
-            List<BattleUnit> aliveAllies = state.allies.stream().filter(BattleUnit::isAlive).toList();
-            EnemyBattleAi.EnemyAction action = EnemyBattleAi.chooseAction(enemy, aliveAllies, random);
-            if (action == null) continue;
-
-            ObjectNode enemyResult = objectMapper.createObjectNode();
-            if ("skill".equals(action.type())) {
-                resolveSkill(state, enemy, action.skillId(), action.targetId(), random, enemyResult);
-            } else {
-                resolveEnemyBasicAttack(state, enemy, action.targetId(), random, enemyResult);
-            }
-            mergeResult(result, enemyResult);
-        }
-    }
 
     // ── Action Resolvers ─────────────────────────────────────────────────────
 
@@ -509,8 +501,25 @@ public class BattleService {
     private List<BattleUnit> aliveAlliesInActionOrder(BattleState state) {
         return state.allies.stream()
                 .filter(BattleUnit::isAlive)
-                .sorted(Comparator.comparingInt(BattleUnit::getId))
+                .sorted(Comparator.comparingInt(BattleService::unitAgility).reversed()
+                        .thenComparingInt(BattleUnit::getId))
                 .toList();
+    }
+
+    private List<BattleUnit> buildRoundActionOrder(BattleState state) {
+        List<BattleUnit> all = new ArrayList<>();
+        all.addAll(state.allies);
+        all.addAll(state.enemies);
+        return all.stream()
+                .filter(BattleUnit::isAlive)
+                .sorted(Comparator.comparingInt(BattleService::unitAgility).reversed()
+                        .thenComparingInt(BattleUnit::getId))
+                .toList();
+    }
+
+    private static int unitAgility(BattleUnit unit) {
+        CharacterStats stats = unit.getStats();
+        return stats != null ? stats.agility() : 0;
     }
 
     private boolean isBattleOver(BattleState state) {

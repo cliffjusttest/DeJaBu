@@ -41,6 +41,9 @@ public class MonsterTemplateEntity {
     @Column(name = "base_luck", nullable = false)
     private int baseLuck = 5;
 
+    @Column(name = "base_agility", nullable = false)
+    private int baseAgility = 5;
+
     @Column(nullable = false)
     private boolean capturable = true;
 
@@ -78,6 +81,10 @@ public class MonsterTemplateEntity {
 
     public int getBaseLuck() {
         return baseLuck;
+    }
+
+    public int getBaseAgility() {
+        return baseAgility;
     }
 
     public boolean isCapturable() {

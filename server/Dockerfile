@@ -7,7 +7,7 @@ COPY pom.xml .
 RUN mvn -B -q dependency:resolve dependency:resolve-plugins
 
 COPY src ./src
-RUN mvn -B -q package -DskipTests
+RUN mvn -B package -DskipTests
 
 # Run stage
 FROM eclipse-temurin:17-jre-jammy

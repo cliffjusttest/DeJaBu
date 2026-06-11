@@ -16,7 +16,8 @@ public final class MonsterStatsFactory {
                 template.getBaseVitality() + bonus * 2,
                 template.getBaseDefense() + bonus,
                 template.getBaseSpirit() + bonus,
-                template.getBaseLuck() + bonus
+                template.getBaseLuck() + bonus,
+                template.getBaseAgility() + bonus
         );
     }
 

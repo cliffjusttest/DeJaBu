@@ -113,7 +113,15 @@ cmd_start() {
   echo "==> 建置並啟動 DeJaBu Server..."
   ensure_log_dir
   ensure_data_dir
-  compose_quiet build
+  local build_log
+  build_log=$(mktemp)
+  if ! "${COMPOSE_CMD[@]}" build --progress=plain >"$build_log" 2>&1; then
+    echo "錯誤: docker compose build 失敗。編譯錯誤如下："
+    cat "$build_log"
+    rm -f "$build_log"
+    exit 1
+  fi
+  rm -f "$build_log"
   if ! compose_quiet up -d --force-recreate; then
     echo "錯誤: docker compose up 失敗。"
     "${COMPOSE_CMD[@]}" ps

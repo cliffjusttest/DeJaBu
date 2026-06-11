@@ -54,6 +54,9 @@ public class UserCompanion {
     @Column(name = "stat_luck", nullable = false)
     private int statLuck;
 
+    @Column(name = "stat_agility", nullable = false)
+    private int statAgility;
+
     @Column(name = "current_hp", nullable = false)
     private int currentHp;
 
@@ -157,6 +160,14 @@ public class UserCompanion {
         this.statLuck = statLuck;
     }
 
+    public int getStatAgility() {
+        return statAgility;
+    }
+
+    public void setStatAgility(int statAgility) {
+        this.statAgility = statAgility;
+    }
+
     public int getCurrentHp() {
         return currentHp;
     }
@@ -192,7 +203,8 @@ public class UserCompanion {
                 statVitality,
                 statDefense,
                 statSpirit,
-                statLuck
+                statLuck,
+                statAgility
         );
     }
 }

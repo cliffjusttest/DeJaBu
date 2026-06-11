@@ -71,6 +71,9 @@ public class User {
     @Column(name = "stat_luck", nullable = false)
     private int statLuck = CharacterStats.BASE_VALUE;
 
+    @Column(name = "stat_agility", nullable = false)
+    private int statAgility = CharacterStats.BASE_VALUE;
+
     @Column(name = "skill_points", nullable = false)
     private int skillPoints = 10;
 
@@ -225,6 +228,14 @@ public class User {
         this.statLuck = statLuck;
     }
 
+    public int getStatAgility() {
+        return statAgility;
+    }
+
+    public void setStatAgility(int statAgility) {
+        this.statAgility = statAgility;
+    }
+
     public int getSkillPoints() {
         return skillPoints;
     }
@@ -273,6 +284,7 @@ public class User {
         setStatDefense(stats.defense());
         setStatSpirit(stats.spirit());
         setStatLuck(stats.luck());
+        setStatAgility(stats.agility());
     }
 
     public Instant getCreatedAt() {

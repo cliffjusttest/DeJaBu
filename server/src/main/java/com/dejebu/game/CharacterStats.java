@@ -12,7 +12,8 @@ public record CharacterStats(
         int vitality,
         int defense,
         int spirit,
-        int luck
+        int luck,
+        int agility
 ) {
 
     public static final int BASE_VALUE = 0;
@@ -21,7 +22,7 @@ public record CharacterStats(
     public static final int MAX_VALUE = 99;
 
     public static CharacterStats zeroBase() {
-        return new CharacterStats(BASE_VALUE, BASE_VALUE, BASE_VALUE, BASE_VALUE, BASE_VALUE, BASE_VALUE);
+        return new CharacterStats(BASE_VALUE, BASE_VALUE, BASE_VALUE, BASE_VALUE, BASE_VALUE, BASE_VALUE, BASE_VALUE);
     }
 
     public static CharacterStats fromUser(User user) {
@@ -31,12 +32,13 @@ public record CharacterStats(
                 user.getStatVitality(),
                 user.getStatDefense(),
                 user.getStatSpirit(),
-                user.getStatLuck()
+                user.getStatLuck(),
+                user.getStatAgility()
         );
     }
 
     public int totalPoints() {
-        return might + intelligence + vitality + defense + spirit + luck;
+        return might + intelligence + vitality + defense + spirit + luck + agility;
     }
 
     public void validate() {
@@ -46,6 +48,7 @@ public record CharacterStats(
         validateStat("防禦", defense);
         validateStat("精神", spirit);
         validateStat("幸運", luck);
+        validateStat("敏捷", agility);
     }
 
     public void validateCreation() {
@@ -92,6 +95,7 @@ public record CharacterStats(
         node.put("defense", defense);
         node.put("spirit", spirit);
         node.put("luck", luck);
+        node.put("agility", agility);
         return node;
     }
 
