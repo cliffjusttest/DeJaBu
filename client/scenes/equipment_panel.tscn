@@ -29,60 +29,122 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -380.0
-offset_top = -280.0
-offset_right = 380.0
-offset_bottom = 280.0
+offset_left = -460.0
+offset_top = -300.0
+offset_right = 460.0
+offset_bottom = 300.0
 grow_horizontal = 2
 grow_vertical = 2
 
 [node name="Margin" type="MarginContainer" parent="Panel"]
 layout_mode = 2
-theme_override_constants/margin_left = 20
-theme_override_constants/margin_top = 16
-theme_override_constants/margin_right = 20
-theme_override_constants/margin_bottom = 16
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 14
 
 [node name="VBox" type="VBoxContainer" parent="Panel/Margin"]
 layout_mode = 2
-theme_override_constants/separation = 10
+theme_override_constants/separation = 8
 
 [node name="TitleLabel" type="Label" parent="Panel/Margin/VBox"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 22
-text = "裝備管理"
+theme_override_font_sizes/font_size = 20
+text = "背包"
 horizontal_alignment = 1
 
 [node name="Separator" type="HSeparator" parent="Panel/Margin/VBox"]
 layout_mode = 2
 
+[node name="TabBar" type="HBoxContainer" parent="Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="TabEquip" type="Button" parent="Panel/Margin/VBox/TabBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "裝備"
+
+[node name="TabItems" type="Button" parent="Panel/Margin/VBox/TabBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "道具"
+
 [node name="Content" type="HBoxContainer" parent="Panel/Margin/VBox"]
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_constants/separation = 12
+theme_override_constants/separation = 10
 
-[node name="EquippedScroll" type="ScrollContainer" parent="Panel/Margin/VBox/Content"]
+[node name="UnitListSection" type="VBoxContainer" parent="Panel/Margin/VBox/Content"]
+layout_mode = 2
+custom_minimum_size = Vector2(148, 0)
+
+[node name="SectionTitle" type="Label" parent="Panel/Margin/VBox/Content/UnitListSection"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "角色 / 夥伴"
+
+[node name="UnitListScroll" type="ScrollContainer" parent="Panel/Margin/VBox/Content/UnitListSection"]
+layout_mode = 2
+size_flags_vertical = 3
+custom_minimum_size = Vector2(0, 260)
+
+[node name="UnitList" type="VBoxContainer" parent="Panel/Margin/VBox/Content/UnitListSection/UnitListScroll"]
 layout_mode = 2
 size_flags_horizontal = 3
-custom_minimum_size = Vector2(0, 300)
-
-[node name="EquippedList" type="VBoxContainer" parent="Panel/Margin/VBox/Content/EquippedScroll"]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_constants/separation = 6
+theme_override_constants/separation = 4
 
 [node name="VSeparator" type="VSeparator" parent="Panel/Margin/VBox/Content"]
 layout_mode = 2
 
-[node name="ItemsScroll" type="ScrollContainer" parent="Panel/Margin/VBox/Content"]
+[node name="EquippedSection" type="VBoxContainer" parent="Panel/Margin/VBox/Content"]
 layout_mode = 2
 size_flags_horizontal = 3
-custom_minimum_size = Vector2(0, 300)
 
-[node name="ItemsList" type="VBoxContainer" parent="Panel/Margin/VBox/Content/ItemsScroll"]
+[node name="SectionTitle" type="Label" parent="Panel/Margin/VBox/Content/EquippedSection"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "已裝備"
+
+[node name="EquippedScroll" type="ScrollContainer" parent="Panel/Margin/VBox/Content/EquippedSection"]
+layout_mode = 2
+size_flags_vertical = 3
+custom_minimum_size = Vector2(0, 260)
+
+[node name="EquippedList" type="VBoxContainer" parent="Panel/Margin/VBox/Content/EquippedSection/EquippedScroll"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 6
+theme_override_constants/separation = 5
+
+[node name="VSeparator2" type="VSeparator" parent="Panel/Margin/VBox/Content"]
+layout_mode = 2
+
+[node name="InventorySection" type="VBoxContainer" parent="Panel/Margin/VBox/Content"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="SectionTitle" type="Label" parent="Panel/Margin/VBox/Content/InventorySection"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "背包裝備"
+
+[node name="InventoryScroll" type="ScrollContainer" parent="Panel/Margin/VBox/Content/InventorySection"]
+layout_mode = 2
+size_flags_vertical = 3
+custom_minimum_size = Vector2(0, 260)
+
+[node name="InventoryList" type="VBoxContainer" parent="Panel/Margin/VBox/Content/InventorySection/InventoryScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 5
+
+[node name="ItemsPlaceholder" type="Label" parent="Panel/Margin/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+text = "道具功能即將開放"
+horizontal_alignment = 1
+vertical_alignment = 1
+visible = false
 
 [node name="MessageLabel" type="Label" parent="Panel/Margin/VBox"]
 layout_mode = 2

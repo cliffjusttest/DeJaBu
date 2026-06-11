@@ -1,6 +1,7 @@
 package com.dejebu.entity;
 
 import com.dejebu.game.EquipmentSlot;
+import com.dejebu.game.ItemType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -23,6 +24,10 @@ public class Item {
 
     @Column(length = 256)
     private String description;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 16)
+    private ItemType type = ItemType.EQUIPMENT;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 16)
@@ -53,6 +58,9 @@ public class Item {
     private int bonusAgility = 0;
 
     public Long getId() { return id; }
+
+    public ItemType getType() { return type; }
+    public void setType(ItemType type) { this.type = type; }
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
