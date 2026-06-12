@@ -24,6 +24,7 @@ config/icon="res://icon.svg"
 
 NetworkClient="*res://scripts/network/network_client.gd"
 GameState="*res://scripts/game/game_state.gd"
+BattleHotkeys="*res://scripts/game/battle_hotkeys.gd"
 
 [display]
 

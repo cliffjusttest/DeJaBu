@@ -95,7 +95,7 @@ func move(x: int, y: int, direction: String, map_id: String = "village") -> void
 func start_battle() -> void:
 	send_message("BATTLE_START")
 
-func battle_action(action: String, target_id: int = -1, actor_id: int = -1, skill_id: int = -1) -> void:
+func battle_action(action: String, target_id: int = -1, actor_id: int = -1, skill_id: int = -1, item_id: int = -1) -> void:
 	var payload := {"action": action}
 	if target_id > 0:
 		payload["targetId"] = target_id
@@ -103,6 +103,8 @@ func battle_action(action: String, target_id: int = -1, actor_id: int = -1, skil
 		payload["actorId"] = actor_id
 	if skill_id > 0:
 		payload["skillId"] = skill_id
+	if item_id > 0:
+		payload["itemId"] = item_id
 	send_message("BATTLE_ACTION", payload)
 
 func npc_interact(npc_id: String, map_id: String) -> void:

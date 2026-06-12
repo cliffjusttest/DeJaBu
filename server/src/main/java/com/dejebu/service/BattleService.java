@@ -11,10 +11,13 @@ import com.dejebu.game.Element;
 import com.dejebu.game.ElementRelation;
 import com.dejebu.game.ElementRelation.ElementMatchup;
 import com.dejebu.game.EnemyBattleAi;
+import com.dejebu.game.ItemType;
 import com.dejebu.game.SkillCombatCalculator;
 import com.dejebu.game.SkillTargetResolver;
+import com.dejebu.game.SkillTargetSide;
 import com.dejebu.game.WildMonsterInstance;
 import com.dejebu.repository.MonsterTemplateSkillRepository;
+import com.dejebu.repository.UserInventoryRepository;
 import com.dejebu.repository.UserRepository;
 import com.dejebu.service.CompanionService.CaptureResult;
 import com.dejebu.service.EncounterService.PendingEncounter;
@@ -52,6 +55,7 @@ public class BattleService {
     private final ProgressionService progressionService;
     private final MonsterTemplateSkillRepository monsterTemplateSkillRepository;
     private final AuthService authService;
+    private final UserInventoryRepository inventoryRepository;
     private final Map<String, BattleState> activeBattles = new ConcurrentHashMap<>();
 
     public BattleService(
@@ -62,7 +66,8 @@ public class BattleService {
             UserRepository userRepository,
             ProgressionService progressionService,
             MonsterTemplateSkillRepository monsterTemplateSkillRepository,
-            AuthService authService
+            AuthService authService,
+            UserInventoryRepository inventoryRepository
     ) {
         this.objectMapper = objectMapper;
         this.encounterService = encounterService;
@@ -72,6 +77,7 @@ public class BattleService {
         this.progressionService = progressionService;
         this.monsterTemplateSkillRepository = monsterTemplateSkillRepository;
         this.authService = authService;
+        this.inventoryRepository = inventoryRepository;
     }
 
     @Transactional(readOnly = true)
@@ -102,8 +108,21 @@ public class BattleService {
                 playerSkills
         );
         equipEnemySkills(state);
+        state.consumables.addAll(loadConsumables(userId));
         activeBattles.put(sessionId, state);
         return toBattleSnapshot(state);
+    }
+
+    private List<ConsumableInfo> loadConsumables(Long userId) {
+        return inventoryRepository.findByUserId(userId).stream()
+                .filter(inv -> inv.getItem().getType() == ItemType.CONSUMABLE)
+                .map(inv -> new ConsumableInfo(
+                        inv.getItem().getId(),
+                        inv.getItem().getName(),
+                        inv.getItem().getHealHp(),
+                        inv.getQuantity()
+                ))
+                .toList();
     }
 
     private void equipEnemySkills(BattleState state) {
@@ -124,7 +143,8 @@ public class BattleService {
 
     // ── Planning Phase ───────────────────────────────────────────────────────
 
-    public ObjectNode resolveAction(String sessionId, String action, Integer targetId, Integer actorId, Long skillId) {
+    @Transactional
+    public ObjectNode resolveAction(String sessionId, String action, Integer targetId, Integer actorId, Long skillId, Long itemId) {
         BattleState state = activeBattles.get(sessionId);
         if (state == null) {
             throw new IllegalStateException("No active battle for session");
@@ -142,8 +162,8 @@ public class BattleService {
             throw new IllegalArgumentException("該單位本回合已指定行動");
         }
 
-        validatePlanAction(state, actor, action, targetId, skillId);
-        state.pendingActions.put(actorId, new PlannedAction(action, targetId, skillId));
+        validatePlanAction(state, actor, action, targetId, skillId, itemId);
+        state.pendingActions.put(actorId, new PlannedAction(action, targetId, skillId, itemId));
         state.activeActorId = findNextUnplannedActor(state);
 
         boolean allPlanned = aliveAlliesInActionOrder(state).stream()
@@ -159,7 +179,7 @@ public class BattleService {
         return executeRound(state, sessionId);
     }
 
-    private void validatePlanAction(BattleState state, BattleUnit actor, String action, Integer targetId, Long skillId) {
+    private void validatePlanAction(BattleState state, BattleUnit actor, String action, Integer targetId, Long skillId, Long itemId) {
         switch (action) {
             case "attack" -> {
                 if (targetId == null || targetId <= 0) throw new IllegalArgumentException("請選擇攻擊目標");
@@ -180,6 +200,11 @@ public class BattleService {
                 BattleUnit target = findUnit(state.enemies, targetId)
                         .orElseThrow(() -> new IllegalArgumentException("無效的捕捉目標"));
                 if (!target.isCapturable()) throw new IllegalArgumentException("此怪物無法捕捉");
+            }
+            case "item" -> {
+                if (itemId == null || itemId <= 0) throw new IllegalArgumentException("請指定道具");
+                findConsumable(state, itemId)
+                        .orElseThrow(() -> new IllegalArgumentException("背包中沒有此道具"));
             }
             case "defend", "flee" -> { /* always valid */ }
             default -> throw new IllegalArgumentException("Unknown battle action: " + action);
@@ -388,7 +413,7 @@ public class BattleService {
                 assigned.add(partner.getId());
                 state.comboFollowers.put(partner.getId(), leader.getId());
                 BattleUnit target = aliveAllies.get(random.nextInt(aliveAllies.size()));
-                state.enemyComboPlans.put(leader.getId(), new PlannedAction("attack", target.getId(), null));
+                state.enemyComboPlans.put(leader.getId(), new PlannedAction("attack", target.getId(), null, null));
                 int k = j + 1;
                 while (k <= sorted.size()) {
                     k = nextUnassigned(sorted, assigned, k);
@@ -453,8 +478,9 @@ public class BattleService {
         int targetId = leaderPlan.targetId();
         Optional<BattleUnit> targetOpt = findUnit(state.enemies, targetId);
         if (targetOpt.isEmpty() || !targetOpt.get().isAlive()) {
-            appendMessage(result, "連擊目標已被擊倒，連擊取消");
-            return;
+            targetOpt = pickFallbackEnemy(state);
+            if (targetOpt.isEmpty()) return;
+            appendMessage(result, "連擊目標已被擊倒，轉移至 " + targetOpt.get().getName());
         }
         BattleUnit comboTarget = targetOpt.get();
 
@@ -618,11 +644,17 @@ public class BattleService {
         switch (plan.action()) {
             case "attack" -> {
                 Optional<BattleUnit> target = findUnit(state.enemies, plan.targetId());
+                int resolveTargetId = plan.targetId();
                 if (target.isEmpty() || !target.get().isAlive()) {
-                    appendMessage(result, actor.getName() + " 的目標已被擊倒，跳過行動");
-                    return;
+                    Optional<BattleUnit> fallback = pickFallbackEnemy(state);
+                    if (fallback.isEmpty()) {
+                        appendMessage(result, actor.getName() + " 的目標已被擊倒，無其他目標");
+                        return;
+                    }
+                    appendMessage(result, actor.getName() + " 的目標已被擊倒，轉移至 " + fallback.get().getName());
+                    resolveTargetId = fallback.get().getId();
                 }
-                resolveAttack(state, actor, plan.targetId(), random, result, 1.0);
+                resolveAttack(state, actor, resolveTargetId, random, result, 1.0);
             }
             case "skill" -> {
                 BattleSkillRuntime skill = actor.findSkill(plan.skillId());
@@ -632,11 +664,17 @@ public class BattleService {
                 }
                 List<BattleUnit> pool = skillTargetPool(state, actor, skill);
                 Optional<BattleUnit> target = findUnit(pool, plan.targetId());
-                if (!skill.isHealSkill() && (target.isEmpty() || !target.get().isAlive())) {
-                    appendMessage(result, actor.getName() + " 的技能目標已被擊倒，跳過行動");
-                    return;
+                int resolveSkillTargetId = plan.targetId();
+                if (!skill.isHealSkill() && skill.getTargetSide() != SkillTargetSide.ALLY && (target.isEmpty() || !target.get().isAlive())) {
+                    Optional<BattleUnit> fallback = pickFallbackEnemy(state);
+                    if (fallback.isEmpty()) {
+                        appendMessage(result, actor.getName() + " 的技能目標已被擊倒，無其他目標");
+                        return;
+                    }
+                    appendMessage(result, actor.getName() + " 的技能目標已被擊倒，轉移至 " + fallback.get().getName());
+                    resolveSkillTargetId = fallback.get().getId();
                 }
-                resolveSkill(state, actor, plan.skillId(), plan.targetId(), random, result, 1.0);
+                resolveSkill(state, actor, plan.skillId(), resolveSkillTargetId, random, result, 1.0);
             }
             case "capture" -> {
                 Optional<BattleUnit> target = findUnit(state.enemies, plan.targetId());
@@ -651,7 +689,42 @@ public class BattleService {
                 appendMessage(result, actor.getName() + " 採取防禦姿態");
             }
             case "flee" -> resolveFlee(state, actor, random, result);
+            case "item" -> resolveItemUse(state, actor, plan.itemId(), result);
         }
+    }
+
+    private void resolveItemUse(BattleState state, BattleUnit actor, Long itemId, ObjectNode result) {
+        ConsumableInfo info = findConsumable(state, itemId)
+                .orElseThrow(() -> new IllegalArgumentException("背包中沒有此道具"));
+
+        int healed = 0;
+        if (info.healHp() > 0) {
+            int before = actor.getHp();
+            actor.setHp(Math.min(actor.getMaxHp(), actor.getHp() + info.healHp()));
+            healed = actor.getHp() - before;
+        }
+
+        // Update in-memory cache
+        state.consumables.remove(info);
+        if (info.quantity() > 1) {
+            state.consumables.add(new ConsumableInfo(info.itemId(), info.name(), info.healHp(), info.quantity() - 1));
+        }
+
+        // Persist inventory change
+        inventoryRepository.findByUserIdAndItemId(state.userId, itemId)
+                .stream().findFirst()
+                .ifPresent(inv -> {
+                    if (inv.getQuantity() <= 1) {
+                        inventoryRepository.delete(inv);
+                    } else {
+                        inv.setQuantity(inv.getQuantity() - 1);
+                    }
+                });
+
+        String msg = healed > 0
+                ? actor.getName() + " 使用了「" + info.name() + "」，恢復了 " + healed + " 點 HP"
+                : actor.getName() + " 使用了「" + info.name() + "」";
+        appendMessage(result, msg);
     }
 
 
@@ -755,7 +828,7 @@ public class BattleService {
         List<BattleUnit> targetPool = skillTargetPool(state, actor, skill);
         BattleUnit anchor = findUnit(targetPool, targetId)
                 .orElseThrow(() -> new IllegalArgumentException("無效的技能目標"));
-        if (!anchor.isAlive() && !skill.isHealSkill()) {
+        if (!anchor.isAlive() && !skill.isHealSkill() && skill.getTargetSide() != SkillTargetSide.ALLY) {
             throw new IllegalArgumentException("該目標已無法戰鬥");
         }
 
@@ -1034,8 +1107,20 @@ public class BattleService {
         }
     }
 
+    private Optional<ConsumableInfo> findConsumable(BattleState state, Long itemId) {
+        return state.consumables.stream()
+                .filter(c -> c.itemId() == itemId)
+                .findFirst();
+    }
+
     private Optional<BattleUnit> findUnit(List<BattleUnit> units, int id) {
         return units.stream().filter(unit -> unit.getId() == id).findFirst();
+    }
+
+    private Optional<BattleUnit> pickFallbackEnemy(BattleState state) {
+        return state.enemies.stream()
+                .filter(BattleUnit::isAlive)
+                .min(Comparator.comparingInt(BattleUnit::getSlot));
     }
 
     private boolean hasAliveAllies(BattleState state) {
@@ -1074,6 +1159,16 @@ public class BattleService {
                 : state.enemies.size() + " 名敵人");
         battle.put("activeActorId", state.activeActorId);
         battle.set("plannedActorIds", idsToJson(state.pendingActions.keySet()));
+        ArrayNode consumablesNode = objectMapper.createArrayNode();
+        for (ConsumableInfo c : state.consumables) {
+            ObjectNode cn = objectMapper.createObjectNode();
+            cn.put("id", c.itemId());
+            cn.put("name", c.name());
+            cn.put("healHp", c.healHp());
+            cn.put("quantity", c.quantity());
+            consumablesNode.add(cn);
+        }
+        battle.set("consumables", consumablesNode);
         return battle;
     }
 
@@ -1091,7 +1186,9 @@ public class BattleService {
 
     // ── Inner Types ──────────────────────────────────────────────────────────
 
-    private record PlannedAction(String action, Integer targetId, Long skillId) {}
+    private record PlannedAction(String action, Integer targetId, Long skillId, Long itemId) {}
+
+    private record ConsumableInfo(long itemId, String name, int healHp, int quantity) {}
 
     private static class BattleState {
         private final String sessionId;
@@ -1106,6 +1203,7 @@ public class BattleService {
         private int activeActorId;
         private final Map<Integer, PlannedAction> pendingActions = new LinkedHashMap<>();
         private final Set<Integer> defendingUnits = new HashSet<>();
+        private final List<ConsumableInfo> consumables = new ArrayList<>();
         // enemyUnitId → list of ally unit ids that landed the killing blow
         private final Map<Integer, List<Integer>> killCredits = new LinkedHashMap<>();
         // followerUnitId → leaderUnitId for active combos this round

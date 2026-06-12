@@ -271,7 +271,8 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
             Integer targetId = payload.has("targetId") ? payload.get("targetId").asInt() : null;
             Integer actorId = payload.has("actorId") ? payload.get("actorId").asInt() : null;
             Long skillId = payload.has("skillId") ? payload.get("skillId").asLong() : null;
-            ObjectNode result = battleService.resolveAction(session.getId(), action, targetId, actorId, skillId);
+            Long itemId = payload.has("itemId") ? payload.get("itemId").asLong() : null;
+            ObjectNode result = battleService.resolveAction(session.getId(), action, targetId, actorId, skillId, itemId);
 
             if (result.path("battleOver").asBoolean() && result.path("victory").asBoolean()) {
                 Optional<Long> userIdOpt = sessionService.getUserId(session);

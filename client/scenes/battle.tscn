@@ -129,7 +129,29 @@ layout_mode = 2
 bbcode_enabled = true
 text = ""
 
-[node name="SkillsRow" type="HBoxContainer" parent="BattleUI/Margin/VBox"]
+[node name="SkillHotkeyBar" type="HBoxContainer" parent="BattleUI/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="ItemHotkeyBar" type="HBoxContainer" parent="BattleUI/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="SkillSubScroll" type="ScrollContainer" parent="BattleUI/Margin/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 64)
+visible = false
+
+[node name="SkillSubVBox" type="HBoxContainer" parent="BattleUI/Margin/VBox/SkillSubScroll"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="ItemSubScroll" type="ScrollContainer" parent="BattleUI/Margin/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 64)
+visible = false
+
+[node name="ItemSubVBox" type="HBoxContainer" parent="BattleUI/Margin/VBox/ItemSubScroll"]
 layout_mode = 2
 theme_override_constants/separation = 8
 
@@ -157,7 +179,19 @@ layout_mode = 2
 size_flags_horizontal = 3
 text = "4 - 捕捉"
 
+[node name="SkillsButton" type="Button" parent="BattleUI/Margin/VBox/ActionsRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "5 - 技能"
+
+[node name="ItemsButton" type="Button" parent="BattleUI/Margin/VBox/ActionsRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "6 - 道具"
+
 [connection signal="pressed" from="BattleUI/Margin/VBox/ActionsRow/AttackButton" to="." method="_on_attack_pressed"]
 [connection signal="pressed" from="BattleUI/Margin/VBox/ActionsRow/DefendButton" to="." method="_on_defend_pressed"]
 [connection signal="pressed" from="BattleUI/Margin/VBox/ActionsRow/FleeButton" to="." method="_on_flee_pressed"]
 [connection signal="pressed" from="BattleUI/Margin/VBox/ActionsRow/CaptureButton" to="." method="_on_capture_pressed"]
+[connection signal="pressed" from="BattleUI/Margin/VBox/ActionsRow/SkillsButton" to="." method="_on_skills_button_pressed"]
+[connection signal="pressed" from="BattleUI/Margin/VBox/ActionsRow/ItemsButton" to="." method="_on_items_button_pressed"]

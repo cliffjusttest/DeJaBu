@@ -19,10 +19,13 @@ extends Node2D
 @onready var quest_layer: CanvasLayer = $QuestLayer
 @onready var equipment_panel: Control = $EquipmentLayer/EquipmentPanel
 @onready var equipment_layer: CanvasLayer = $EquipmentLayer
+@onready var hotkey_panel: Control = $HotkeyLayer/HotkeyPanel
+@onready var hotkey_layer: CanvasLayer = $HotkeyLayer
 @onready var skills_button: Button = $UI/SkillsButton
 @onready var companions_button: Button = $UI/CompanionsButton
 @onready var quests_button: Button = $UI/QuestsButton
 @onready var equipment_button: Button = $UI/EquipmentButton
+@onready var hotkey_button: Button = $UI/HotkeyButton
 @onready var world: Node2D = $World
 @onready var ui: CanvasLayer = $UI
 
@@ -45,10 +48,12 @@ func _ready() -> void:
 	dialogue_panel.dialogue_closed.connect(_on_dialogue_closed)
 	quest_log_panel.closed.connect(_on_quest_log_closed)
 	equipment_panel.closed.connect(_on_equipment_panel_closed)
+	hotkey_panel.closed.connect(_on_hotkey_panel_closed)
 	skills_button.pressed.connect(_on_skills_button_pressed)
 	companions_button.pressed.connect(_on_companions_button_pressed)
 	quests_button.pressed.connect(_on_quests_button_pressed)
 	equipment_button.pressed.connect(_on_equipment_button_pressed)
+	hotkey_button.pressed.connect(_on_hotkey_button_pressed)
 	NetworkClient.connected.connect(_on_connected)
 	NetworkClient.disconnected.connect(_on_disconnected)
 	NetworkClient.connection_failed.connect(_on_connection_failed)
@@ -58,6 +63,7 @@ func _ready() -> void:
 	companions_button.hide()
 	quests_button.hide()
 	equipment_button.hide()
+	hotkey_button.hide()
 	status_label.text = "DeJaBu - 請登入"
 
 func _on_login_authenticated(auth_data: Dictionary) -> void:
@@ -126,7 +132,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if GameState.mode != GameState.Mode.EXPLORE:
 		return
 
-	if skill_tree_layer.visible or companion_layer.visible or quest_layer.visible or equipment_layer.visible:
+	if skill_tree_layer.visible or companion_layer.visible or quest_layer.visible or equipment_layer.visible or hotkey_layer.visible:
 		return
 
 	if event is InputEventKey and event.pressed and not event.echo:
@@ -145,6 +151,10 @@ func _unhandled_input(event: InputEvent) -> void:
 				return
 			KEY_E:
 				_toggle_equipment_panel()
+				get_viewport().set_input_as_handled()
+				return
+			KEY_H:
+				_toggle_hotkey_panel()
 				get_viewport().set_input_as_handled()
 				return
 			KEY_F:
@@ -409,7 +419,8 @@ func _on_battle_action_requested(
 	action: String,
 	target_id: int = -1,
 	actor_id: int = -1,
-	skill_id: int = -1
+	skill_id: int = -1,
+	item_id: int = -1
 ) -> void:
 	if GameState.mode != GameState.Mode.BATTLE:
 		return
@@ -417,10 +428,12 @@ func _on_battle_action_requested(
 		return
 	if action == "skill" and skill_id <= 0:
 		return
+	if action == "item" and item_id <= 0:
+		return
 	if actor_id <= 0:
 		return
 	battle_scene.set_actions_enabled(false)
-	NetworkClient.battle_action(action, target_id, actor_id, skill_id)
+	NetworkClient.battle_action(action, target_id, actor_id, skill_id, item_id)
 
 func _handle_npc_interact_ok(payload: Dictionary) -> void:
 	if payload.get("finished", false):
@@ -502,6 +515,7 @@ func _set_gameplay_visible(visible: bool) -> void:
 	companions_button.visible = visible
 	quests_button.visible = visible
 	equipment_button.visible = visible
+	hotkey_button.visible = visible
 
 func _on_skills_button_pressed() -> void:
 	_toggle_skill_tree()
@@ -559,6 +573,26 @@ func _toggle_equipment_panel() -> void:
 func _on_equipment_panel_closed() -> void:
 	equipment_panel.hide()
 	equipment_layer.hide()
+	_update_status()
+
+func _on_hotkey_button_pressed() -> void:
+	_toggle_hotkey_panel()
+
+func _toggle_hotkey_panel() -> void:
+	if hotkey_layer.visible:
+		hotkey_panel.hide()
+		hotkey_layer.hide()
+	else:
+		skill_tree_layer.hide()
+		companion_layer.hide()
+		quest_layer.hide()
+		equipment_layer.hide()
+		hotkey_layer.show()
+		hotkey_panel.open()
+
+func _on_hotkey_panel_closed() -> void:
+	hotkey_panel.hide()
+	hotkey_layer.hide()
 	_update_status()
 
 func _show_login_screen(message: String = "") -> void:

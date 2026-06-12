@@ -1,7 +1,7 @@
 class_name BattleScene
 extends CanvasLayer
 
-signal battle_action_requested(action: String, target_id: int, actor_id: int, skill_id: int)
+signal battle_action_requested(action: String, target_id: int, actor_id: int, skill_id: int, item_id: int)
 
 const SLOTS_PER_ROW := 5
 const ROW_COUNT := 2
@@ -18,8 +18,15 @@ enum TargetMode { NONE, ATTACK, CAPTURE, SKILL }
 @onready var log_label: RichTextLabel = $BattleUI/Margin/VBox/LogLabel
 @onready var attack_button: Button = $BattleUI/Margin/VBox/ActionsRow/AttackButton
 @onready var capture_button: Button = $BattleUI/Margin/VBox/ActionsRow/CaptureButton
+@onready var skills_button: Button = $BattleUI/Margin/VBox/ActionsRow/SkillsButton
+@onready var items_button: Button = $BattleUI/Margin/VBox/ActionsRow/ItemsButton
 @onready var hint_label: Label = $BattleUI/Margin/VBox/HintLabel
-@onready var skills_row: HBoxContainer = $BattleUI/Margin/VBox/SkillsRow
+@onready var skill_hotkey_bar: HBoxContainer = $BattleUI/Margin/VBox/SkillHotkeyBar
+@onready var item_hotkey_bar: HBoxContainer = $BattleUI/Margin/VBox/ItemHotkeyBar
+@onready var skill_sub_scroll: ScrollContainer = $BattleUI/Margin/VBox/SkillSubScroll
+@onready var skill_sub_vbox: HBoxContainer = $BattleUI/Margin/VBox/SkillSubScroll/SkillSubVBox
+@onready var item_sub_scroll: ScrollContainer = $BattleUI/Margin/VBox/ItemSubScroll
+@onready var item_sub_vbox: HBoxContainer = $BattleUI/Margin/VBox/ItemSubScroll/ItemSubVBox
 
 var _enemy_slots: Array[BattleSlot] = []
 var _ally_slots: Array[BattleSlot] = []
@@ -29,6 +36,7 @@ var _selected_actor_id := -1
 var _planned_actor_ids: Array = []
 var _pending_skill_id := -1
 var _pending_skill_targets_allies := false
+var _battle_consumables: Array = []
 
 func _ready() -> void:
 	_build_formation_grids()
@@ -36,8 +44,10 @@ func _ready() -> void:
 
 func show_battle(battle_data: Dictionary) -> void:
 	_cancel_target_selection()
+	_cancel_sub_panels()
 	_actions_enabled = true
 	_sync_actor_state(battle_data)
+	_update_consumables(battle_data)
 	_update_action_buttons()
 	update_battle_data(battle_data)
 	log_label.clear()
@@ -45,12 +55,14 @@ func show_battle(battle_data: Dictionary) -> void:
 
 func hide_battle() -> void:
 	_cancel_target_selection()
+	_cancel_sub_panels()
 	hide()
 
 func update_battle_data(battle_data: Dictionary) -> void:
 	_render_formation(enemy_grid, _enemy_slots, battle_data.get("enemies", []))
 	_render_formation(ally_grid, _ally_slots, battle_data.get("allies", []))
 	_sync_actor_state(battle_data)
+	_update_consumables(battle_data)
 
 	var player_element := str(
 		battle_data.get("playerElementName", ElementData.display_name(str(battle_data.get("playerElement", ""))))
@@ -73,13 +85,20 @@ func update_battle_data(battle_data: Dictionary) -> void:
 
 	_refresh_target_highlights()
 	_refresh_actor_highlights()
-	_render_skill_buttons()
+	_render_hotkey_bars()
+
+func _update_consumables(battle_data: Dictionary) -> void:
+	var consumables: Variant = battle_data.get("consumables", [])
+	if typeof(consumables) == TYPE_ARRAY:
+		_battle_consumables = consumables
 
 func append_log(text: String) -> void:
 	log_label.append_text(text + "\n")
 
 func set_actions_enabled(enabled: bool) -> void:
 	_actions_enabled = enabled
+	if not enabled:
+		_cancel_sub_panels()
 	_update_action_buttons()
 
 func play_attack_animations(events: Array) -> void:
@@ -166,6 +185,207 @@ func _sync_actor_state(battle_data: Dictionary) -> void:
 		for actor_id in planned:
 			_planned_actor_ids.append(int(actor_id))
 
+# ── Sub-panels ────────────────────────────────────────────────────────────────
+
+func _cancel_sub_panels() -> void:
+	skill_sub_scroll.hide()
+	item_sub_scroll.hide()
+
+func _on_skills_button_pressed() -> void:
+	if not _actions_enabled:
+		return
+	if skill_sub_scroll.visible:
+		skill_sub_scroll.hide()
+	else:
+		item_sub_scroll.hide()
+		_render_skill_sub_panel()
+		skill_sub_scroll.show()
+
+func _on_items_button_pressed() -> void:
+	if not _actions_enabled:
+		return
+	if item_sub_scroll.visible:
+		item_sub_scroll.hide()
+	else:
+		skill_sub_scroll.hide()
+		_render_item_sub_panel()
+		item_sub_scroll.show()
+
+func _render_skill_sub_panel() -> void:
+	for child in skill_sub_vbox.get_children():
+		child.queue_free()
+
+	var skills := _active_actor_skills()
+	if skills.is_empty():
+		var label := Label.new()
+		label.text = "無可用技能"
+		skill_sub_vbox.add_child(label)
+		return
+
+	for entry in skills:
+		if typeof(entry) != TYPE_DICTIONARY:
+			continue
+		var skill: Dictionary = entry
+		var skill_id := int(skill.get("skillId", 0))
+		var skill_level := int(skill.get("skillLevel", 1))
+		var cd := int(skill.get("cooldownRemaining", 0))
+		var can_use := bool(skill.get("canUse", true))
+		var btn := Button.new()
+		btn.text = "%s Lv.%d" % [skill.get("name", "技能"), skill_level]
+		if cd > 0:
+			btn.text += "\n(CD %d)" % cd
+		btn.custom_minimum_size = Vector2(90, 0)
+		btn.disabled = not _actions_enabled or not can_use
+		var targets_allies := str(skill.get("targetSide", "ENEMY")) == "ALLY"
+		btn.pressed.connect(_on_skill_sub_pressed.bind(skill_id, targets_allies))
+		skill_sub_vbox.add_child(btn)
+
+func _render_item_sub_panel() -> void:
+	for child in item_sub_vbox.get_children():
+		child.queue_free()
+
+	if _battle_consumables.is_empty():
+		var label := Label.new()
+		label.text = "無可用道具"
+		item_sub_vbox.add_child(label)
+		return
+
+	for item_data in _battle_consumables:
+		if typeof(item_data) != TYPE_DICTIONARY:
+			continue
+		var item_id := int(item_data.get("id", 0))
+		var quantity := int(item_data.get("quantity", 0))
+		var btn := Button.new()
+		btn.text = "%s\nx%d" % [item_data.get("name", "道具"), quantity]
+		btn.custom_minimum_size = Vector2(90, 0)
+		btn.disabled = not _actions_enabled
+		btn.pressed.connect(_on_item_sub_pressed.bind(item_id))
+		item_sub_vbox.add_child(btn)
+
+func _on_skill_sub_pressed(skill_id: int, targets_allies: bool) -> void:
+	skill_sub_scroll.hide()
+	_on_skill_pressed(skill_id, targets_allies)
+
+func _on_item_sub_pressed(item_id: int) -> void:
+	item_sub_scroll.hide()
+	battle_action_requested.emit("item", -1, _selected_actor_id, -1, item_id)
+
+# ── Hotkey bars ───────────────────────────────────────────────────────────────
+
+func _get_actor_slot() -> int:
+	for slot in _ally_slots:
+		if slot.unit_id == _selected_actor_id:
+			return slot.slot_index
+	return -1
+
+func _render_hotkey_bars() -> void:
+	_render_skill_hotkey_bar()
+	_render_item_hotkey_bar()
+
+func _render_skill_hotkey_bar() -> void:
+	for child in skill_hotkey_bar.get_children():
+		child.queue_free()
+
+	var actor_slot := _get_actor_slot()
+	var skills_by_id: Dictionary = {}
+	for s in _active_actor_skills():
+		if typeof(s) == TYPE_DICTIONARY:
+			skills_by_id[int(s.get("skillId", -1))] = s
+
+	for i in range(12):
+		var btn := Button.new()
+		var key_name := "F%d" % (i + 1)
+		if actor_slot >= 0:
+			var skill_id := BattleHotkeys.get_skill_hotkey(actor_slot, i)
+			if skill_id > 0 and skills_by_id.has(skill_id):
+				var s: Dictionary = skills_by_id[skill_id]
+				var cd := int(s.get("cooldownRemaining", 0))
+				var can_use := bool(s.get("canUse", true))
+				btn.text = "%s\n%s" % [key_name, s.get("name", "?")]
+				if cd > 0:
+					btn.text += "\nCD%d" % cd
+				btn.disabled = not _actions_enabled or not can_use
+			elif skill_id > 0:
+				btn.text = "%s\n(?)" % key_name
+				btn.disabled = true
+			else:
+				btn.text = "%s\n(空)" % key_name
+				btn.disabled = true
+		else:
+			btn.text = "%s\n(空)" % key_name
+			btn.disabled = true
+		btn.custom_minimum_size = Vector2(54, 50)
+		skill_hotkey_bar.add_child(btn)
+
+func _render_item_hotkey_bar() -> void:
+	for child in item_hotkey_bar.get_children():
+		child.queue_free()
+
+	var items_by_id: Dictionary = {}
+	for item_data in _battle_consumables:
+		if typeof(item_data) == TYPE_DICTIONARY:
+			items_by_id[int(item_data.get("id", -1))] = item_data
+
+	for i in range(12):
+		var btn := Button.new()
+		var key_name := "SF%d" % (i + 1)
+		var item_id := BattleHotkeys.get_item_hotkey(i)
+		if item_id > 0:
+			var quantity := 0
+			var item_name := "?"
+			if items_by_id.has(item_id):
+				var d: Dictionary = items_by_id[item_id]
+				quantity = int(d.get("quantity", 0))
+				item_name = str(d.get("name", "?"))
+			btn.text = "%s\n%s\nx%d" % [key_name, item_name, quantity]
+			btn.disabled = not _actions_enabled or quantity <= 0
+		else:
+			btn.text = "%s\n(空)" % key_name
+			btn.disabled = true
+		btn.custom_minimum_size = Vector2(54, 50)
+		item_hotkey_bar.add_child(btn)
+
+# ── Hotkey triggers ───────────────────────────────────────────────────────────
+
+func _trigger_skill_hotkey(index: int) -> void:
+	if not _actions_enabled:
+		return
+	var actor_slot := _get_actor_slot()
+	if actor_slot < 0:
+		return
+	var skill_id := BattleHotkeys.get_skill_hotkey(actor_slot, index)
+	if skill_id <= 0:
+		return
+	for skill_data in _active_actor_skills():
+		if typeof(skill_data) != TYPE_DICTIONARY:
+			continue
+		if int(skill_data.get("skillId", 0)) == skill_id:
+			if not bool(skill_data.get("canUse", true)):
+				return
+			var targets_allies := str(skill_data.get("targetSide", "ENEMY")) == "ALLY"
+			_cancel_sub_panels()
+			_on_skill_pressed(skill_id, targets_allies)
+			return
+
+func _trigger_item_hotkey(index: int) -> void:
+	if not _actions_enabled:
+		return
+	var item_id := BattleHotkeys.get_item_hotkey(index)
+	if item_id <= 0:
+		return
+	for item_data in _battle_consumables:
+		if typeof(item_data) != TYPE_DICTIONARY:
+			continue
+		if int(item_data.get("id", 0)) == item_id:
+			var quantity := int(item_data.get("quantity", 0))
+			if quantity <= 0:
+				return
+			_cancel_sub_panels()
+			battle_action_requested.emit("item", -1, _selected_actor_id, -1, item_id)
+			return
+
+# ── Target selection ──────────────────────────────────────────────────────────
+
 func _enter_target_selection(mode: TargetMode) -> void:
 	if not _actions_enabled:
 		return
@@ -197,8 +417,8 @@ func _cancel_target_selection() -> void:
 func _default_hint_text() -> String:
 	var actor_name := _selected_actor_name()
 	if _is_companion_actor():
-		return "為 %s 指定行動 | 點選未指定的單位切換 | 1 攻擊 / 2 防禦 / 3 逃跑" % actor_name
-	return "為 %s 指定行動 | 點選未指定的單位切換 | 1 攻擊 / 4 捕捉 / 2 防禦 / 3 逃跑" % actor_name
+		return "為 %s 指定行動 | 1 攻擊 / 2 防禦 / 3 逃跑 / 5 技能 / 6 道具" % actor_name
+	return "為 %s 指定行動 | 1 攻擊 / 4 捕捉 / 2 防禦 / 3 逃跑 / 5 技能 / 6 道具" % actor_name
 
 func _selected_actor_name() -> String:
 	for slot in _ally_slots:
@@ -260,11 +480,11 @@ func _on_enemy_slot_pressed(_slot_index: int, unit_id: int) -> void:
 	if _target_mode == TargetMode.SKILL:
 		var skill_id := _pending_skill_id
 		_cancel_target_selection()
-		battle_action_requested.emit("skill", unit_id, _selected_actor_id, skill_id)
+		battle_action_requested.emit("skill", unit_id, _selected_actor_id, skill_id, -1)
 		return
 	var action := "capture" if _target_mode == TargetMode.CAPTURE else "attack"
 	_cancel_target_selection()
-	battle_action_requested.emit(action, unit_id, _selected_actor_id, -1)
+	battle_action_requested.emit(action, unit_id, _selected_actor_id, -1, -1)
 
 func _on_ally_slot_pressed(_slot_index: int, unit_id: int) -> void:
 	if not _actions_enabled:
@@ -272,7 +492,7 @@ func _on_ally_slot_pressed(_slot_index: int, unit_id: int) -> void:
 	if _target_mode == TargetMode.SKILL and _pending_skill_targets_allies:
 		var skill_id := _pending_skill_id
 		_cancel_target_selection()
-		battle_action_requested.emit("skill", unit_id, _selected_actor_id, skill_id)
+		battle_action_requested.emit("skill", unit_id, _selected_actor_id, skill_id, -1)
 		return
 	if _target_mode != TargetMode.NONE:
 		return
@@ -287,24 +507,41 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not visible or not _actions_enabled:
 		return
 	if event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode >= KEY_F1 and event.keycode <= KEY_F12:
+			var hotkey_index: int = event.keycode - KEY_F1
+			if event.shift_pressed:
+				_trigger_item_hotkey(hotkey_index)
+			else:
+				_trigger_skill_hotkey(hotkey_index)
+			get_viewport().set_input_as_handled()
+			return
 		match event.keycode:
 			KEY_1:
 				_on_attack_pressed()
 				get_viewport().set_input_as_handled()
 			KEY_2:
 				_cancel_target_selection()
-				battle_action_requested.emit("defend", -1, _selected_actor_id, -1)
+				battle_action_requested.emit("defend", -1, _selected_actor_id, -1, -1)
 				get_viewport().set_input_as_handled()
 			KEY_3:
 				_cancel_target_selection()
-				battle_action_requested.emit("flee", -1, _selected_actor_id, -1)
+				battle_action_requested.emit("flee", -1, _selected_actor_id, -1, -1)
 				get_viewport().set_input_as_handled()
 			KEY_4:
 				if not _is_companion_actor():
 					_on_capture_pressed()
 				get_viewport().set_input_as_handled()
+			KEY_5:
+				_on_skills_button_pressed()
+				get_viewport().set_input_as_handled()
+			KEY_6:
+				_on_items_button_pressed()
+				get_viewport().set_input_as_handled()
 			KEY_ESCAPE:
-				if _target_mode != TargetMode.NONE:
+				if skill_sub_scroll.visible or item_sub_scroll.visible:
+					_cancel_sub_panels()
+					get_viewport().set_input_as_handled()
+				elif _target_mode != TargetMode.NONE:
 					_cancel_target_selection()
 					get_viewport().set_input_as_handled()
 
@@ -332,13 +569,13 @@ func _on_defend_pressed() -> void:
 	if not _actions_enabled:
 		return
 	_cancel_target_selection()
-	battle_action_requested.emit("defend", -1, _selected_actor_id, -1)
+	battle_action_requested.emit("defend", -1, _selected_actor_id, -1, -1)
 
 func _on_flee_pressed() -> void:
 	if not _actions_enabled:
 		return
 	_cancel_target_selection()
-	battle_action_requested.emit("flee", -1, _selected_actor_id, -1)
+	battle_action_requested.emit("flee", -1, _selected_actor_id, -1, -1)
 
 func _on_skill_pressed(skill_id: int, targets_allies: bool) -> void:
 	if not _actions_enabled:
@@ -356,42 +593,17 @@ func _active_actor_skills() -> Array:
 				return skills
 	return []
 
-func _render_skill_buttons() -> void:
-	for child in skills_row.get_children():
-		child.queue_free()
-
-	var skills := _active_actor_skills()
-	if skills.is_empty():
-		var empty := Label.new()
-		empty.text = "無可用技能"
-		skills_row.add_child(empty)
-		return
-
-	for entry in skills:
-		if typeof(entry) != TYPE_DICTIONARY:
-			continue
-		var skill: Dictionary = entry
-		var button := Button.new()
-		var skill_id := int(skill.get("skillId", 0))
-		var skill_level := int(skill.get("skillLevel", 1))
-		var cd := int(skill.get("cooldownRemaining", 0))
-		var can_use := bool(skill.get("canUse", true))
-		button.text = "%s Lv.%d" % [skill.get("name", "技能"), skill_level]
-		if cd > 0:
-			button.text += " (CD %d)" % cd
-		button.disabled = not _actions_enabled or not can_use
-		var targets_allies := str(skill.get("targetSide", "ENEMY")) == "ALLY"
-		button.pressed.connect(_on_skill_pressed.bind(skill_id, targets_allies))
-		skills_row.add_child(button)
-
 func _update_action_buttons() -> void:
 	attack_button.disabled = not _actions_enabled
 	capture_button.disabled = not _actions_enabled or _is_companion_actor()
 	capture_button.visible = not _is_companion_actor()
 	$BattleUI/Margin/VBox/ActionsRow/DefendButton.disabled = not _actions_enabled
 	$BattleUI/Margin/VBox/ActionsRow/FleeButton.disabled = not _actions_enabled
-	_render_skill_buttons()
+	skills_button.disabled = not _actions_enabled
+	items_button.disabled = not _actions_enabled
+	_render_hotkey_bars()
 	if not _actions_enabled:
 		_cancel_target_selection()
+		_cancel_sub_panels()
 	elif _target_mode == TargetMode.NONE:
 		hint_label.text = _default_hint_text()
