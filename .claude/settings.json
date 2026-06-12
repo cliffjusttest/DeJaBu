@@ -12,7 +12,10 @@
       "Bash(grep -E \"\\\\.java$\")",
       "Bash(git show *)",
       "Bash(./mvnw compile *)",
-      "Bash(xargs cat *)"
+      "Bash(xargs cat *)",
+      "Bash(git -C /Users/cliff/other-project/DeJaBu diff)",
+      "Bash(git -C /Users/cliff/other-project/DeJaBu log --oneline -5)",
+      "Bash(git -C /Users/cliff/other-project/DeJaBu add README.md client/scenes/main.tscn client/scripts/main.gd client/scenes/status_panel.tscn client/scripts/ui/status_panel.gd client/scripts/ui/status_panel.gd.uid .claude/settings.json)"
     ]
   }
 }

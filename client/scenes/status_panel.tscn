@@ -1,0 +1,53 @@
+[gd_scene load_steps=2 format=3 uid="uid://dejebu_status_panel"]
+
+[ext_resource type="Script" path="res://scripts/ui/status_panel.gd" id="1_status"]
+
+[node name="StatusPanel" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_status")
+
+[node name="Panel" type="Panel" parent="."]
+offset_left = 30.0
+offset_top = 80.0
+offset_right = 720.0
+offset_bottom = 660.0
+
+[node name="Margin" type="MarginContainer" parent="Panel"]
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 680.0
+offset_bottom = 570.0
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="VBox" type="VBoxContainer" parent="Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="TitleLabel" type="Label" parent="Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "狀態總覽"
+
+[node name="MessageLabel" type="Label" parent="Panel/Margin/VBox"]
+layout_mode = 2
+text = ""
+
+[node name="Scroll" type="ScrollContainer" parent="Panel/Margin/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Content" type="VBoxContainer" parent="Panel/Margin/VBox/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+
+[node name="CloseButton" type="Button" parent="Panel/Margin/VBox"]
+layout_mode = 2
+text = "關閉 [C]"
+
+[node name="HTTPRequest" type="HTTPRequest" parent="."]

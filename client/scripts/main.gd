@@ -21,11 +21,14 @@ extends Node2D
 @onready var equipment_layer: CanvasLayer = $EquipmentLayer
 @onready var hotkey_panel: Control = $HotkeyLayer/HotkeyPanel
 @onready var hotkey_layer: CanvasLayer = $HotkeyLayer
+@onready var status_panel: Control = $StatusLayer/StatusPanel
+@onready var status_layer: CanvasLayer = $StatusLayer
 @onready var skills_button: Button = $UI/SkillsButton
 @onready var companions_button: Button = $UI/CompanionsButton
 @onready var quests_button: Button = $UI/QuestsButton
 @onready var equipment_button: Button = $UI/EquipmentButton
 @onready var hotkey_button: Button = $UI/HotkeyButton
+@onready var status_button: Button = $UI/StatusButton
 @onready var world: Node2D = $World
 @onready var ui: CanvasLayer = $UI
 
@@ -49,11 +52,13 @@ func _ready() -> void:
 	quest_log_panel.closed.connect(_on_quest_log_closed)
 	equipment_panel.closed.connect(_on_equipment_panel_closed)
 	hotkey_panel.closed.connect(_on_hotkey_panel_closed)
+	status_panel.closed.connect(_on_status_panel_closed)
 	skills_button.pressed.connect(_on_skills_button_pressed)
 	companions_button.pressed.connect(_on_companions_button_pressed)
 	quests_button.pressed.connect(_on_quests_button_pressed)
 	equipment_button.pressed.connect(_on_equipment_button_pressed)
 	hotkey_button.pressed.connect(_on_hotkey_button_pressed)
+	status_button.pressed.connect(_on_status_button_pressed)
 	NetworkClient.connected.connect(_on_connected)
 	NetworkClient.disconnected.connect(_on_disconnected)
 	NetworkClient.connection_failed.connect(_on_connection_failed)
@@ -64,6 +69,7 @@ func _ready() -> void:
 	quests_button.hide()
 	equipment_button.hide()
 	hotkey_button.hide()
+	status_button.hide()
 	status_label.text = "DeJaBu - 請登入"
 
 func _on_login_authenticated(auth_data: Dictionary) -> void:
@@ -132,11 +138,15 @@ func _unhandled_input(event: InputEvent) -> void:
 	if GameState.mode != GameState.Mode.EXPLORE:
 		return
 
-	if skill_tree_layer.visible or companion_layer.visible or quest_layer.visible or equipment_layer.visible or hotkey_layer.visible:
+	if skill_tree_layer.visible or companion_layer.visible or quest_layer.visible or equipment_layer.visible or hotkey_layer.visible or status_layer.visible:
 		return
 
 	if event is InputEventKey and event.pressed and not event.echo:
 		match event.keycode:
+			KEY_C:
+				_toggle_status_panel()
+				get_viewport().set_input_as_handled()
+				return
 			KEY_K:
 				_toggle_skill_tree()
 				get_viewport().set_input_as_handled()
@@ -216,6 +226,7 @@ func _on_disconnected() -> void:
 	companion_layer.hide()
 	dialogue_layer.hide()
 	quest_layer.hide()
+	status_layer.hide()
 	_show_login_screen("與伺服器斷線，請重新登入")
 
 func _on_connection_failed(reason: String) -> void:
@@ -279,6 +290,7 @@ func _handle_login_ok(payload: Dictionary) -> void:
 	dialogue_layer.hide()
 	quest_layer.hide()
 	equipment_layer.hide()
+	status_layer.hide()
 	_log(payload.get("message", "登入成功"))
 
 	if not GameState.player_appearance.is_empty():
@@ -516,6 +528,7 @@ func _set_gameplay_visible(visible: bool) -> void:
 	quests_button.visible = visible
 	equipment_button.visible = visible
 	hotkey_button.visible = visible
+	status_button.visible = visible
 
 func _on_skills_button_pressed() -> void:
 	_toggle_skill_tree()
@@ -575,6 +588,27 @@ func _on_equipment_panel_closed() -> void:
 	equipment_layer.hide()
 	_update_status()
 
+func _on_status_button_pressed() -> void:
+	_toggle_status_panel()
+
+func _toggle_status_panel() -> void:
+	if status_layer.visible:
+		status_panel.hide()
+		status_layer.hide()
+	else:
+		skill_tree_layer.hide()
+		companion_layer.hide()
+		quest_layer.hide()
+		equipment_layer.hide()
+		hotkey_layer.hide()
+		status_layer.show()
+		status_panel.open()
+
+func _on_status_panel_closed() -> void:
+	status_panel.hide()
+	status_layer.hide()
+	_update_status()
+
 func _on_hotkey_button_pressed() -> void:
 	_toggle_hotkey_panel()
 
@@ -614,21 +648,12 @@ func _update_status() -> void:
 		GameState.Mode.DIALOGUE: mode_text = "對話"
 		_: mode_text = "探索"
 	var pos := GameState.player_world_position
-	var element_name := ElementData.display_name(GameState.player_element) if not GameState.player_element.is_empty() else ""
-	var stats_text := CharacterStatsData.compact_text(GameState.player_stats)
-	var name_with_element := "%s（%s）" % [GameState.player_name, element_name] if not element_name.is_empty() else GameState.player_name
 	var map_name := world_map.get_map_name() if world_map.get_current_map_id() == GameState.player_map_id else MapRegistry.get_map_name(GameState.player_map_id)
-	status_label.text = "%s | %s | Lv.%d | HP %d/%d | EXP %d/%d | 技能點 %d | 夥伴 %d | 任務 %d | %s | X: %.0f  Y: %.0f | 模式: %s%s" % [
-		name_with_element,
-		stats_text,
+	status_label.text = "%s | Lv.%d | HP %d/%d | %s | X: %.0f  Y: %.0f | 模式: %s%s" % [
+		GameState.player_name,
 		GameState.player_level,
 		GameState.player_current_hp,
 		GameState.player_max_hp,
-		GameState.player_exp,
-		GameState.exp_to_next_level,
-		GameState.skill_points,
-		GameState.companions.size(),
-		GameState.active_quests.size(),
 		map_name,
 		pos.x,
 		pos.y,
