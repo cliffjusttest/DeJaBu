@@ -5,6 +5,7 @@ signal closed
 const API_STATUS  := "http://localhost:8080/api/backpack/status"
 const API_EQUIP   := "http://localhost:8080/api/backpack/equip"
 const API_UNEQUIP := "http://localhost:8080/api/backpack/unequip"
+const API_USE     := "http://localhost:8080/api/backpack/use"
 
 const SLOT_DISPLAY_NAMES := {
 	"HEAD":      "頭",
@@ -28,7 +29,8 @@ const TAB_ITEMS := 1
 @onready var inventory_container: VBoxContainer  = $Panel/Margin/VBox/Content/InventorySection/InventoryScroll/InventoryList
 @onready var equipped_title: Label               = $Panel/Margin/VBox/Content/EquippedSection/SectionTitle
 @onready var content_area: HBoxContainer         = $Panel/Margin/VBox/Content
-@onready var items_placeholder: Label            = $Panel/Margin/VBox/ItemsPlaceholder
+@onready var items_section: VBoxContainer        = $Panel/Margin/VBox/ItemsSection
+@onready var items_list_container: VBoxContainer = $Panel/Margin/VBox/ItemsSection/ItemsScroll/ItemsList
 @onready var message_label: Label                = $Panel/Margin/VBox/MessageLabel
 @onready var close_button: Button                = $Panel/Margin/VBox/CloseButton
 @onready var tab_equip: Button                   = $Panel/Margin/VBox/TabBar/TabEquip
@@ -113,6 +115,11 @@ func _on_request_completed(
 	_player_equipped = data.get("playerEquipped", {})
 	_companions      = data.get("companions", [])
 
+	if data.has("playerCurrentHp"):
+		GameState.player_current_hp = int(data.get("playerCurrentHp", GameState.player_current_hp))
+	if data.has("playerMaxHp"):
+		GameState.player_max_hp = int(data.get("playerMaxHp", GameState.player_max_hp))
+
 	var server_msg := str(data.get("message", ""))
 	_set_message(server_msg if not server_msg.is_empty() else "背包")
 
@@ -126,11 +133,12 @@ func _render() -> void:
 	_update_tab_buttons()
 	if _current_tab == TAB_ITEMS:
 		content_area.hide()
-		items_placeholder.show()
+		items_section.show()
+		_render_items()
 		return
 
 	content_area.show()
-	items_placeholder.hide()
+	items_section.hide()
 	_render_unit_list()
 
 	var is_player := _selected_id == -1
@@ -322,6 +330,67 @@ func _on_unequip_pressed(slot_key: String, companion_id: int) -> void:
 	if companion_id != -1:
 		body["companionId"] = companion_id
 	_request(API_UNEQUIP, body)
+
+func _render_items() -> void:
+	for child in items_list_container.get_children():
+		child.queue_free()
+
+	var consumables: Array = _inventory.filter(
+		func(i): return str(i.get("type", "")) == "CONSUMABLE"
+	)
+
+	if consumables.is_empty():
+		var label := Label.new()
+		label.text = "背包中沒有消耗道具"
+		label.modulate = Color(0.6, 0.6, 0.6)
+		items_list_container.add_child(label)
+		return
+
+	for item in consumables:
+		items_list_container.add_child(_create_consumable_card(item))
+
+func _create_consumable_card(item: Dictionary) -> PanelContainer:
+	var panel := PanelContainer.new()
+
+	var margin := MarginContainer.new()
+	for side in ["margin_left", "margin_top", "margin_right", "margin_bottom"]:
+		margin.add_theme_constant_override(side, 5)
+	panel.add_child(margin)
+
+	var hbox := HBoxContainer.new()
+	hbox.add_theme_constant_override("separation", 6)
+	margin.add_child(hbox)
+
+	var vbox := VBoxContainer.new()
+	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hbox.add_child(vbox)
+
+	var name_label := Label.new()
+	name_label.text = str(item.get("name", ""))
+	name_label.add_theme_font_size_override("font_size", 13)
+	vbox.add_child(name_label)
+
+	var desc_label := Label.new()
+	var heal := int(item.get("healHp", 0))
+	desc_label.text = str(item.get("description", "")) if heal == 0 else "恢復 %d HP" % heal
+	desc_label.modulate = Color(0.75, 0.75, 0.75)
+	vbox.add_child(desc_label)
+
+	var qty_label := Label.new()
+	qty_label.text = "數量：%d / 999" % int(item.get("quantity", 0))
+	qty_label.modulate = Color(0.75, 0.75, 0.75)
+	vbox.add_child(qty_label)
+
+	var use_btn := Button.new()
+	use_btn.text = "使用"
+	var item_id := int(item.get("id", 0))
+	use_btn.pressed.connect(_on_use_pressed.bind(item_id))
+	hbox.add_child(use_btn)
+
+	return panel
+
+func _on_use_pressed(item_id: int) -> void:
+	_request(API_USE, {"token": GameState.auth_token, "itemId": item_id})
 
 func _format_bonuses(item: Dictionary) -> String:
 	var parts: Array = []

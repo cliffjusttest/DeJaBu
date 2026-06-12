@@ -1,29 +1,29 @@
 package com.dejebu.entity;
 
 import jakarta.persistence.Column;
-import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.MapsId;
 import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "user_inventory")
 public class UserInventory {
 
-    @EmbeddedId
-    private UserInventoryId id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @MapsId("userId")
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
     @ManyToOne(fetch = FetchType.EAGER)
-    @MapsId("itemId")
-    @JoinColumn(name = "item_id")
+    @JoinColumn(name = "item_id", nullable = false)
     private Item item;
 
     @Column(nullable = false)
@@ -34,11 +34,10 @@ public class UserInventory {
     public UserInventory(User user, Item item, int quantity) {
         this.user = user;
         this.item = item;
-        this.id = new UserInventoryId(user.getId(), item.getId());
         this.quantity = quantity;
     }
 
-    public UserInventoryId getId() { return id; }
+    public Long getId() { return id; }
     public User getUser() { return user; }
     public Item getItem() { return item; }
     public int getQuantity() { return quantity; }

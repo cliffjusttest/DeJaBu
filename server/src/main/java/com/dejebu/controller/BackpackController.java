@@ -4,6 +4,7 @@ import com.dejebu.dto.BackpackEquipRequest;
 import com.dejebu.dto.BackpackResponse;
 import com.dejebu.dto.BackpackStatusRequest;
 import com.dejebu.dto.BackpackUnequipRequest;
+import com.dejebu.dto.UseConsumableRequest;
 import com.dejebu.entity.User;
 import com.dejebu.service.AuthService;
 import com.dejebu.service.BackpackService;
@@ -50,5 +51,12 @@ public class BackpackController {
             return backpackService.unequipFromCompanion(user, request.companionId(), request.slot());
         }
         return backpackService.unequipFromPlayer(user, request.slot());
+    }
+
+    @PostMapping("/use")
+    public BackpackResponse use(@Valid @RequestBody UseConsumableRequest request) {
+        User user = authService.validateToken(request.token())
+                .orElseThrow(() -> new IllegalArgumentException("登入已失效，請重新登入"));
+        return backpackService.useConsumable(user, request.itemId());
     }
 }

@@ -18,17 +18,22 @@ public record InventoryItemDto(
         int bonusSpirit,
         int bonusLuck,
         int bonusAgility,
+        int healHp,
         int quantity
 ) {
     public static InventoryItemDto from(UserInventory inv) {
+        return fromWithQuantity(inv, inv.getQuantity());
+    }
+
+    public static InventoryItemDto fromWithQuantity(UserInventory inv, int quantity) {
         Item item = inv.getItem();
         return new InventoryItemDto(
                 item.getId(),
                 item.getName(),
                 item.getDescription(),
                 item.getType().name(),
-                item.getSlot().name(),
-                item.getSlot().getDisplayName(),
+                item.getSlot() != null ? item.getSlot().name() : null,
+                item.getSlot() != null ? item.getSlot().getDisplayName() : null,
                 item.getRequiredLevel(),
                 item.getBonusMight(),
                 item.getBonusIntelligence(),
@@ -37,7 +42,8 @@ public record InventoryItemDto(
                 item.getBonusSpirit(),
                 item.getBonusLuck(),
                 item.getBonusAgility(),
-                inv.getQuantity()
+                item.getHealHp(),
+                quantity
         );
     }
 }

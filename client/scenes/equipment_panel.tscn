@@ -138,13 +138,25 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 5
 
-[node name="ItemsPlaceholder" type="Label" parent="Panel/Margin/VBox"]
+[node name="ItemsSection" type="VBoxContainer" parent="Panel/Margin/VBox"]
 layout_mode = 2
 size_flags_vertical = 3
-text = "道具功能即將開放"
-horizontal_alignment = 1
-vertical_alignment = 1
 visible = false
+
+[node name="SectionTitle" type="Label" parent="Panel/Margin/VBox/ItemsSection"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "消耗道具"
+
+[node name="ItemsScroll" type="ScrollContainer" parent="Panel/Margin/VBox/ItemsSection"]
+layout_mode = 2
+size_flags_vertical = 3
+custom_minimum_size = Vector2(0, 480)
+
+[node name="ItemsList" type="VBoxContainer" parent="Panel/Margin/VBox/ItemsSection/ItemsScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
 
 [node name="MessageLabel" type="Label" parent="Panel/Margin/VBox"]
 layout_mode = 2

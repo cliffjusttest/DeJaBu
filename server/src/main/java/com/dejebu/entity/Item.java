@@ -30,11 +30,14 @@ public class Item {
     private ItemType type = ItemType.EQUIPMENT;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 16)
+    @Column(length = 16)
     private EquipmentSlot slot;
 
     @Column(name = "required_level", nullable = false)
     private int requiredLevel = 1;
+
+    @Column(name = "heal_hp", nullable = false)
+    private int healHp = 0;
 
     @Column(name = "bonus_might", nullable = false)
     private int bonusMight = 0;
@@ -94,4 +97,7 @@ public class Item {
 
     public int getBonusAgility() { return bonusAgility; }
     public void setBonusAgility(int bonusAgility) { this.bonusAgility = bonusAgility; }
+
+    public int getHealHp() { return healHp; }
+    public void setHealHp(int healHp) { this.healHp = healHp; }
 }

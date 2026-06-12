@@ -11,16 +11,20 @@ import com.dejebu.entity.UserCompanion;
 import com.dejebu.entity.UserEquipment;
 import com.dejebu.entity.UserInventory;
 import com.dejebu.game.EquipmentSlot;
+import com.dejebu.game.ItemType;
 import com.dejebu.repository.CompanionEquipmentRepository;
 import com.dejebu.repository.UserCompanionRepository;
 import com.dejebu.repository.UserEquipmentRepository;
 import com.dejebu.repository.UserInventoryRepository;
+import com.dejebu.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class BackpackService {
@@ -29,16 +33,19 @@ public class BackpackService {
     private final UserEquipmentRepository userEquipmentRepository;
     private final CompanionEquipmentRepository companionEquipmentRepository;
     private final UserCompanionRepository companionRepository;
+    private final UserRepository userRepository;
 
     public BackpackService(
             UserInventoryRepository inventoryRepository,
             UserEquipmentRepository userEquipmentRepository,
             CompanionEquipmentRepository companionEquipmentRepository,
-            UserCompanionRepository companionRepository) {
+            UserCompanionRepository companionRepository,
+            UserRepository userRepository) {
         this.inventoryRepository = inventoryRepository;
         this.userEquipmentRepository = userEquipmentRepository;
         this.companionEquipmentRepository = companionEquipmentRepository;
         this.companionRepository = companionRepository;
+        this.userRepository = userRepository;
     }
 
     @Transactional(readOnly = true)
@@ -47,11 +54,38 @@ public class BackpackService {
     }
 
     @Transactional
+    public BackpackResponse useConsumable(User user, Long itemId) {
+        UserInventory inv = findAnyStack(user.getId(), itemId)
+                .orElseThrow(() -> new IllegalArgumentException("背包中沒有此道具"));
+        Item item = inv.getItem();
+
+        if (item.getType() != ItemType.CONSUMABLE) {
+            throw new IllegalArgumentException("此物品不是消耗道具");
+        }
+
+        String effect = "";
+        if (item.getHealHp() > 0) {
+            int maxHp = user.resolveMaxHp();
+            int before = user.resolveCurrentHp();
+            int healed = Math.min(item.getHealHp(), maxHp - before);
+            user.setPlayerCurrentHp(before + healed);
+            userRepository.save(user);
+            effect = "，恢復了 " + healed + " 點 HP";
+        }
+
+        removeFromInventory(user.getId(), itemId);
+        return buildResponse(user, "使用了「" + item.getName() + "」" + effect);
+    }
+
+    @Transactional
     public BackpackResponse equipToPlayer(User user, Long itemId) {
-        UserInventory inv = inventoryRepository.findByIdUserIdAndIdItemId(user.getId(), itemId)
+        UserInventory inv = findAnyStack(user.getId(), itemId)
                 .orElseThrow(() -> new IllegalArgumentException("背包中沒有此裝備"));
         Item item = inv.getItem();
 
+        if (item.getType() != ItemType.EQUIPMENT) {
+            throw new IllegalArgumentException("此物品無法裝備");
+        }
         if (item.getRequiredLevel() > user.getLevel()) {
             throw new IllegalArgumentException("等級不足，此裝備需要 Lv." + item.getRequiredLevel());
         }
@@ -84,10 +118,13 @@ public class BackpackService {
         UserCompanion companion = companionRepository.findByUserIdAndId(user.getId(), companionId)
                 .orElseThrow(() -> new IllegalArgumentException("找不到此夥伴"));
 
-        UserInventory inv = inventoryRepository.findByIdUserIdAndIdItemId(user.getId(), itemId)
+        UserInventory inv = findAnyStack(user.getId(), itemId)
                 .orElseThrow(() -> new IllegalArgumentException("背包中沒有此裝備"));
         Item item = inv.getItem();
 
+        if (item.getType() != ItemType.EQUIPMENT) {
+            throw new IllegalArgumentException("此物品無法裝備");
+        }
         if (item.getRequiredLevel() > companion.getLevel()) {
             throw new IllegalArgumentException("夥伴等級不足，此裝備需要 Lv." + item.getRequiredLevel());
         }
@@ -120,11 +157,26 @@ public class BackpackService {
     }
 
     private BackpackResponse buildResponse(User user, String message) {
-        List<InventoryItemDto> inventory = inventoryRepository.findByIdUserId(user.getId())
-                .stream().map(InventoryItemDto::from).toList();
+        List<InventoryItemDto> inventory = aggregateInventory(user.getId());
         Map<String, ItemDto> playerEquipped = buildPlayerEquippedMap(user.getId());
         List<CompanionEquipmentDto> companions = buildCompanionList(user.getId());
-        return new BackpackResponse(inventory, playerEquipped, companions, message);
+        return new BackpackResponse(inventory, playerEquipped, companions,
+                user.resolveCurrentHp(), user.resolveMaxHp(), message);
+    }
+
+    // Aggregates all stacks of the same item into one DTO showing the combined quantity.
+    // Stacks are still stored separately in the DB; the client always operates by item_id.
+    private List<InventoryItemDto> aggregateInventory(Long userId) {
+        Map<Long, List<UserInventory>> byItem = inventoryRepository.findByUserId(userId)
+                .stream()
+                .collect(Collectors.groupingBy(inv -> inv.getItem().getId(),
+                        LinkedHashMap::new, Collectors.toList()));
+        List<InventoryItemDto> result = new ArrayList<>();
+        for (List<UserInventory> stacks : byItem.values()) {
+            int total = stacks.stream().mapToInt(UserInventory::getQuantity).sum();
+            result.add(InventoryItemDto.fromWithQuantity(stacks.get(0), total));
+        }
+        return result;
     }
 
     private Map<String, ItemDto> buildPlayerEquippedMap(Long userId) {
@@ -147,17 +199,28 @@ public class BackpackService {
                 .toList();
     }
 
+    // Finds any existing stack for this (user, item) pair.
+    private java.util.Optional<UserInventory> findAnyStack(Long userId, Long itemId) {
+        return inventoryRepository.findByUserIdAndItemId(userId, itemId)
+                .stream().findFirst();
+    }
+
+    // Adds one item back to inventory: fills the first non-full stack, or creates a new one.
     private void returnToInventory(User user, Item item) {
-        inventoryRepository.findByIdUserIdAndIdItemId(user.getId(), item.getId())
+        inventoryRepository.findByUserIdAndItemId(user.getId(), item.getId())
+                .stream()
+                .filter(inv -> inv.getQuantity() < 999)
+                .findFirst()
                 .ifPresentOrElse(
                         inv -> inv.setQuantity(inv.getQuantity() + 1),
                         () -> inventoryRepository.save(new UserInventory(user, item, 1))
                 );
     }
 
+    // Removes one item from inventory: decrements the first stack found, deletes it if empty.
     private void removeFromInventory(Long userId, Long itemId) {
-        UserInventory inv = inventoryRepository.findByIdUserIdAndIdItemId(userId, itemId)
-                .orElseThrow();
+        UserInventory inv = inventoryRepository.findByUserIdAndItemId(userId, itemId)
+                .stream().findFirst().orElseThrow();
         if (inv.getQuantity() <= 1) {
             inventoryRepository.delete(inv);
         } else {
