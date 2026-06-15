@@ -87,6 +87,10 @@ func _render_player() -> void:
 	hp_label.text = "HP  %d / %d" % [GameState.player_current_hp, GameState.player_max_hp]
 	content.add_child(hp_label)
 
+	var mp_label := Label.new()
+	mp_label.text = "MP  %d / %d" % [GameState.player_current_mp, GameState.player_max_mp]
+	content.add_child(mp_label)
+
 	var exp_label := Label.new()
 	exp_label.text = "EXP  %d / %d    技能點  %d    金幣  %d" % [
 		GameState.player_exp, GameState.exp_to_next_level, GameState.skill_points, GameState.player_gold

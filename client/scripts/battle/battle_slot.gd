@@ -34,7 +34,12 @@ func set_unit(data: Dictionary) -> void:
 	var alive := bool(data.get("alive", true))
 	var element_name := str(data.get("elementName", ""))
 	var level := int(data.get("level", 1))
-	var hp_line := "%d / %d" % [int(data.get("hp", 0)), int(data.get("maxHp", 0))]
+	var hp_line := "HP %d/%d  MP %d/%d" % [
+		int(data.get("hp", 0)),
+		int(data.get("maxHp", 0)),
+		int(data.get("mp", 0)),
+		int(data.get("maxMp", 0)),
+	]
 	if alive:
 		_occupied = true
 		text = "%s Lv.%d（%s）\n%s" % [data.get("name", ""), level, element_name, hp_line]

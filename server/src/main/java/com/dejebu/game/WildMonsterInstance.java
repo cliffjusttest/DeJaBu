@@ -95,6 +95,8 @@ public class WildMonsterInstance {
                 stats,
                 maxHp,
                 hp,
+                stats.maxMp(),
+                stats.maxMp(),
                 capturable
         );
     }

@@ -16,6 +16,7 @@ public class BattleSkillRuntime {
     private final int skillLevel;
     private final int maxLevel;
     private final int cooldownTurns;
+    private final int mpCost;
     private final SkillTargetSide targetSide;
     private final SkillTargetRange targetRange;
     private final boolean comboEligible;
@@ -30,6 +31,7 @@ public class BattleSkillRuntime {
             int skillLevel,
             int maxLevel,
             int cooldownTurns,
+            int mpCost,
             SkillTargetSide targetSide,
             SkillTargetRange targetRange,
             boolean comboEligible
@@ -42,6 +44,7 @@ public class BattleSkillRuntime {
         this.skillLevel = skillLevel;
         this.maxLevel = maxLevel;
         this.cooldownTurns = cooldownTurns;
+        this.mpCost = mpCost;
         this.targetSide = targetSide;
         this.targetRange = targetRange;
         this.comboEligible = comboEligible;
@@ -57,6 +60,7 @@ public class BattleSkillRuntime {
                 skillLevel,
                 skill.getMaxLevel(),
                 skill.getCooldownTurns(),
+                skill.getMpCost(),
                 skill.getTargetSide(),
                 skill.getTargetRange(),
                 skill.isComboEligible()
@@ -95,6 +99,10 @@ public class BattleSkillRuntime {
         return cooldownTurns;
     }
 
+    public int getMpCost() {
+        return mpCost;
+    }
+
     public SkillTargetSide getTargetSide() {
         return targetSide;
     }
@@ -115,6 +123,10 @@ public class BattleSkillRuntime {
         return cooldownRemaining <= 0;
     }
 
+    public boolean canUse(int currentMp) {
+        return isReady() && currentMp >= mpCost;
+    }
+
     public boolean isHealSkill() {
         return targetSide == SkillTargetSide.ALLY
                 && mightCoefficient.compareTo(BigDecimal.ZERO) == 0
@@ -131,7 +143,7 @@ public class BattleSkillRuntime {
         }
     }
 
-    public ObjectNode toJsonNode(ObjectMapper objectMapper) {
+    public ObjectNode toJsonNode(ObjectMapper objectMapper, int currentMp) {
         ObjectNode node = objectMapper.createObjectNode();
         node.put("skillId", skillId);
         node.put("name", name);
@@ -141,11 +153,12 @@ public class BattleSkillRuntime {
         node.put("maxLevel", maxLevel);
         node.put("cooldownTurns", cooldownTurns);
         node.put("cooldownRemaining", cooldownRemaining);
+        node.put("mpCost", mpCost);
         node.put("targetSide", targetSide.getCode());
         node.put("targetSideName", targetSide.getDisplayName());
         node.put("targetRange", targetRange.getCode());
         node.put("targetRangeName", targetRange.getDisplayName());
-        node.put("canUse", isReady());
+        node.put("canUse", canUse(currentMp));
         node.put("heal", isHealSkill());
         node.put("comboEligible", comboEligible);
         return node;

@@ -64,6 +64,7 @@ class EnemyBattleAiTest {
         skill.setIntelligenceCoefficient(BigDecimal.valueOf(1.2));
         skill.setMaxLevel(5);
         skill.setCooldownTurns(0);
+        skill.setMpCost(8);
         skill.setTargetSide(SkillTargetSide.ENEMY);
         skill.setTargetRange(SkillTargetRange.SINGLE);
         return skill;
@@ -90,11 +91,13 @@ class EnemyBattleAiTest {
                 CharacterStats.zeroBase(),
                 60,
                 60,
+                20,
+                20,
                 true
         );
     }
 
     private static BattleUnit allyUnit(int id, String name) {
-        return BattleUnit.player(id, 7, name, Element.FIRE, 50, 1, CharacterStats.zeroBase());
+        return BattleUnit.player(id, 7, name, Element.FIRE, 50, 50, 20, 20, 1, CharacterStats.zeroBase());
     }
 }

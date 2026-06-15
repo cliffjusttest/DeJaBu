@@ -86,6 +86,9 @@ public class User {
     @Column(name = "player_current_hp", nullable = false)
     private int playerCurrentHp = 50;
 
+    @Column(name = "player_current_mp", nullable = false)
+    private int playerCurrentMp = 20;
+
     @Column(nullable = false)
     private int gold = 100;
 
@@ -271,6 +274,14 @@ public class User {
         this.playerCurrentHp = playerCurrentHp;
     }
 
+    public int getPlayerCurrentMp() {
+        return playerCurrentMp;
+    }
+
+    public void setPlayerCurrentMp(int playerCurrentMp) {
+        this.playerCurrentMp = playerCurrentMp;
+    }
+
     public int getGold() {
         return gold;
     }
@@ -286,6 +297,15 @@ public class User {
     public int resolveCurrentHp() {
         int maxHp = resolveMaxHp();
         return Math.min(Math.max(0, playerCurrentHp), maxHp);
+    }
+
+    public int resolveMaxMp() {
+        return CharacterStats.fromUser(this).maxMp();
+    }
+
+    public int resolveCurrentMp() {
+        int maxMp = resolveMaxMp();
+        return Math.min(Math.max(0, playerCurrentMp), maxMp);
     }
 
     public void applyStats(CharacterStats stats) {

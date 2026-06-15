@@ -155,6 +155,7 @@ public class SkillService {
                 skill.getRequiredLevel(),
                 skill.getMaxLevel(),
                 skill.getCooldownTurns(),
+                skill.getMpCost(),
                 skill.getTargetSide().getCode(),
                 skill.getTargetSide().getDisplayName(),
                 skill.getTargetRange().getCode(),

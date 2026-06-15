@@ -19,6 +19,8 @@ var player_exp := 0
 var exp_to_next_level := 100
 var player_current_hp := 50
 var player_max_hp := 50
+var player_current_mp := 20
+var player_max_mp := 20
 var player_gold := 100
 var player_world_position := Vector2.ZERO
 var mode := Mode.EXPLORE
@@ -62,6 +64,8 @@ func clear_auth() -> void:
 	exp_to_next_level = 100
 	player_current_hp = 50
 	player_max_hp = 50
+	player_current_mp = 20
+	player_max_mp = 20
 	player_gold = 100
 	companions = []
 	active_quests = []

@@ -63,6 +63,12 @@ public class UserCompanion {
     @Column(name = "max_hp", nullable = false)
     private int maxHp;
 
+    @Column(name = "current_mp", nullable = false)
+    private int currentMp = 20;
+
+    @Column(name = "max_mp", nullable = false)
+    private int maxMp = 20;
+
     @Column(nullable = false)
     private int exp = 0;
 
@@ -187,6 +193,22 @@ public class UserCompanion {
         this.maxHp = maxHp;
     }
 
+    public int getCurrentMp() {
+        return currentMp;
+    }
+
+    public void setCurrentMp(int currentMp) {
+        this.currentMp = currentMp;
+    }
+
+    public int getMaxMp() {
+        return maxMp;
+    }
+
+    public void setMaxMp(int maxMp) {
+        this.maxMp = maxMp;
+    }
+
     public int getExp() {
         return exp;
     }
@@ -217,5 +239,13 @@ public class UserCompanion {
                 statLuck,
                 statAgility
         );
+    }
+
+    public int resolveMaxMp() {
+        return toStats().maxMp();
+    }
+
+    public int resolveCurrentMp() {
+        return Math.min(Math.max(0, currentMp), Math.max(maxMp, resolveMaxMp()));
     }
 }

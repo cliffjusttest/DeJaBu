@@ -19,7 +19,7 @@ public final class EnemyBattleAi {
             ThreadLocalRandom random
     ) {
         List<BattleSkillRuntime> readySkills = attacker.getSkills().stream()
-                .filter(BattleSkillRuntime::isReady)
+                .filter(skill -> skill.canUse(attacker.getMp()))
                 .filter(skill -> !skill.isHealSkill())
                 .toList();
 

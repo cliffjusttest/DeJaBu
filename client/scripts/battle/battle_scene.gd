@@ -68,12 +68,14 @@ func update_battle_data(battle_data: Dictionary) -> void:
 		battle_data.get("playerElementName", ElementData.display_name(str(battle_data.get("playerElement", ""))))
 	)
 	var player_level := int(battle_data.get("playerLevel", GameState.player_level))
-	player_hp_label.text = "%s Lv.%d（%s） HP: %d / %d" % [
+	player_hp_label.text = "%s Lv.%d（%s） HP: %d / %d  MP: %d / %d" % [
 		battle_data.get("playerName", GameState.player_name),
 		player_level,
 		player_element,
 		int(battle_data.get("playerHp", 0)),
-		int(battle_data.get("playerMaxHp", 0))
+		int(battle_data.get("playerMaxHp", 0)),
+		int(battle_data.get("playerMp", 0)),
+		int(battle_data.get("playerMaxMp", 0))
 	]
 	var stats := CharacterStatsData.from_payload(battle_data.get("playerStats", GameState.player_stats))
 	player_stats_label.text = CharacterStatsData.summary_text(stats)
@@ -229,9 +231,12 @@ func _render_skill_sub_panel() -> void:
 		var skill_id := int(skill.get("skillId", 0))
 		var skill_level := int(skill.get("skillLevel", 1))
 		var cd := int(skill.get("cooldownRemaining", 0))
+		var mp_cost := int(skill.get("mpCost", 0))
 		var can_use := bool(skill.get("canUse", true))
 		var btn := Button.new()
 		btn.text = "%s Lv.%d" % [skill.get("name", "技能"), skill_level]
+		if mp_cost > 0:
+			btn.text += "\nMP %d" % mp_cost
 		if cd > 0:
 			btn.text += "\n(CD %d)" % cd
 		btn.custom_minimum_size = Vector2(90, 0)
@@ -300,8 +305,11 @@ func _render_skill_hotkey_bar() -> void:
 			if skill_id > 0 and skills_by_id.has(skill_id):
 				var s: Dictionary = skills_by_id[skill_id]
 				var cd := int(s.get("cooldownRemaining", 0))
+				var mp_cost := int(s.get("mpCost", 0))
 				var can_use := bool(s.get("canUse", true))
 				btn.text = "%s\n%s" % [key_name, s.get("name", "?")]
+				if mp_cost > 0:
+					btn.text += "\nMP%d" % mp_cost
 				if cd > 0:
 					btn.text += "\nCD%d" % cd
 				btn.disabled = not _actions_enabled or not can_use

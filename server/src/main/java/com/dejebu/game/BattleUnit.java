@@ -20,6 +20,8 @@ public class BattleUnit {
     private final Element element;
     private final int maxHp;
     private int hp;
+    private final int maxMp;
+    private int mp;
     private final String templateId;
     private final int level;
     private final CharacterStats stats;
@@ -34,6 +36,8 @@ public class BattleUnit {
             Element element,
             int maxHp,
             int hp,
+            int maxMp,
+            int mp,
             String templateId,
             int level,
             CharacterStats stats,
@@ -49,15 +53,13 @@ public class BattleUnit {
         this.element = element;
         this.maxHp = maxHp;
         this.hp = hp;
+        this.maxMp = maxMp;
+        this.mp = Math.max(0, Math.min(maxMp, mp));
         this.templateId = templateId;
         this.level = level;
         this.stats = stats;
         this.wild = wild;
         this.capturable = capturable;
-    }
-
-    public static BattleUnit player(int id, int slot, String name, Element element, int maxHp, int level, CharacterStats stats) {
-        return player(id, slot, name, element, maxHp, maxHp, level, stats);
     }
 
     public static BattleUnit player(
@@ -67,10 +69,15 @@ public class BattleUnit {
             Element element,
             int maxHp,
             int currentHp,
+            int maxMp,
+            int currentMp,
             int level,
             CharacterStats stats
     ) {
-        return new BattleUnit(id, slot, name, element, maxHp, currentHp, null, level, stats, false, false);
+        return new BattleUnit(
+                id, slot, name, element, maxHp, currentHp, maxMp, currentMp,
+                null, level, stats, false, false
+        );
     }
 
     public static BattleUnit companion(
@@ -82,9 +89,14 @@ public class BattleUnit {
             int level,
             CharacterStats stats,
             int maxHp,
-            int currentHp
+            int currentHp,
+            int maxMp,
+            int currentMp
     ) {
-        return new BattleUnit(id, slot, name, element, maxHp, currentHp, templateId, level, stats, false, false);
+        return new BattleUnit(
+                id, slot, name, element, maxHp, currentHp, maxMp, currentMp,
+                templateId, level, stats, false, false
+        );
     }
 
     public static BattleUnit wild(
@@ -97,9 +109,14 @@ public class BattleUnit {
             CharacterStats stats,
             int maxHp,
             int currentHp,
+            int maxMp,
+            int currentMp,
             boolean capturable
     ) {
-        return new BattleUnit(id, slot, name, element, maxHp, currentHp, templateId, level, stats, true, capturable);
+        return new BattleUnit(
+                id, slot, name, element, maxHp, currentHp, maxMp, currentMp,
+                templateId, level, stats, true, capturable
+        );
     }
 
     public int getId() {
@@ -132,6 +149,25 @@ public class BattleUnit {
 
     public void setHpRaw(int hp) {
         this.hp = Math.min(maxHp, hp); // allow negative (combo overflow)
+    }
+
+    public int getMaxMp() {
+        return maxMp;
+    }
+
+    public int getMp() {
+        return mp;
+    }
+
+    public void setMp(int mp) {
+        this.mp = Math.max(0, Math.min(maxMp, mp));
+    }
+
+    public void consumeMp(int amount) {
+        if (amount <= 0) {
+            return;
+        }
+        setMp(mp - amount);
     }
 
     public String getTemplateId() {
@@ -193,6 +229,8 @@ public class BattleUnit {
         node.put("name", name);
         node.put("hp", hp);
         node.put("maxHp", maxHp);
+        node.put("mp", mp);
+        node.put("maxMp", maxMp);
         node.put("level", level);
         node.put("element", element.getCode());
         node.put("elementName", element.getDisplayName());
@@ -208,7 +246,7 @@ public class BattleUnit {
         }
         ArrayNode skillsNode = objectMapper.createArrayNode();
         for (BattleSkillRuntime skill : skills) {
-            skillsNode.add(skill.toJsonNode(objectMapper));
+            skillsNode.add(skill.toJsonNode(objectMapper, mp));
         }
         node.set("skills", skillsNode);
         return node;

@@ -23,6 +23,13 @@ class CharacterStatsTest {
     }
 
     @Test
+    void higherIntelligenceAndSpiritIncreaseMaxMp() {
+        CharacterStats stats = new CharacterStats(0, 10, 0, 0, 10, 0, 0);
+        assertEquals(70, stats.maxMp());
+        assertEquals(20, CharacterStats.zeroBase().maxMp());
+    }
+
+    @Test
     void fullMightAllocationProducesExpectedAttackRange() {
         CharacterStats stats = new CharacterStats(10, 0, 0, 0, 0, 0, 0);
         ThreadLocalRandom random = ThreadLocalRandom.current();

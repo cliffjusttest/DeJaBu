@@ -65,6 +65,10 @@ public record CharacterStats(
         return 50 + vitality * 5;
     }
 
+    public int maxMp() {
+        return 20 + intelligence * 3 + spirit * 2;
+    }
+
     public int rollAttackDamage(ThreadLocalRandom random) {
         int min = Math.max(1, might / 2 + 3);
         int max = Math.max(min + 1, might + 9);

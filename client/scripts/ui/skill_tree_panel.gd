@@ -184,7 +184,7 @@ func _render_tree() -> void:
 
 func _create_skill_card(skill: Dictionary) -> PanelContainer:
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(170, 0)
+	panel.custom_minimum_size = Vector2(190, 0)
 
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 8)
@@ -208,13 +208,21 @@ func _create_skill_card(skill: Dictionary) -> PanelContainer:
 	vbox.add_child(element_label)
 
 	var coeff_label := Label.new()
+	coeff_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	coeff_label.text = "武 %.2f / 智 %.2f" % [
 		float(skill.get("mightCoefficient", 0)),
 		float(skill.get("intelligenceCoefficient", 0)),
 	]
 	vbox.add_child(coeff_label)
 
+	var mp_cost := int(skill.get("mpCost", skill.get("mp_cost", 0)))
+	var mp_label := Label.new()
+	mp_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	mp_label.text = "消耗 MP：%d" % mp_cost if mp_cost > 0 else "消耗 MP：無"
+	vbox.add_child(mp_label)
+
 	var req_label := Label.new()
+	req_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	req_label.text = "需求等級 %d | CD %d 回合" % [
 		int(skill.get("requiredLevel", 1)),
 		int(skill.get("cooldownTurns", 0)),
@@ -224,6 +232,7 @@ func _create_skill_card(skill: Dictionary) -> PanelContainer:
 	var target_side := SkillTargetData.side_display_name(str(skill.get("targetSide", "")))
 	var target_range := SkillTargetData.range_display_name(str(skill.get("targetRange", "")))
 	var target_label := Label.new()
+	target_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	target_label.text = "目標：%s | 範圍：%s" % [target_side, target_range]
 	vbox.add_child(target_label)
 

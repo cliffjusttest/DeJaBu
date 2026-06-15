@@ -53,6 +53,9 @@ public class Skill {
     @Column(name = "cooldown_turns", nullable = false)
     private int cooldownTurns = 0;
 
+    @Column(name = "mp_cost", nullable = false)
+    private int mpCost = 0;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "target_side", nullable = false, length = 16)
     private SkillTargetSide targetSide = SkillTargetSide.ENEMY;
@@ -148,6 +151,14 @@ public class Skill {
 
     public void setCooldownTurns(int cooldownTurns) {
         this.cooldownTurns = cooldownTurns;
+    }
+
+    public int getMpCost() {
+        return mpCost;
+    }
+
+    public void setMpCost(int mpCost) {
+        this.mpCost = mpCost;
     }
 
     public SkillTargetSide getTargetSide() {

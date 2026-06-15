@@ -13,6 +13,7 @@ public record SkillNodeDto(
         int requiredLevel,
         int maxLevel,
         int cooldownTurns,
+        int mpCost,
         String targetSide,
         String targetSideName,
         String targetRange,

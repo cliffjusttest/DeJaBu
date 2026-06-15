@@ -146,6 +146,8 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
             response.set("playerStats", CharacterStats.fromUser(user).toJsonNode(objectMapper));
             response.put("playerCurrentHp", user.resolveCurrentHp());
             response.put("playerMaxHp", user.resolveMaxHp());
+            response.put("playerCurrentMp", user.resolveCurrentMp());
+            response.put("playerMaxMp", user.resolveMaxMp());
         }
         response.put("sessionId", session.getId());
         response.put("onlineCount", sessionService.getOnlineCount());

@@ -91,6 +91,7 @@ public class BattleService {
         if (playerCurrentHp <= 0) {
             throw new IllegalStateException("體力不足，無法戰鬥");
         }
+        int playerCurrentMp = user.resolveCurrentMp();
 
         PendingEncounter encounter = encounterService.getEncounter(sessionId)
                 .orElseThrow(() -> new IllegalStateException("沒有待處理的野外遭遇，請先遭遇野生怪物"));
@@ -106,6 +107,7 @@ public class BattleService {
                 playerStats,
                 playerLevel,
                 playerCurrentHp,
+                playerCurrentMp,
                 encounter,
                 partyCompanions,
                 playerSkills
@@ -192,7 +194,12 @@ public class BattleService {
                 if (skillId == null || skillId <= 0) throw new IllegalArgumentException("請指定技能");
                 BattleSkillRuntime skill = actor.findSkill(skillId);
                 if (skill == null) throw new IllegalArgumentException("該單位沒有此技能");
-                if (!skill.isReady()) throw new IllegalArgumentException("「" + skill.getName() + "」冷卻中");
+                if (!skill.canUse(actor.getMp())) {
+                    if (!skill.isReady()) {
+                        throw new IllegalArgumentException("「" + skill.getName() + "」冷卻中");
+                    }
+                    throw new IllegalArgumentException("MP 不足");
+                }
                 if (targetId == null || targetId <= 0) throw new IllegalArgumentException("請選擇技能目標");
                 List<BattleUnit> pool = skillTargetPool(state, actor, skill);
                 findUnit(pool, targetId).orElseThrow(() -> new IllegalArgumentException("無效的技能目標"));
@@ -269,7 +276,7 @@ public class BattleService {
 
         if (result.path("escaped").asBoolean()) {
             state.defendingUnits.clear();
-            syncBattleHp(state);
+            syncBattleResources(state);
             activeBattles.remove(sessionId);
             encounterService.clearEncounter(state.sessionId);
             result.set("battle", toBattleSnapshot(state));
@@ -297,7 +304,7 @@ public class BattleService {
             } else {
                 result.put("victory", false);
             }
-            syncBattleHp(state);
+            syncBattleResources(state);
             activeBattles.remove(sessionId);
             encounterService.clearEncounter(state.sessionId);
         }
@@ -457,6 +464,7 @@ public class BattleService {
         if ("skill".equals(plan.action())) {
             BattleSkillRuntime skill = ally.findSkill(plan.skillId());
             if (skill == null || !skill.isComboEligible() || skill.isHealSkill()) return false;
+            if (!skill.canUse(ally.getMp())) return false;
         }
         return true;
     }
@@ -575,7 +583,7 @@ public class BattleService {
             case "attack" -> resolveComboBasicAttack(state, actor, comboTarget, random, result);
             case "skill" -> {
                 BattleSkillRuntime skill = actor.findSkill(plan.skillId());
-                if (skill == null || !skill.isReady()) {
+                if (skill == null || !skill.canUse(actor.getMp())) {
                     appendMessage(result, actor.getName() + " 的技能無法使用，跳過行動");
                     return;
                 }
@@ -638,6 +646,7 @@ public class BattleService {
             recordAttackEvent(result, actor.getId(), unit.getId(), damage, critical);
         }
         message.append("，造成 ").append(totalDamage).append(" 點傷害");
+        actor.consumeMp(skill.getMpCost());
         skill.markUsed();
         appendMessage(result, message.toString());
     }
@@ -662,7 +671,7 @@ public class BattleService {
             }
             case "skill" -> {
                 BattleSkillRuntime skill = actor.findSkill(plan.skillId());
-                if (skill == null || !skill.isReady()) {
+                if (skill == null || !skill.canUse(actor.getMp())) {
                     appendMessage(result, actor.getName() + " 的技能無法使用，跳過行動");
                     return;
                 }
@@ -826,7 +835,12 @@ public class BattleService {
     ) {
         BattleSkillRuntime skill = actor.findSkill(skillId);
         if (skill == null) throw new IllegalArgumentException("該單位沒有此技能");
-        if (!skill.isReady()) throw new IllegalArgumentException("「" + skill.getName() + "」冷卻中");
+        if (!skill.canUse(actor.getMp())) {
+            if (!skill.isReady()) {
+                throw new IllegalArgumentException("「" + skill.getName() + "」冷卻中");
+            }
+            throw new IllegalArgumentException("MP 不足");
+        }
 
         boolean actorIsAlly = isAllyUnit(state, actor);
         List<BattleUnit> targetPool = skillTargetPool(state, actor, skill);
@@ -880,6 +894,7 @@ public class BattleService {
             message.append("，造成 ").append(totalDamage).append(" 點傷害");
         }
 
+        actor.consumeMp(skill.getMpCost());
         skill.markUsed();
         appendMessage(result, message.toString());
     }
@@ -1123,12 +1138,25 @@ public class BattleService {
         return message.toString();
     }
 
+    private void syncBattleResources(BattleState state) {
+        syncBattleHp(state);
+        syncBattleMp(state);
+    }
+
     private void syncBattleHp(BattleState state) {
         state.allies.stream()
                 .filter(unit -> unit.getId() == state.playerUnitId)
                 .findFirst()
                 .ifPresent(playerUnit -> authService.syncPlayerHp(state.userId, Math.max(1, playerUnit.getHp())));
         companionService.syncPartyHp(state.userId, state.allies, state.playerUnitId);
+    }
+
+    private void syncBattleMp(BattleState state) {
+        state.allies.stream()
+                .filter(unit -> unit.getId() == state.playerUnitId)
+                .findFirst()
+                .ifPresent(playerUnit -> authService.syncPlayerMp(state.userId, playerUnit.getMp()));
+        companionService.syncPartyMp(state.userId, state.allies, state.playerUnitId);
     }
 
     private void appendMessage(ObjectNode result, String text) {
@@ -1181,6 +1209,8 @@ public class BattleService {
                 .orElse(state.allies.get(0));
         battle.put("playerHp", playerUnit.getHp());
         battle.put("playerMaxHp", playerUnit.getMaxHp());
+        battle.put("playerMp", playerUnit.getMp());
+        battle.put("playerMaxMp", playerUnit.getMaxMp());
 
         int enemyHp = state.enemies.stream().mapToInt(BattleUnit::getHp).sum();
         int enemyMaxHp = state.enemies.stream().mapToInt(BattleUnit::getMaxHp).sum();
@@ -1251,6 +1281,7 @@ public class BattleService {
                 CharacterStats playerStats,
                 int playerLevel,
                 int playerCurrentHp,
+                int playerCurrentMp,
                 PendingEncounter encounter,
                 List<BattleUnit> partyCompanions,
                 List<BattleSkillRuntime> playerSkills
@@ -1271,6 +1302,8 @@ public class BattleService {
                     playerElement,
                     playerStats.maxHp(),
                     playerCurrentHp,
+                    playerStats.maxMp(),
+                    playerCurrentMp,
                     playerLevel,
                     playerStats
             );

@@ -88,6 +88,7 @@ public class AuthService {
         stats.validateCreation();
         user.applyStats(stats);
         user.setPlayerCurrentHp(stats.maxHp());
+        user.setPlayerCurrentMp(stats.maxMp());
 
         user.setHasCharacter(true);
         userRepository.save(user);
@@ -151,6 +152,15 @@ public class AuthService {
         userRepository.findById(userId).ifPresent(user -> {
             int maxHp = user.resolveMaxHp();
             user.setPlayerCurrentHp(Math.max(0, Math.min(hp, maxHp)));
+            userRepository.save(user);
+        });
+    }
+
+    @Transactional
+    public void syncPlayerMp(Long userId, int mp) {
+        userRepository.findById(userId).ifPresent(user -> {
+            int maxMp = user.resolveMaxMp();
+            user.setPlayerCurrentMp(Math.max(0, Math.min(mp, maxMp)));
             userRepository.save(user);
         });
     }

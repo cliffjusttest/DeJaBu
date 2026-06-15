@@ -127,7 +127,9 @@ public class CompanionService {
                     companion.getLevel(),
                     companion.toStats(),
                     companion.getMaxHp(),
-                    companion.getCurrentHp()
+                    companion.getCurrentHp(),
+                    companion.getMaxMp(),
+                    companion.resolveCurrentMp()
             );
             unit.setSkills(loadRuntimeSkillsForCompanion(companion.getId()));
             units.add(unit);
@@ -186,6 +188,9 @@ public class CompanionService {
         companion.setStatAgility(stats.agility());
         companion.setMaxHp(monster.getMaxHp());
         companion.setCurrentHp(monster.getHp());
+        int maxMp = monster.getStats().maxMp();
+        companion.setMaxMp(maxMp);
+        companion.setCurrentMp(maxMp);
         companion.setPartySlot(resolvePartySlot(user.getId()));
         UserCompanion saved = userCompanionRepository.save(companion);
         copyTemplateSkillsToCompanion(saved, template);
@@ -231,6 +236,24 @@ public class CompanionService {
             userCompanionRepository.findByUserIdAndPartySlot(userId, partySlot)
                     .ifPresent(companion -> {
                         companion.setCurrentHp(ally.getHp());
+                        userCompanionRepository.save(companion);
+                    });
+        }
+    }
+
+    @Transactional
+    public void syncPartyMp(Long userId, List<BattleUnit> allies, int playerUnitId) {
+        for (BattleUnit ally : allies) {
+            if (ally.getId() == playerUnitId || ally.getTemplateId() == null) {
+                continue;
+            }
+            int partySlot = BattleFormation.battleSlotToPartySlot(ally.getSlot());
+            if (partySlot < 0) {
+                continue;
+            }
+            userCompanionRepository.findByUserIdAndPartySlot(userId, partySlot)
+                    .ifPresent(companion -> {
+                        companion.setCurrentMp(ally.getMp());
                         userCompanionRepository.save(companion);
                     });
         }

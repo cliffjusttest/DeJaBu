@@ -276,10 +276,15 @@ func _handle_login_ok(payload: Dictionary) -> void:
 	GameState.player_current_hp = int(payload.get("playerCurrentHp", GameState.player_current_hp))
 	if payload.has("playerMaxHp"):
 		GameState.player_max_hp = int(payload.get("playerMaxHp"))
+	if payload.has("playerCurrentMp"):
+		GameState.player_current_mp = int(payload.get("playerCurrentMp"))
+	if payload.has("playerMaxMp"):
+		GameState.player_max_mp = int(payload.get("playerMaxMp"))
 	if payload.has("playerGold"):
 		GameState.player_gold = int(payload.get("playerGold"))
 	elif not GameState.player_stats.is_empty():
 		GameState.player_max_hp = CharacterStatsData.max_hp(GameState.player_stats)
+		GameState.player_max_mp = CharacterStatsData.max_mp(GameState.player_stats)
 	GameState.player_element = str(payload.get("playerElement", GameState.player_element))
 	GameState.player_appearance = str(payload.get("playerAppearance", GameState.player_appearance))
 	if payload.has("playerStats"):
@@ -393,6 +398,8 @@ func _sync_player_hp_from_battle(battle_data: Dictionary) -> void:
 		return
 	GameState.player_current_hp = int(battle_data.get("playerHp", GameState.player_current_hp))
 	GameState.player_max_hp = int(battle_data.get("playerMaxHp", GameState.player_max_hp))
+	GameState.player_current_mp = int(battle_data.get("playerMp", GameState.player_current_mp))
+	GameState.player_max_mp = int(battle_data.get("playerMaxMp", GameState.player_max_mp))
 
 func _apply_progression(payload: Dictionary) -> void:
 	GameState.player_exp = int(payload.get("playerExp", GameState.player_exp))
@@ -694,11 +701,13 @@ func _update_status() -> void:
 		_: mode_text = "探索"
 	var pos := GameState.player_world_position
 	var map_name := world_map.get_map_name() if world_map.get_current_map_id() == GameState.player_map_id else MapRegistry.get_map_name(GameState.player_map_id)
-	status_label.text = "%s | Lv.%d | HP %d/%d | 金幣 %d | %s | X: %.0f  Y: %.0f | 模式: %s%s" % [
+	status_label.text = "%s | Lv.%d | HP %d/%d | MP %d/%d | 金幣 %d | %s | X: %.0f  Y: %.0f | 模式: %s%s" % [
 		GameState.player_name,
 		GameState.player_level,
 		GameState.player_current_hp,
 		GameState.player_max_hp,
+		GameState.player_current_mp,
+		GameState.player_max_mp,
 		GameState.player_gold,
 		map_name,
 		pos.x,
