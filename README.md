@@ -658,9 +658,16 @@ hpFactor = 1 - 當前HP/最大HP（血量越低越容易）
 
 創角時五種外型代碼（`STYLE_1` … `STYLE_5`），客戶端以不同色調顯示同一 sprite。
 
-### 尚未實作
+### 多人同地圖可見
 
-- 多人同地圖可見（伺服器僅追蹤連線數，無位置廣播）
+同一張地圖上的線上玩家會互相看見對方，顯示角色 sprite、名稱標籤與外型色調。
+
+- 登入成功（`LOGIN_OK`）或傳送換圖（`MOVE_OK` 且 `mapChanged: true`）時，伺服器回傳 `otherPlayers` 陣列，列出該地圖上其他玩家
+- 其他玩家移動時，伺服器向同地圖玩家廣播 `PLAYER_MOVE`
+- 玩家登入或傳送至某地圖時，向該地圖其他玩家廣播 `PLAYER_JOIN`
+- 玩家離線或離開地圖時，向該地圖其他玩家廣播 `PLAYER_LEAVE`
+
+`otherPlayers`／廣播封包欄位：`playerId`、`playerName`、`mapId`、`x`、`y`、`direction`、`playerLevel`、（選填）`playerAppearance`
 
 ## 客戶端模組說明
 
@@ -677,6 +684,7 @@ hpFactor = 1 - 當前HP/最大HP（血量越低越容易）
 - NPC 根據 `maps.json` 的 `npcs` 區塊自動渲染為人物圖示 + 名稱標籤
 - 提供 `is_walkable()`、`grid_to_world()` 等格子座標轉換
 - 透過 `map_registry.gd` 讀取 `maps.json` 管理多地圖切換，`get_adjacent_npc()` 偵測相鄰 NPC
+- **OtherPlayersManager** — 管理同地圖其他玩家的 sprite 與名稱標籤，接收 `PLAYER_JOIN`／`PLAYER_LEAVE`／`PLAYER_MOVE` 廣播
 
 ### 遊戲流程
 
@@ -735,8 +743,11 @@ ws://localhost:8080/ws/game
 | C→S | `DIALOGUE_CHOICE` | 選擇對話選項，帶 `npcId`、`nodeKey`、`choiceIndex` |
 | C→S | `QUEST_LIST` | 取得目前任務日誌 |
 | C→S | `PING` | 心跳 |
-| S→C | `LOGIN_OK` | 登入成功，回傳角色座標、地圖、元素、能力、HP 等 |
-| S→C | `MOVE_OK` | 移動確認，可能帶 `encounter`、`mapChanged`、`wildMonsters` |
+| S→C | `LOGIN_OK` | 登入成功，回傳角色座標、地圖、元素、能力、HP、`otherPlayers` 等 |
+| S→C | `MOVE_OK` | 移動確認，可能帶 `encounter`、`mapChanged`、`wildMonsters`；換圖時另帶 `otherPlayers` |
+| S→C | `PLAYER_JOIN` | 其他玩家進入同地圖 |
+| S→C | `PLAYER_LEAVE` | 其他玩家離開地圖或離線 |
+| S→C | `PLAYER_MOVE` | 其他玩家在同地圖移動 |
 | S→C | `BATTLE_START` | 戰鬥開始，回傳雙方陣型、HP、元素、技能 |
 | S→C | `BATTLE_RESULT` | 回合結算；勝利時帶 `questProgress` 陣列 |
 | S→C | `NPC_INTERACT_OK` | 對話節點（`finished: false`）或對話結束（`finished: true`）；帶 `questRewards` |
@@ -757,7 +768,7 @@ ws://localhost:8080/ws/game
 - **CompanionService** — 夥伴列表、出戰管理、捕捉結算、夥伴技能升級、HP 同步
 - **MapService** — 地圖載入、可走性驗證、傳送點解析
 - **EncounterService** — 野外遭遇生成與暫存
-- **SessionService** — WebSocket session 與玩家管理
+- **SessionService** — WebSocket session、玩家 presence（地圖／座標／外型）管理
 - **BattleService** — 回合制戰鬥邏輯（指定→執行兩段式、傷害、元素克制、技能、道具使用、捕捉、勝負、EXP 結算、勝利時附帶 killedTemplateIds；battle snapshot 包含 `consumables` 陣列供客戶端快捷鍵欄使用）
 - **ProgressionService** — EXP 計算、升級判定、技能點發放
 - **NpcService** — NPC 互動、對話樹節點解析、依任務狀態動態決定起始節點、任務接受／報酬觸發
@@ -869,6 +880,6 @@ Docker 容器透過 volume 掛載此目錄，並停用 Docker 自身的 log driv
 - [x] 金幣、商店（村長 / 行商 NPC 對話「我想買東西」）
 - [x] 消耗道具獲取途徑（商店購買、怪物掉落）
 - [x] 夥伴裝備加成計入戰鬥計算
+- [x] 多人同地圖可見
 - [ ] 裝備強化、耐久度
 - [ ] 更豐富的任務類型（TALK、FETCH、多段任務鏈）
-- [ ] 多人同地圖可見

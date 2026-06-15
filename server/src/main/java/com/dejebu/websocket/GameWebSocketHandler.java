@@ -13,6 +13,7 @@ import com.dejebu.service.MapService;
 import com.dejebu.service.NpcService;
 import com.dejebu.service.ProgressionService;
 import com.dejebu.service.EquipmentService;
+import com.dejebu.service.PlayerPresence;
 import com.dejebu.service.QuestService;
 import com.dejebu.service.SessionService;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -97,6 +98,8 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
         encounterService.clearEncounter(session.getId());
+        sessionService.getPresence(session).ifPresent(presence ->
+                broadcastPlayerLeave(session, presence.mapId(), presence.playerId()));
         sessionService.unregister(session);
         log.info("Client disconnected: {} ({})", session.getId(), status);
     }
@@ -125,6 +128,19 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
 
         sessionService.bindUser(session, user.getId(), user.getDisplayName());
 
+        String appearanceCode = user.getAppearance() != null ? user.getAppearance().getCode() : null;
+        sessionService.setPresence(
+                session,
+                user.getId(),
+                user.getDisplayName(),
+                user.getPlayerMapId(),
+                user.getPlayerX(),
+                user.getPlayerY(),
+                "down",
+                appearanceCode,
+                user.getLevel()
+        );
+
         ObjectNode response = objectMapper.createObjectNode();
         response.put("token", token);
         response.put("playerId", user.getId());
@@ -151,7 +167,9 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
         }
         response.put("sessionId", session.getId());
         response.put("onlineCount", sessionService.getOnlineCount());
+        response.set("otherPlayers", buildOtherPlayersArray(user.getPlayerMapId(), session.getId()));
         response.put("message", "歡迎回來，" + user.getDisplayName());
+        broadcastPlayerJoin(session);
         return new GameMessage(MessageType.LOGIN_OK, response);
     }
 
@@ -190,10 +208,14 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
         }
 
         Optional<Long> userIdOptional = sessionService.getUserId(session);
+        String previousMapId = sessionService.getPresence(session)
+                .map(PlayerPresence::mapId)
+                .orElse(mapId);
         String finalMapId = resultMapId;
         int finalX = resultX;
         int finalY = resultY;
         userIdOptional.ifPresent(userId -> authService.updatePlayerPosition(userId, finalMapId, finalX, finalY));
+        sessionService.updatePresence(session, resultMapId, resultX, resultY, direction);
 
         ObjectNode response = objectMapper.createObjectNode();
         response.put("x", resultX);
@@ -207,6 +229,9 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
             response.put("message", "傳送至 " + mapService.getMapName(resultMapId));
             response.put("encounter", false);
             encounterService.clearEncounter(session.getId());
+            broadcastPlayerLeave(session, previousMapId, userIdOptional.orElse(null));
+            broadcastPlayerJoin(session);
+            response.set("otherPlayers", buildOtherPlayersArray(resultMapId, session.getId()));
             return new GameMessage(MessageType.MOVE_OK, response);
         }
 
@@ -228,6 +253,7 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
             encounterService.clearEncounter(session.getId());
         }
 
+        broadcastPlayerMove(session);
         return new GameMessage(MessageType.MOVE_OK, response);
     }
 
@@ -362,5 +388,69 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
     private void send(WebSocketSession session, GameMessage message) throws IOException {
         String json = objectMapper.writeValueAsString(message);
         session.sendMessage(new TextMessage(json));
+    }
+
+    private void sendQuiet(WebSocketSession session, GameMessage message) {
+        try {
+            send(session, message);
+        } catch (IOException ex) {
+            log.warn("Failed to send {} to {}: {}", message.getType(), session.getId(), ex.getMessage());
+        }
+    }
+
+    private ArrayNode buildOtherPlayersArray(String mapId, String excludeSessionId) {
+        ArrayNode players = objectMapper.createArrayNode();
+        for (PlayerPresence presence : sessionService.getOtherPlayersOnMap(mapId, excludeSessionId)) {
+            players.add(presenceToJson(presence));
+        }
+        return players;
+    }
+
+    private ObjectNode presenceToJson(PlayerPresence presence) {
+        ObjectNode node = objectMapper.createObjectNode();
+        node.put("playerId", presence.playerId());
+        node.put("playerName", presence.playerName());
+        node.put("mapId", presence.mapId());
+        node.put("x", presence.x());
+        node.put("y", presence.y());
+        node.put("direction", presence.direction());
+        node.put("playerLevel", presence.level());
+        if (presence.appearance() != null) {
+            node.put("playerAppearance", presence.appearance());
+        }
+        return node;
+    }
+
+    private void broadcastToMap(String mapId, String excludeSessionId, GameMessage message) {
+        for (var entry : sessionService.getSessionsOnMap(mapId)) {
+            if (entry.getKey().equals(excludeSessionId)) {
+                continue;
+            }
+            sendQuiet(entry.getValue(), message);
+        }
+    }
+
+    private void broadcastPlayerJoin(WebSocketSession session) {
+        sessionService.getPresence(session).ifPresent(presence -> {
+            ObjectNode payload = presenceToJson(presence);
+            broadcastToMap(presence.mapId(), session.getId(), new GameMessage(MessageType.PLAYER_JOIN, payload));
+        });
+    }
+
+    private void broadcastPlayerLeave(WebSocketSession session, String mapId, Long playerId) {
+        if (mapId == null || mapId.isBlank() || playerId == null) {
+            return;
+        }
+        ObjectNode payload = objectMapper.createObjectNode();
+        payload.put("playerId", playerId);
+        payload.put("mapId", mapId);
+        broadcastToMap(mapId, session.getId(), new GameMessage(MessageType.PLAYER_LEAVE, payload));
+    }
+
+    private void broadcastPlayerMove(WebSocketSession session) {
+        sessionService.getPresence(session).ifPresent(presence -> {
+            ObjectNode payload = presenceToJson(presence);
+            broadcastToMap(presence.mapId(), session.getId(), new GameMessage(MessageType.PLAYER_MOVE, payload));
+        });
     }
 }

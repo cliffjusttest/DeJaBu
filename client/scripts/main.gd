@@ -2,6 +2,7 @@ extends Node2D
 
 @onready var world_map: WorldMap = $World/WorldMap
 @onready var player: PlayerController = $World/Player
+@onready var other_players: OtherPlayersManager = $World/OtherPlayers
 @onready var status_label: Label = $UI/StatusLabel
 @onready var log_label: RichTextLabel = $UI/LogLabel
 @onready var battle_scene: CanvasLayer = $BattleLayer/BattleScene
@@ -34,12 +35,14 @@ extends Node2D
 @onready var world: Node2D = $World
 @onready var ui: CanvasLayer = $UI
 
+var _pending_other_players: Array = []
 var _last_direction := "down"
 var _pending_sync_grid := Vector2i(-9999, -9999)
 var _awaiting_server := false
 var _game_started := false
 func _ready() -> void:
 	world_map.map_loaded.connect(_on_map_loaded)
+	other_players.setup(world_map)
 	player.grid_cell_changed.connect(_on_grid_cell_changed)
 	battle_scene.battle_action_requested.connect(_on_battle_action_requested)
 	login_panel.authenticated.connect(_on_login_authenticated)
@@ -120,6 +123,10 @@ func _on_map_loaded() -> void:
 	GameState.player_y = spawn.y
 	player.setup(world_map, spawn)
 	GameState.player_world_position = player.global_position
+	other_players.setup(world_map)
+	if not _pending_other_players.is_empty():
+		other_players.sync_players(_pending_other_players)
+		_pending_other_players.clear()
 	_update_status()
 
 func _process(_delta: float) -> void:
@@ -222,6 +229,8 @@ func _on_connected() -> void:
 
 func _on_disconnected() -> void:
 	_game_started = false
+	other_players.clear_all()
+	_pending_other_players.clear()
 	GameState.clear_auth()
 	_set_gameplay_visible(false)
 	character_create_layer.hide()
@@ -251,6 +260,12 @@ func _on_message_received(type: String, payload: Dictionary) -> void:
 			_handle_npc_interact_ok(payload)
 		"QUEST_LIST_OK":
 			_handle_quest_list_ok(payload)
+		"PLAYER_JOIN":
+			other_players.handle_join(payload)
+		"PLAYER_LEAVE":
+			other_players.handle_leave(payload)
+		"PLAYER_MOVE":
+			other_players.handle_move(payload)
 		"ERROR":
 			var err_msg := str(payload.get("message", "未知錯誤"))
 			_log("錯誤: %s" % err_msg)
@@ -306,6 +321,7 @@ func _handle_login_ok(payload: Dictionary) -> void:
 	if not GameState.player_appearance.is_empty():
 		player.apply_appearance(GameState.player_appearance)
 
+	_pending_other_players = payload.get("otherPlayers", [])
 	_load_player_map()
 
 func _handle_move_ok(payload: Dictionary) -> void:
@@ -320,6 +336,8 @@ func _handle_move_ok(payload: Dictionary) -> void:
 	if payload.get("mapChanged", false):
 		player.stop_movement()
 		_pending_sync_grid = Vector2i(-9999, -9999)
+		other_players.clear_all()
+		_pending_other_players = payload.get("otherPlayers", [])
 		_log(payload.get("message", "傳送至 %s" % MapRegistry.get_map_name(new_map_id)))
 		if world_map.get_current_map_id() != new_map_id:
 			world_map.load_map_by_id(new_map_id)

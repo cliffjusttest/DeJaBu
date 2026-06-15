@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3 uid="uid://dejebu_main_scene"]
+[gd_scene load_steps=16 format=3 uid="uid://dejebu_main_scene"]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/world/world_map.gd" id="2_world_map"]
@@ -14,6 +14,8 @@
 [ext_resource type="PackedScene" uid="uid://dejebu_hotkey_panel" path="res://scenes/hotkey_settings_panel.tscn" id="13_hotkey"]
 [ext_resource type="PackedScene" uid="uid://dejebu_status_panel" path="res://scenes/status_panel.tscn" id="14_status"]
 [ext_resource type="PackedScene" uid="uid://dejebu_shop_panel" path="res://scenes/shop_panel.tscn" id="15_shop"]
+
+[ext_resource type="Script" path="res://scripts/world/other_players_manager.gd" id="16_other_players"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_player"]
 radius = 10.0
@@ -37,6 +39,10 @@ y_sort_enabled = true
 [node name="Player" type="CharacterBody2D" parent="World"]
 motion_mode = 1
 script = ExtResource("3_player")
+
+[node name="OtherPlayers" type="Node2D" parent="World"]
+y_sort_enabled = true
+script = ExtResource("16_other_players")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="World/Player"]
 shape = SubResource("CircleShape2D_player")
