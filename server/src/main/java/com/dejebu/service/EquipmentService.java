@@ -2,11 +2,13 @@ package com.dejebu.service;
 
 import com.dejebu.dto.EquipmentResponse;
 import com.dejebu.dto.ItemDto;
+import com.dejebu.entity.CompanionEquipment;
 import com.dejebu.entity.Item;
 import com.dejebu.entity.User;
 import com.dejebu.entity.UserEquipment;
 import com.dejebu.game.CharacterStats;
 import com.dejebu.game.EquipmentSlot;
+import com.dejebu.repository.CompanionEquipmentRepository;
 import com.dejebu.repository.ItemRepository;
 import com.dejebu.repository.UserEquipmentRepository;
 import org.springframework.stereotype.Service;
@@ -21,10 +23,16 @@ public class EquipmentService {
 
     private final ItemRepository itemRepository;
     private final UserEquipmentRepository userEquipmentRepository;
+    private final CompanionEquipmentRepository companionEquipmentRepository;
 
-    public EquipmentService(ItemRepository itemRepository, UserEquipmentRepository userEquipmentRepository) {
+    public EquipmentService(
+            ItemRepository itemRepository,
+            UserEquipmentRepository userEquipmentRepository,
+            CompanionEquipmentRepository companionEquipmentRepository
+    ) {
         this.itemRepository = itemRepository;
         this.userEquipmentRepository = userEquipmentRepository;
+        this.companionEquipmentRepository = companionEquipmentRepository;
     }
 
     @Transactional(readOnly = true)
@@ -76,10 +84,25 @@ public class EquipmentService {
 
     @Transactional(readOnly = true)
     public CharacterStats getTotalEquipmentBonus(Long userId) {
-        List<UserEquipment> equipped = userEquipmentRepository.findByIdUserId(userId);
+        return sumItemBonuses(
+                userEquipmentRepository.findByIdUserId(userId).stream()
+                        .map(UserEquipment::getItem)
+                        .toList()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public CharacterStats getCompanionEquipmentBonus(Long companionId) {
+        return sumItemBonuses(
+                companionEquipmentRepository.findByIdCompanionId(companionId).stream()
+                        .map(CompanionEquipment::getItem)
+                        .toList()
+        );
+    }
+
+    static CharacterStats sumItemBonuses(List<Item> items) {
         int might = 0, intel = 0, vit = 0, def = 0, spirit = 0, luck = 0, agility = 0;
-        for (UserEquipment ue : equipped) {
-            Item item = ue.getItem();
+        for (Item item : items) {
             might   += item.getBonusMight();
             intel   += item.getBonusIntelligence();
             vit     += item.getBonusVitality();

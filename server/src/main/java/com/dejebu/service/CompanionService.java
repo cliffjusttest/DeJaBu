@@ -39,19 +39,22 @@ public class CompanionService {
     private final MonsterTemplateSkillRepository monsterTemplateSkillRepository;
     private final CompanionSkillRepository companionSkillRepository;
     private final UserRepository userRepository;
+    private final EquipmentService equipmentService;
 
     public CompanionService(
             UserCompanionRepository userCompanionRepository,
             MonsterTemplateRepository monsterTemplateRepository,
             MonsterTemplateSkillRepository monsterTemplateSkillRepository,
             CompanionSkillRepository companionSkillRepository,
-            UserRepository userRepository
+            UserRepository userRepository,
+            EquipmentService equipmentService
     ) {
         this.userCompanionRepository = userCompanionRepository;
         this.monsterTemplateRepository = monsterTemplateRepository;
         this.monsterTemplateSkillRepository = monsterTemplateSkillRepository;
         this.companionSkillRepository = companionSkillRepository;
         this.userRepository = userRepository;
+        this.equipmentService = equipmentService;
     }
 
     @Transactional(readOnly = true)
@@ -118,6 +121,12 @@ public class CompanionService {
                 continue;
             }
             MonsterTemplateEntity template = companion.getTemplate();
+            CharacterStats battleStats = companion.toStats()
+                    .withBonus(equipmentService.getCompanionEquipmentBonus(companion.getId()));
+            int battleMaxHp = battleStats.maxHp();
+            int battleMaxMp = battleStats.maxMp();
+            int currentHp = Math.min(Math.max(0, companion.getCurrentHp()), battleMaxHp);
+            int currentMp = Math.min(Math.max(0, companion.resolveCurrentMp()), battleMaxMp);
             BattleUnit unit = BattleUnit.companion(
                     nextId++,
                     BattleFormation.partySlotToBattleSlot(companion.getPartySlot()),
@@ -125,11 +134,11 @@ public class CompanionService {
                     companion.getNickname(),
                     template.getElement(),
                     companion.getLevel(),
-                    companion.toStats(),
-                    companion.getMaxHp(),
-                    companion.getCurrentHp(),
-                    companion.getMaxMp(),
-                    companion.resolveCurrentMp()
+                    battleStats,
+                    battleMaxHp,
+                    currentHp,
+                    battleMaxMp,
+                    currentMp
             );
             unit.setSkills(loadRuntimeSkillsForCompanion(companion.getId()));
             units.add(unit);
