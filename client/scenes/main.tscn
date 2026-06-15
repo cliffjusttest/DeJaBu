@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=3 uid="uid://dejebu_main_scene"]
+[gd_scene load_steps=15 format=3 uid="uid://dejebu_main_scene"]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/world/world_map.gd" id="2_world_map"]
@@ -13,6 +13,7 @@
 [ext_resource type="PackedScene" uid="uid://dejebu_equipment_panel" path="res://scenes/equipment_panel.tscn" id="12_equipment"]
 [ext_resource type="PackedScene" uid="uid://dejebu_hotkey_panel" path="res://scenes/hotkey_settings_panel.tscn" id="13_hotkey"]
 [ext_resource type="PackedScene" uid="uid://dejebu_status_panel" path="res://scenes/status_panel.tscn" id="14_status"]
+[ext_resource type="PackedScene" uid="uid://dejebu_shop_panel" path="res://scenes/shop_panel.tscn" id="15_shop"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_player"]
 radius = 10.0
@@ -170,4 +171,10 @@ visible = false
 visible = false
 
 [node name="StatusPanel" parent="StatusLayer" instance=ExtResource("14_status")]
+visible = false
+
+[node name="ShopLayer" type="CanvasLayer" parent="."]
+visible = false
+
+[node name="ShopPanel" parent="ShopLayer" instance=ExtResource("15_shop")]
 visible = false

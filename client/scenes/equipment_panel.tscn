@@ -53,6 +53,11 @@ theme_override_font_sizes/font_size = 20
 text = "背包"
 horizontal_alignment = 1
 
+[node name="GoldLabel" type="Label" parent="Panel/Margin/VBox"]
+layout_mode = 2
+text = "金幣：0"
+horizontal_alignment = 1
+
 [node name="Separator" type="HSeparator" parent="Panel/Margin/VBox"]
 layout_mode = 2
 

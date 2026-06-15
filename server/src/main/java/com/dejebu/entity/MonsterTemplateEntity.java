@@ -47,6 +47,12 @@ public class MonsterTemplateEntity {
     @Column(nullable = false)
     private boolean capturable = true;
 
+    @Column(name = "gold_drop_min", nullable = false)
+    private int goldDropMin = 0;
+
+    @Column(name = "gold_drop_max", nullable = false)
+    private int goldDropMax = 0;
+
     public String getId() {
         return id;
     }
@@ -89,5 +95,13 @@ public class MonsterTemplateEntity {
 
     public boolean isCapturable() {
         return capturable;
+    }
+
+    public int getGoldDropMin() {
+        return goldDropMin;
+    }
+
+    public int getGoldDropMax() {
+        return goldDropMax;
     }
 }

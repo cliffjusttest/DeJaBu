@@ -88,8 +88,8 @@ func _render_player() -> void:
 	content.add_child(hp_label)
 
 	var exp_label := Label.new()
-	exp_label.text = "EXP  %d / %d    技能點  %d" % [
-		GameState.player_exp, GameState.exp_to_next_level, GameState.skill_points
+	exp_label.text = "EXP  %d / %d    技能點  %d    金幣  %d" % [
+		GameState.player_exp, GameState.exp_to_next_level, GameState.skill_points, GameState.player_gold
 	]
 	content.add_child(exp_label)
 

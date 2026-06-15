@@ -56,6 +56,7 @@ public class BattleService {
     private final MonsterTemplateSkillRepository monsterTemplateSkillRepository;
     private final AuthService authService;
     private final UserInventoryRepository inventoryRepository;
+    private final LootService lootService;
     private final Map<String, BattleState> activeBattles = new ConcurrentHashMap<>();
 
     public BattleService(
@@ -67,7 +68,8 @@ public class BattleService {
             ProgressionService progressionService,
             MonsterTemplateSkillRepository monsterTemplateSkillRepository,
             AuthService authService,
-            UserInventoryRepository inventoryRepository
+            UserInventoryRepository inventoryRepository,
+            LootService lootService
     ) {
         this.objectMapper = objectMapper;
         this.encounterService = encounterService;
@@ -78,6 +80,7 @@ public class BattleService {
         this.monsterTemplateSkillRepository = monsterTemplateSkillRepository;
         this.authService = authService;
         this.inventoryRepository = inventoryRepository;
+        this.lootService = lootService;
     }
 
     @Transactional(readOnly = true)
@@ -290,6 +293,7 @@ public class BattleService {
                         .forEach(killedTemplates::add);
                 result.set("killedTemplateIds", killedTemplates);
                 appendVictoryExpResult(result, state);
+                appendVictoryLootResult(result, state);
             } else {
                 result.put("victory", false);
             }
@@ -946,6 +950,34 @@ public class BattleService {
         }
         if (!companionArray.isEmpty()) {
             result.set("companionExpResults", companionArray);
+        }
+    }
+
+    private void appendVictoryLootResult(ObjectNode result, BattleState state) {
+        List<String> killedTemplateIds = state.enemies.stream()
+                .map(BattleUnit::getTemplateId)
+                .filter(id -> id != null && !id.isEmpty())
+                .toList();
+        if (killedTemplateIds.isEmpty()) {
+            return;
+        }
+
+        LootService.BattleLootResult loot = lootService.grantBattleLoot(
+                state.userId, killedTemplateIds, ThreadLocalRandom.current());
+
+        result.put("goldGained", loot.goldGained());
+        result.put("playerGold", loot.playerGold());
+
+        if (!loot.items().isEmpty()) {
+            ArrayNode dropsArray = objectMapper.createArrayNode();
+            for (LootService.DroppedItem drop : loot.items()) {
+                ObjectNode dropNode = objectMapper.createObjectNode();
+                dropNode.put("itemId", drop.itemId());
+                dropNode.put("name", drop.name());
+                dropNode.put("quantity", drop.quantity());
+                dropsArray.add(dropNode);
+            }
+            result.set("itemDrops", dropsArray);
         }
     }
 

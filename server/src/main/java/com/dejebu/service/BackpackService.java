@@ -78,6 +78,26 @@ public class BackpackService {
     }
 
     @Transactional
+    public void addItem(User user, Item item, int quantity) {
+        if (quantity <= 0) {
+            return;
+        }
+        for (int i = 0; i < quantity; i++) {
+            returnToInventory(user, item);
+        }
+    }
+
+    @Transactional
+    public void removeItem(User user, Long itemId, int quantity) {
+        if (quantity <= 0) {
+            return;
+        }
+        for (int i = 0; i < quantity; i++) {
+            removeFromInventory(user.getId(), itemId);
+        }
+    }
+
+    @Transactional
     public BackpackResponse equipToPlayer(User user, Long itemId) {
         UserInventory inv = findAnyStack(user.getId(), itemId)
                 .orElseThrow(() -> new IllegalArgumentException("背包中沒有此裝備"));
@@ -161,7 +181,7 @@ public class BackpackService {
         Map<String, ItemDto> playerEquipped = buildPlayerEquippedMap(user.getId());
         List<CompanionEquipmentDto> companions = buildCompanionList(user.getId());
         return new BackpackResponse(inventory, playerEquipped, companions,
-                user.resolveCurrentHp(), user.resolveMaxHp(), message);
+                user.resolveCurrentHp(), user.resolveMaxHp(), user.getGold(), message);
     }
 
     // Aggregates all stacks of the same item into one DTO showing the combined quantity.

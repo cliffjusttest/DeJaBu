@@ -60,6 +60,9 @@ public class Item {
     @Column(name = "bonus_agility", nullable = false)
     private int bonusAgility = 0;
 
+    @Column(name = "sell_price", nullable = false)
+    private int sellPrice = 0;
+
     public Long getId() { return id; }
 
     public ItemType getType() { return type; }
@@ -100,4 +103,7 @@ public class Item {
 
     public int getHealHp() { return healHp; }
     public void setHealHp(int healHp) { this.healHp = healHp; }
+
+    public int getSellPrice() { return sellPrice; }
+    public void setSellPrice(int sellPrice) { this.sellPrice = sellPrice; }
 }

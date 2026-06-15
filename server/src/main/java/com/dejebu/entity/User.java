@@ -86,6 +86,9 @@ public class User {
     @Column(name = "player_current_hp", nullable = false)
     private int playerCurrentHp = 50;
 
+    @Column(nullable = false)
+    private int gold = 100;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -266,6 +269,14 @@ public class User {
 
     public void setPlayerCurrentHp(int playerCurrentHp) {
         this.playerCurrentHp = playerCurrentHp;
+    }
+
+    public int getGold() {
+        return gold;
+    }
+
+    public void setGold(int gold) {
+        this.gold = gold;
     }
 
     public int resolveMaxHp() {

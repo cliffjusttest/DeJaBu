@@ -32,6 +32,7 @@ const TAB_ITEMS := 1
 @onready var items_section: VBoxContainer        = $Panel/Margin/VBox/ItemsSection
 @onready var items_list_container: VBoxContainer = $Panel/Margin/VBox/ItemsSection/ItemsScroll/ItemsList
 @onready var message_label: Label                = $Panel/Margin/VBox/MessageLabel
+@onready var gold_label: Label                   = $Panel/Margin/VBox/GoldLabel
 @onready var close_button: Button                = $Panel/Margin/VBox/CloseButton
 @onready var tab_equip: Button                   = $Panel/Margin/VBox/TabBar/TabEquip
 @onready var tab_items: Button                   = $Panel/Margin/VBox/TabBar/TabItems
@@ -62,6 +63,7 @@ func open() -> void:
 		return
 	_selected_id = -1  # default to player
 	show()
+	_update_gold_label()
 	_fetch_status()
 
 func _fetch_status() -> void:
@@ -119,6 +121,9 @@ func _on_request_completed(
 		GameState.player_current_hp = int(data.get("playerCurrentHp", GameState.player_current_hp))
 	if data.has("playerMaxHp"):
 		GameState.player_max_hp = int(data.get("playerMaxHp", GameState.player_max_hp))
+	if data.has("playerGold"):
+		GameState.player_gold = int(data.get("playerGold"))
+	_update_gold_label()
 
 	var server_msg := str(data.get("message", ""))
 	_set_message(server_msg if not server_msg.is_empty() else "背包")
@@ -306,7 +311,9 @@ func _create_item_card(item: Dictionary) -> PanelContainer:
 	var req := int(item.get("requiredLevel", 1))
 	var qty := int(item.get("quantity", 1))
 	var meta_label := Label.new()
-	meta_label.text = "需求 Lv.%d%s" % [req, ("  ×%d" % qty) if qty > 1 else ""]
+	var sell := int(item.get("sellPrice", 0))
+	var sell_text := "  賣出價 %d" % sell if sell > 0 else ""
+	meta_label.text = "需求 Lv.%d%s%s" % [req, ("  ×%d" % qty) if qty > 1 else "", sell_text]
 	meta_label.modulate = Color(0.75, 0.75, 0.75)
 	vbox.add_child(meta_label)
 
@@ -377,7 +384,9 @@ func _create_consumable_card(item: Dictionary) -> PanelContainer:
 	vbox.add_child(desc_label)
 
 	var qty_label := Label.new()
-	qty_label.text = "數量：%d / 999" % int(item.get("quantity", 0))
+	var sell := int(item.get("sellPrice", 0))
+	var sell_text := "    賣出價 %d" % sell if sell > 0 else ""
+	qty_label.text = "數量：%d / 999%s" % [int(item.get("quantity", 0)), sell_text]
 	qty_label.modulate = Color(0.75, 0.75, 0.75)
 	vbox.add_child(qty_label)
 
@@ -406,3 +415,6 @@ func _format_bonuses(item: Dictionary) -> String:
 
 func _set_message(text: String) -> void:
 	message_label.text = text
+
+func _update_gold_label() -> void:
+	gold_label.text = "金幣：%d" % GameState.player_gold

@@ -136,6 +136,7 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
         response.put("playerExp", user.getExp());
         response.put("expToNextLevel", ProgressionService.expToNextLevel(user.getLevel()));
         response.put("skillPoints", user.getSkillPoints());
+        response.put("playerGold", user.getGold());
         response.put("playerElement", user.getElement().getCode());
         response.put("playerElementName", user.getElement().getDisplayName());
         if (user.getAppearance() != null) {

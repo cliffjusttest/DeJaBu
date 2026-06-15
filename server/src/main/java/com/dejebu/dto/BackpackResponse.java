@@ -9,5 +9,6 @@ public record BackpackResponse(
         List<CompanionEquipmentDto> companions,
         int playerCurrentHp,
         int playerMaxHp,
+        int playerGold,
         String message
 ) {}

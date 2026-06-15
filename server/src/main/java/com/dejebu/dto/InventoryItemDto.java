@@ -19,6 +19,7 @@ public record InventoryItemDto(
         int bonusLuck,
         int bonusAgility,
         int healHp,
+        int sellPrice,
         int quantity
 ) {
     public static InventoryItemDto from(UserInventory inv) {
@@ -43,6 +44,7 @@ public record InventoryItemDto(
                 item.getBonusLuck(),
                 item.getBonusAgility(),
                 item.getHealHp(),
+                item.getSellPrice(),
                 quantity
         );
     }

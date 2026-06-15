@@ -23,6 +23,8 @@ extends Node2D
 @onready var hotkey_layer: CanvasLayer = $HotkeyLayer
 @onready var status_panel: Control = $StatusLayer/StatusPanel
 @onready var status_layer: CanvasLayer = $StatusLayer
+@onready var shop_panel: Control = $ShopLayer/ShopPanel
+@onready var shop_layer: CanvasLayer = $ShopLayer
 @onready var skills_button: Button = $UI/SkillsButton
 @onready var companions_button: Button = $UI/CompanionsButton
 @onready var quests_button: Button = $UI/QuestsButton
@@ -53,6 +55,7 @@ func _ready() -> void:
 	equipment_panel.closed.connect(_on_equipment_panel_closed)
 	hotkey_panel.closed.connect(_on_hotkey_panel_closed)
 	status_panel.closed.connect(_on_status_panel_closed)
+	shop_panel.closed.connect(_on_shop_panel_closed)
 	skills_button.pressed.connect(_on_skills_button_pressed)
 	companions_button.pressed.connect(_on_companions_button_pressed)
 	quests_button.pressed.connect(_on_quests_button_pressed)
@@ -273,6 +276,8 @@ func _handle_login_ok(payload: Dictionary) -> void:
 	GameState.player_current_hp = int(payload.get("playerCurrentHp", GameState.player_current_hp))
 	if payload.has("playerMaxHp"):
 		GameState.player_max_hp = int(payload.get("playerMaxHp"))
+	if payload.has("playerGold"):
+		GameState.player_gold = int(payload.get("playerGold"))
 	elif not GameState.player_stats.is_empty():
 		GameState.player_max_hp = CharacterStatsData.max_hp(GameState.player_stats)
 	GameState.player_element = str(payload.get("playerElement", GameState.player_element))
@@ -374,6 +379,7 @@ func _handle_battle_result(payload: Dictionary) -> void:
 		if payload.get("victory", false):
 			_apply_progression(payload)
 			_apply_quest_progress(payload)
+			_apply_battle_loot(payload)
 		else:
 			_log("戰鬥失敗...")
 		_end_battle()
@@ -421,6 +427,26 @@ func _apply_quest_progress(payload: Dictionary) -> void:
 			_log("任務進度：%s（%d/%d）— 可回去領取報酬！" % [q_name, prog, req])
 		else:
 			_log("任務進度：%s（%d/%d）" % [q_name, prog, req])
+
+func _apply_battle_loot(payload: Dictionary) -> void:
+	if payload.has("playerGold"):
+		GameState.player_gold = int(payload.get("playerGold"))
+	var gold_gained := int(payload.get("goldGained", 0))
+	if gold_gained > 0:
+		_log("獲得 %d 金幣（持有 %d）" % [gold_gained, GameState.player_gold])
+
+	var drops: Variant = payload.get("itemDrops", [])
+	if typeof(drops) != TYPE_ARRAY or drops.is_empty():
+		return
+	for drop in drops:
+		if typeof(drop) != TYPE_DICTIONARY:
+			continue
+		var name := str(drop.get("name", "道具"))
+		var qty := int(drop.get("quantity", 1))
+		if qty > 1:
+			_log("掉落：%s x%d" % [name, qty])
+		else:
+			_log("掉落：%s" % name)
 
 func _end_battle() -> void:
 	GameState.reset_battle()
@@ -489,6 +515,18 @@ func _on_dialogue_finished(payload: Dictionary) -> void:
 	dialogue_panel.hide_dialogue()
 	GameState.reset_dialogue()
 	dialogue_layer.hide()
+
+	if payload.get("openShop", false):
+		var npc_id := str(payload.get("npcId", ""))
+		var npc_name := str(payload.get("npcName", "商人"))
+		shop_layer.show()
+		shop_panel.open_for_npc(npc_id, npc_name)
+	else:
+		_update_status()
+
+func _on_shop_panel_closed() -> void:
+	shop_panel.hide()
+	shop_layer.hide()
 	_update_status()
 
 func _try_npc_interact() -> void:
@@ -580,6 +618,9 @@ func _toggle_equipment_panel() -> void:
 		skill_tree_layer.hide()
 		companion_layer.hide()
 		quest_layer.hide()
+		status_layer.hide()
+		hotkey_layer.hide()
+		shop_layer.hide()
 		equipment_layer.show()
 		equipment_panel.open()
 
@@ -601,6 +642,8 @@ func _toggle_status_panel() -> void:
 		quest_layer.hide()
 		equipment_layer.hide()
 		hotkey_layer.hide()
+		status_layer.hide()
+		shop_layer.hide()
 		status_layer.show()
 		status_panel.open()
 
@@ -621,6 +664,8 @@ func _toggle_hotkey_panel() -> void:
 		companion_layer.hide()
 		quest_layer.hide()
 		equipment_layer.hide()
+		hotkey_layer.hide()
+		shop_layer.hide()
 		hotkey_layer.show()
 		hotkey_panel.open()
 
@@ -649,11 +694,12 @@ func _update_status() -> void:
 		_: mode_text = "探索"
 	var pos := GameState.player_world_position
 	var map_name := world_map.get_map_name() if world_map.get_current_map_id() == GameState.player_map_id else MapRegistry.get_map_name(GameState.player_map_id)
-	status_label.text = "%s | Lv.%d | HP %d/%d | %s | X: %.0f  Y: %.0f | 模式: %s%s" % [
+	status_label.text = "%s | Lv.%d | HP %d/%d | 金幣 %d | %s | X: %.0f  Y: %.0f | 模式: %s%s" % [
 		GameState.player_name,
 		GameState.player_level,
 		GameState.player_current_hp,
 		GameState.player_max_hp,
+		GameState.player_gold,
 		map_name,
 		pos.x,
 		pos.y,

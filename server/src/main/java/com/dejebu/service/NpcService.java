@@ -108,6 +108,10 @@ public class NpcService {
             rewards = reward.map(List::of).orElse(List.of());
         }
 
+        if (choice.has("action") && "open_shop".equals(choice.get("action").asText())) {
+            return buildShopOpenResponse(npc);
+        }
+
         JsonNode nextKeyNode = choice.get("nextKey");
         if (nextKeyNode == null || nextKeyNode.isNull()) {
             return buildFinishedResponse(npc, rewards);
@@ -170,6 +174,16 @@ public class NpcService {
         response.put("npcName", npc.getName());
         response.put("message", "再見！");
         appendRewards(response, rewards);
+        return response;
+    }
+
+    private ObjectNode buildShopOpenResponse(NpcEntity npc) {
+        ObjectNode response = objectMapper.createObjectNode();
+        response.put("finished", true);
+        response.put("openShop", true);
+        response.put("npcId", npc.getId());
+        response.put("npcName", npc.getName());
+        response.put("message", "歡迎光臨！");
         return response;
     }
 
