@@ -163,7 +163,12 @@ func _render_list(companions: Variant) -> void:
 
 		var party_text := "候補"
 		var in_party := companion.get("partySlot") != null
-		if in_party:
+		if bool(companion.get("awaitingHospitalRevive", false)):
+			party_text = "待治療"
+		elif bool(companion.get("incapacitated", false)):
+			var minutes := int(companion.get("incapacitationMinutesRemaining", 0))
+			party_text = "休養中（%d 分）" % minutes
+		elif in_party:
 			var slot_index := int(companion.get("partySlot"))
 			var position_name: String = "出戰"
 			if slot_index >= 0 and slot_index < PARTY_POSITION_NAMES.size():
@@ -191,12 +196,13 @@ func _render_list(companions: Variant) -> void:
 
 		var action := Button.new()
 		var companion_id := int(companion.get("id", 0))
+		var blocked := bool(companion.get("incapacitated", false)) or bool(companion.get("awaitingHospitalRevive", false))
 		if in_party:
 			action.text = "撤出"
 			action.pressed.connect(_on_party_pressed.bind(companion_id, false))
 		else:
 			action.text = "出戰"
-			action.disabled = party_count >= max_party
+			action.disabled = party_count >= max_party or blocked
 			action.pressed.connect(_on_party_pressed.bind(companion_id, true))
 		row.add_child(action)
 

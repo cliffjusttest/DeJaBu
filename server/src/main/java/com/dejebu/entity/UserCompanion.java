@@ -78,6 +78,9 @@ public class UserCompanion {
     @Column(name = "captured_at", nullable = false)
     private Instant capturedAt;
 
+    @Column(name = "incapacitated_until")
+    private Instant incapacitatedUntil;
+
     @PrePersist
     void onCreate() {
         if (capturedAt == null) {
@@ -227,6 +230,14 @@ public class UserCompanion {
 
     public Instant getCapturedAt() {
         return capturedAt;
+    }
+
+    public Instant getIncapacitatedUntil() {
+        return incapacitatedUntil;
+    }
+
+    public void setIncapacitatedUntil(Instant incapacitatedUntil) {
+        this.incapacitatedUntil = incapacitatedUntil;
     }
 
     public CharacterStats toStats() {

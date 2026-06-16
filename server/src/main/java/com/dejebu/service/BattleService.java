@@ -57,6 +57,7 @@ public class BattleService {
     private final AuthService authService;
     private final UserInventoryRepository inventoryRepository;
     private final LootService lootService;
+    private final BattleDeathService battleDeathService;
     private final Map<String, BattleState> activeBattles = new ConcurrentHashMap<>();
 
     public BattleService(
@@ -69,7 +70,8 @@ public class BattleService {
             MonsterTemplateSkillRepository monsterTemplateSkillRepository,
             AuthService authService,
             UserInventoryRepository inventoryRepository,
-            LootService lootService
+            LootService lootService,
+            BattleDeathService battleDeathService
     ) {
         this.objectMapper = objectMapper;
         this.encounterService = encounterService;
@@ -81,6 +83,7 @@ public class BattleService {
         this.authService = authService;
         this.inventoryRepository = inventoryRepository;
         this.lootService = lootService;
+        this.battleDeathService = battleDeathService;
     }
 
     @Transactional(readOnly = true)
@@ -364,7 +367,17 @@ public class BattleService {
 
         if (result.path("escaped").asBoolean()) {
             state.defendingUnits.clear();
-            syncBattleResources(state);
+            Set<Long> respawnedPlayerIds = Set.of();
+            if (hasDeathConsequences(state)) {
+                respawnedPlayerIds = battleDeathService.processDefeatOrEscape(
+                        state.participantUserIds,
+                        state.allies,
+                        state.userPlayerUnitIds,
+                        result,
+                        true
+                ).respawnedPlayerIds();
+            }
+            syncBattleResources(state, false, respawnedPlayerIds);
             activeBattles.remove(battleId);
             encounterService.clearEncounter(state.encounterKey);
             result.set("battle", toBattleSnapshot(state, actingUserId));
@@ -389,10 +402,18 @@ public class BattleService {
                 result.set("killedTemplateIds", killedTemplates);
                 appendVictoryExpResult(result, state);
                 appendVictoryLootResult(result, state);
+                syncBattleResources(state, true, Set.of());
             } else {
                 result.put("victory", false);
+                BattleDeathService.ProcessOutcomeResult deathOutcome = battleDeathService.processDefeatOrEscape(
+                        state.participantUserIds,
+                        state.allies,
+                        state.userPlayerUnitIds,
+                        result,
+                        false
+                );
+                syncBattleResources(state, false, deathOutcome.respawnedPlayerIds());
             }
-            syncBattleResources(state);
             activeBattles.remove(battleId);
             encounterService.clearEncounter(state.encounterKey);
         }
@@ -1379,33 +1400,59 @@ public class BattleService {
         return message.toString();
     }
 
-    private void syncBattleResources(BattleState state) {
-        syncBattleHp(state);
-        syncBattleMp(state);
+    private boolean hasDeathConsequences(BattleState state) {
+        for (Long userId : state.participantUserIds) {
+            int playerUnitId = state.userPlayerUnitIds.get(userId);
+            Optional<BattleUnit> playerUnit = findUnit(state.allies, playerUnitId);
+            if (playerUnit.isPresent() && playerUnit.get().getHp() <= 0) {
+                return true;
+            }
+        }
+        return state.allies.stream()
+                .anyMatch(ally -> ally.isCompanion() && ally.getHp() <= 0);
     }
 
-    private void syncBattleHp(BattleState state) {
+    private void syncBattleResources(BattleState state, boolean victory, Set<Long> respawnedPlayerIds) {
+        syncBattleHp(state, victory, respawnedPlayerIds);
+        syncBattleMp(state, respawnedPlayerIds);
+    }
+
+    private void syncBattleHp(BattleState state, boolean victory, Set<Long> respawnedPlayerIds) {
         if (state.multiplayer) {
             for (Long memberId : state.participantUserIds) {
+                if (respawnedPlayerIds.contains(memberId)) {
+                    continue;
+                }
                 int playerUnitId = state.userPlayerUnitIds.get(memberId);
                 state.allies.stream()
                         .filter(unit -> unit.getId() == playerUnitId)
                         .findFirst()
-                        .ifPresent(playerUnit -> authService.syncPlayerHp(memberId, Math.max(1, playerUnit.getHp())));
-                companionService.syncPartyHp(memberId, state.allies, playerUnitId);
+                        .ifPresent(playerUnit -> authService.syncPlayerHp(
+                                memberId,
+                                victory ? Math.max(1, playerUnit.getHp()) : playerUnit.getHp()
+                        ));
+                companionService.syncPartyHp(memberId, state.allies, playerUnitId, victory);
             }
             return;
         }
-        state.allies.stream()
-                .filter(unit -> unit.getId() == state.playerUnitId)
-                .findFirst()
-                .ifPresent(playerUnit -> authService.syncPlayerHp(state.userId, Math.max(1, playerUnit.getHp())));
-        companionService.syncPartyHp(state.userId, state.allies, state.playerUnitId);
+        if (!respawnedPlayerIds.contains(state.userId)) {
+            state.allies.stream()
+                    .filter(unit -> unit.getId() == state.playerUnitId)
+                    .findFirst()
+                    .ifPresent(playerUnit -> authService.syncPlayerHp(
+                            state.userId,
+                            victory ? Math.max(1, playerUnit.getHp()) : playerUnit.getHp()
+                    ));
+        }
+        companionService.syncPartyHp(state.userId, state.allies, state.playerUnitId, victory);
     }
 
-    private void syncBattleMp(BattleState state) {
+    private void syncBattleMp(BattleState state, Set<Long> respawnedPlayerIds) {
         if (state.multiplayer) {
             for (Long memberId : state.participantUserIds) {
+                if (respawnedPlayerIds.contains(memberId)) {
+                    continue;
+                }
                 int playerUnitId = state.userPlayerUnitIds.get(memberId);
                 state.allies.stream()
                         .filter(unit -> unit.getId() == playerUnitId)
@@ -1415,10 +1462,12 @@ public class BattleService {
             }
             return;
         }
-        state.allies.stream()
-                .filter(unit -> unit.getId() == state.playerUnitId)
-                .findFirst()
-                .ifPresent(playerUnit -> authService.syncPlayerMp(state.userId, playerUnit.getMp()));
+        if (!respawnedPlayerIds.contains(state.userId)) {
+            state.allies.stream()
+                    .filter(unit -> unit.getId() == state.playerUnitId)
+                    .findFirst()
+                    .ifPresent(playerUnit -> authService.syncPlayerMp(state.userId, playerUnit.getMp()));
+        }
         companionService.syncPartyMp(state.userId, state.allies, state.playerUnitId);
     }
 

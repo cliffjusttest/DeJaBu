@@ -19,6 +19,9 @@ public record CompanionDto(
         int spirit,
         int luck,
         Integer partySlot,
+        boolean incapacitated,
+        boolean awaitingHospitalRevive,
+        long incapacitationMinutesRemaining,
         List<CompanionSkillDto> skills
 ) {
 }

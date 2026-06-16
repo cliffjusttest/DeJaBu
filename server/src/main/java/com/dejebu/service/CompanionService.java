@@ -26,6 +26,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 
 @Service
 public class CompanionService {
@@ -42,6 +44,7 @@ public class CompanionService {
     private final UserRepository userRepository;
     private final EquipmentService equipmentService;
     private final PlayerPartyService playerPartyService;
+    private final ProgressionService progressionService;
 
     public CompanionService(
             UserCompanionRepository userCompanionRepository,
@@ -50,7 +53,8 @@ public class CompanionService {
             CompanionSkillRepository companionSkillRepository,
             UserRepository userRepository,
             EquipmentService equipmentService,
-            PlayerPartyService playerPartyService
+            PlayerPartyService playerPartyService,
+            ProgressionService progressionService
     ) {
         this.userCompanionRepository = userCompanionRepository;
         this.monsterTemplateRepository = monsterTemplateRepository;
@@ -59,6 +63,7 @@ public class CompanionService {
         this.userRepository = userRepository;
         this.equipmentService = equipmentService;
         this.playerPartyService = playerPartyService;
+        this.progressionService = progressionService;
     }
 
     @Transactional(readOnly = true)
@@ -101,6 +106,9 @@ public class CompanionService {
             if (companion.getPartySlot() != null) {
                 return new CompanionListResponse(listCompanionDtos(user), "此夥伴已在出戰隊伍中", user.getSkillPoints());
             }
+            if (!canAssignToParty(companion)) {
+                throw new IllegalArgumentException(describeBattleBlockReason(companion));
+            }
             int maxCompanions = playerPartyService.isInParty(user.getId())
                     ? BattleFormation.maxCompanionsPerPlayerInParty()
                     : MAX_PARTY_COMPANIONS;
@@ -140,7 +148,7 @@ public class CompanionService {
             if (loaded >= maxCompanions) {
                 break;
             }
-            if (companion.getCurrentHp() <= 0) {
+            if (!isAvailableForBattle(companion)) {
                 continue;
             }
             MonsterTemplateEntity template = companion.getTemplate();
@@ -261,7 +269,7 @@ public class CompanionService {
     }
 
     @Transactional
-    public void syncPartyHp(Long userId, List<BattleUnit> allies, int playerUnitId) {
+    public void syncPartyHp(Long userId, List<BattleUnit> allies, int playerUnitId, boolean victory) {
         for (BattleUnit ally : allies) {
             if (ally.getId() == playerUnitId || !ally.isCompanion()) {
                 continue;
@@ -271,10 +279,103 @@ public class CompanionService {
             }
             findCompanionForBattleUnit(userId, ally)
                     .ifPresent(companion -> {
-                        companion.setCurrentHp(ally.getHp());
+                        int hp = victory ? Math.max(1, ally.getHp()) : ally.getHp();
+                        companion.setCurrentHp(hp);
                         userCompanionRepository.save(companion);
                     });
         }
+    }
+
+    @Transactional
+    public void syncPartyHp(Long userId, List<BattleUnit> allies, int playerUnitId) {
+        syncPartyHp(userId, allies, playerUnitId, false);
+    }
+
+    @Transactional
+    public void applyCompanionDefeat(Long userId, BattleUnit ally) {
+        findCompanionForBattleUnit(userId, ally).ifPresent(companion -> {
+            companion.setCurrentHp(0);
+            companion.setIncapacitatedUntil(
+                    Instant.now().plus(BattleDeathService.COMPANION_INCAPACITATED_MINUTES, ChronoUnit.MINUTES)
+            );
+            progressionService.applyExpLoss(companion);
+            userCompanionRepository.save(companion);
+        });
+    }
+
+    @Transactional
+    public HospitalReviveResult reviveCompanionsAtHospital(User user) {
+        List<String> revivedNames = new ArrayList<>();
+        for (UserCompanion companion : userCompanionRepository.findByUserIdOrderByCapturedAtAsc(user.getId())) {
+            if (!needsHospitalRevive(companion)) {
+                continue;
+            }
+            companion.setCurrentHp(companion.getMaxHp());
+            companion.setCurrentMp(companion.resolveMaxMp());
+            companion.setIncapacitatedUntil(null);
+            userCompanionRepository.save(companion);
+            revivedNames.add(companion.getNickname());
+        }
+        if (revivedNames.isEmpty()) {
+            return new HospitalReviveResult(false, "目前沒有需要治療的夥伴。");
+        }
+        return new HospitalReviveResult(true, "已治療夥伴：" + String.join("、", revivedNames));
+    }
+
+    public boolean isAvailableForBattle(UserCompanion companion) {
+        if (companion.getCurrentHp() <= 0) {
+            return false;
+        }
+        if (isIncapacitationCooldown(companion)) {
+            return false;
+        }
+        return !needsHospitalRevive(companion);
+    }
+
+    public boolean canAssignToParty(UserCompanion companion) {
+        if (companion.getCurrentHp() <= 0) {
+            return false;
+        }
+        if (isIncapacitationCooldown(companion)) {
+            return false;
+        }
+        return !needsHospitalRevive(companion);
+    }
+
+    public boolean isIncapacitationCooldown(UserCompanion companion) {
+        Instant until = companion.getIncapacitatedUntil();
+        return until != null && Instant.now().isBefore(until);
+    }
+
+    public boolean needsHospitalRevive(UserCompanion companion) {
+        if (companion.getCurrentHp() > 0) {
+            return false;
+        }
+        Instant until = companion.getIncapacitatedUntil();
+        return until != null && !Instant.now().isBefore(until);
+    }
+
+    public long incapacitationMinutesRemaining(UserCompanion companion) {
+        Instant until = companion.getIncapacitatedUntil();
+        if (until == null || !Instant.now().isBefore(until)) {
+            return 0;
+        }
+        return Math.max(1, ChronoUnit.MINUTES.between(Instant.now(), until));
+    }
+
+    private String describeBattleBlockReason(UserCompanion companion) {
+        if (needsHospitalRevive(companion)) {
+            return "「" + companion.getNickname() + "」需要到醫館治療後才能出戰";
+        }
+        if (isIncapacitationCooldown(companion)) {
+            return "「" + companion.getNickname() + "」仍在休養中，約 "
+                    + incapacitationMinutesRemaining(companion)
+                    + " 分鐘後才能至醫館治療";
+        }
+        if (companion.getCurrentHp() <= 0) {
+            return "「" + companion.getNickname() + "」體力耗盡，無法出戰";
+        }
+        return "此夥伴目前無法出戰";
     }
 
     @Transactional
@@ -302,6 +403,10 @@ public class CompanionService {
         return userCompanionRepository.findByUserIdAndPartySlotIsNotNullOrderByPartySlotAsc(userId).stream()
                 .filter(companion -> companion.getNickname().equals(ally.getName()))
                 .findFirst();
+    }
+
+    public Optional<UserCompanion> findCompanionEntityForBattleUnit(Long userId, BattleUnit ally) {
+        return findCompanionForBattleUnit(userId, ally);
     }
 
     public Optional<Integer> findPartySlotForBattleUnit(Long userId, BattleUnit ally) {
@@ -340,6 +445,9 @@ public class CompanionService {
                 companion.getStatSpirit(),
                 companion.getStatLuck(),
                 companion.getPartySlot(),
+                isIncapacitationCooldown(companion),
+                needsHospitalRevive(companion),
+                incapacitationMinutesRemaining(companion),
                 skills
         );
     }
@@ -368,4 +476,6 @@ public class CompanionService {
             return new CaptureResult(false, message);
         }
     }
+
+    public record HospitalReviveResult(boolean revived, String message) {}
 }

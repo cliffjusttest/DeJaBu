@@ -4,9 +4,11 @@ import com.dejebu.entity.DialogueNodeEntity;
 import com.dejebu.entity.NpcEntity;
 import com.dejebu.entity.PlayerQuestEntity;
 import com.dejebu.entity.QuestEntity;
+import com.dejebu.entity.User;
 import com.dejebu.repository.DialogueNodeRepository;
 import com.dejebu.repository.NpcRepository;
 import com.dejebu.repository.QuestRepository;
+import com.dejebu.repository.UserRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -24,17 +26,23 @@ public class NpcService {
     private final DialogueNodeRepository dialogueNodeRepository;
     private final QuestRepository questRepository;
     private final QuestService questService;
+    private final CompanionService companionService;
+    private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
 
     public NpcService(NpcRepository npcRepository,
                       DialogueNodeRepository dialogueNodeRepository,
                       QuestRepository questRepository,
                       QuestService questService,
+                      CompanionService companionService,
+                      UserRepository userRepository,
                       ObjectMapper objectMapper) {
         this.npcRepository = npcRepository;
         this.dialogueNodeRepository = dialogueNodeRepository;
         this.questRepository = questRepository;
         this.questService = questService;
+        this.companionService = companionService;
+        this.userRepository = userRepository;
         this.objectMapper = objectMapper;
     }
 
@@ -112,6 +120,13 @@ public class NpcService {
             return buildShopOpenResponse(npc);
         }
 
+        if (choice.has("action") && "hospital_revive".equals(choice.get("action").asText())) {
+            if (!npc.isHospital()) {
+                throw new IllegalArgumentException("此 NPC 無法提供治療");
+            }
+            return buildHospitalReviveResponse(npc, userId);
+        }
+
         JsonNode nextKeyNode = choice.get("nextKey");
         if (nextKeyNode == null || nextKeyNode.isNull()) {
             return buildFinishedResponse(npc, rewards);
@@ -184,6 +199,20 @@ public class NpcService {
         response.put("npcId", npc.getId());
         response.put("npcName", npc.getName());
         response.put("message", "歡迎光臨！");
+        return response;
+    }
+
+    private ObjectNode buildHospitalReviveResponse(NpcEntity npc, Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalStateException("玩家不存在"));
+        CompanionService.HospitalReviveResult reviveResult = companionService.reviveCompanionsAtHospital(user);
+
+        ObjectNode response = objectMapper.createObjectNode();
+        response.put("finished", true);
+        response.put("hospitalRevive", reviveResult.revived());
+        response.put("npcId", npc.getId());
+        response.put("npcName", npc.getName());
+        response.put("message", reviveResult.message());
         return response;
     }
 

@@ -433,17 +433,62 @@ func _handle_battle_result(payload: Dictionary) -> void:
 
 	if payload.get("battleOver", false):
 		_sync_player_hp_from_battle(GameState.battle_data)
+		_apply_death_result(payload)
 		if payload.get("victory", false):
 			_apply_progression(payload)
 			_apply_quest_progress(payload)
 			_apply_battle_loot(payload)
-		else:
+		elif not payload.has("deathResult"):
 			_log("戰鬥失敗...")
 		_end_battle()
 	elif payload.get("escaped", false):
 		_sync_player_hp_from_battle(GameState.battle_data)
-		_log("成功逃離戰鬥")
+		_apply_death_result(payload)
+		if not payload.has("deathResult"):
+			_log("成功逃離戰鬥")
 		_end_battle()
+
+func _apply_death_result(payload: Dictionary) -> void:
+	if not payload.has("deathResult"):
+		return
+	var death: Dictionary = payload.get("deathResult", {})
+	if death.is_empty():
+		return
+
+	if death.has("message"):
+		_log(str(death.get("message")))
+
+	if death.get("playerDied", false):
+		if death.has("expLost"):
+			GameState.player_exp = int(death.get("playerExp", GameState.player_exp))
+		if death.has("expToNextLevel"):
+			GameState.exp_to_next_level = int(death.get("expToNextLevel", GameState.exp_to_next_level))
+		if death.has("playerLevel"):
+			GameState.player_level = int(death.get("playerLevel", GameState.player_level))
+		if death.has("playerCurrentHp"):
+			GameState.player_current_hp = int(death.get("playerCurrentHp", GameState.player_current_hp))
+		if death.has("playerMaxHp"):
+			GameState.player_max_hp = int(death.get("playerMaxHp", GameState.player_max_hp))
+		if death.has("playerCurrentMp"):
+			GameState.player_current_mp = int(death.get("playerCurrentMp", GameState.player_current_mp))
+		if death.has("playerMaxMp"):
+			GameState.player_max_mp = int(death.get("playerMaxMp", GameState.player_max_mp))
+
+		var map_id := str(death.get("teleportMapId", GameState.player_map_id))
+		var new_x := int(death.get("teleportX", GameState.player_x))
+		var new_y := int(death.get("teleportY", GameState.player_y))
+		GameState.player_map_id = map_id
+		GameState.player_x = new_x
+		GameState.player_y = new_y
+		player.stop_movement()
+		_pending_sync_grid = Vector2i(-9999, -9999)
+		if world_map.get_current_map_id() != map_id:
+			world_map.load_map_by_id(map_id)
+		else:
+			var spawn := world_map.find_spawn_point(Vector2i(new_x, new_y))
+			GameState.player_x = spawn.x
+			GameState.player_y = spawn.y
+			player.setup(world_map, spawn)
 
 func _sync_player_hp_from_battle(battle_data: Dictionary) -> void:
 	if battle_data.is_empty():
@@ -580,6 +625,9 @@ func _on_dialogue_finished(payload: Dictionary) -> void:
 		var npc_name := str(payload.get("npcName", "商人"))
 		shop_layer.show()
 		shop_panel.open_for_npc(npc_id, npc_name)
+	elif payload.has("hospitalRevive"):
+		_log(str(payload.get("message", "治療完成")))
+		_update_status()
 	else:
 		_update_status()
 

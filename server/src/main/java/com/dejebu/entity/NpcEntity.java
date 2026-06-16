@@ -31,6 +31,9 @@ public class NpcEntity {
     @Column(name = "root_node_key", nullable = false, length = 64)
     private String rootNodeKey = "root";
 
+    @Column(nullable = false, length = 16)
+    private String role = "default";
+
     public String getId() { return id; }
     public String getMapId() { return mapId; }
     public int getGridX() { return gridX; }
@@ -38,4 +41,6 @@ public class NpcEntity {
     public String getName() { return name; }
     public String getSpriteKey() { return spriteKey; }
     public String getRootNodeKey() { return rootNodeKey; }
+    public String getRole() { return role; }
+    public boolean isHospital() { return "hospital".equals(role); }
 }

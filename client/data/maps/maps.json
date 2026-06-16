@@ -16,10 +16,12 @@
   },
   "npcs": {
     "village": [
-      { "id": "village_elder", "name": "村長", "x": 5, "y": 8, "spriteKey": "elder" }
+      { "id": "village_elder", "name": "村長", "x": 5, "y": 8, "spriteKey": "elder" },
+      { "id": "village_healer", "name": "村醫", "x": 4, "y": 11, "spriteKey": "healer" }
     ],
     "forest": [
-      { "id": "forest_merchant", "name": "行商", "x": 12, "y": 5, "spriteKey": "merchant" }
+      { "id": "forest_merchant", "name": "行商", "x": 12, "y": 5, "spriteKey": "merchant" },
+      { "id": "forest_healer", "name": "森林醫師", "x": 5, "y": 10, "spriteKey": "healer" }
     ]
   }
 }

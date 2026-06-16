@@ -112,6 +112,26 @@ class ProgressionServiceTest {
         assertEquals(15, captor.getValue().getExp());
     }
 
+    @Test
+    void applyExpLossReducesCurrentExpWithoutLevelDown() {
+        User user = user(5, 80, 10);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        int expLost = progressionService.applyExpLoss(user);
+
+        assertEquals(8, expLost);
+        assertEquals(72, user.getExp());
+        assertEquals(5, user.getLevel());
+    }
+
+    @Test
+    void calculateExpLossUsesTenPercentFloor() {
+        assertEquals(0, ProgressionService.calculateExpLoss(0));
+        assertEquals(1, ProgressionService.calculateExpLoss(15));
+        assertEquals(9, ProgressionService.calculateExpLoss(90));
+    }
+
     private static User user(int level, int exp, int skillPoints) {
         User user = new User();
         user.setLevel(level);

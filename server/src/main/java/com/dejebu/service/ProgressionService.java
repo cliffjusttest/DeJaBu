@@ -16,6 +16,7 @@ public class ProgressionService {
 
     public static final int MAX_LEVEL = 99;
     public static final int SKILL_POINTS_PER_LEVEL = 2;
+    public static final double EXP_LOSS_RATE = 0.10;
 
     private final UserRepository userRepository;
     private final UserCompanionRepository userCompanionRepository;
@@ -35,6 +36,26 @@ public class ProgressionService {
             total += Math.max(1, monster.getLevel()) * 5;
         }
         return total;
+    }
+
+    public static int calculateExpLoss(int currentExp) {
+        return (int) Math.floor(currentExp * EXP_LOSS_RATE);
+    }
+
+    @Transactional
+    public int applyExpLoss(User user) {
+        int expLost = calculateExpLoss(user.getExp());
+        user.setExp(Math.max(0, user.getExp() - expLost));
+        userRepository.save(user);
+        return expLost;
+    }
+
+    @Transactional
+    public int applyExpLoss(UserCompanion companion) {
+        int expLost = calculateExpLoss(companion.getExp());
+        companion.setExp(Math.max(0, companion.getExp() - expLost));
+        userCompanionRepository.save(companion);
+        return expLost;
     }
 
     @Transactional

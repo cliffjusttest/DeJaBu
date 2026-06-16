@@ -429,6 +429,7 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
             }
 
             personalizeBattleResult(result, userId);
+            applyDeathTeleportPresence(session, userId, result);
             broadcastBattleResultToOthers(session.getId(), battleId, userId, result);
 
             return new GameMessage(MessageType.BATTLE_RESULT, result);
@@ -823,6 +824,32 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
                 result.set("companionExpResults", myCompanions);
             }
         }
+
+        if (result.has("deathOutcomes")) {
+            for (JsonNode entry : result.get("deathOutcomes")) {
+                if (entry.path("playerId").asLong() == userId) {
+                    result.set("deathResult", entry);
+                    break;
+                }
+            }
+        }
+    }
+
+    private void applyDeathTeleportPresence(WebSocketSession session, Long userId, ObjectNode result) {
+        if (!result.has("deathResult")) {
+            return;
+        }
+        JsonNode deathResult = result.get("deathResult");
+        if (!deathResult.path("playerDied").asBoolean()) {
+            return;
+        }
+        String mapId = deathResult.path("teleportMapId").asText("");
+        if (mapId.isBlank()) {
+            return;
+        }
+        int x = deathResult.path("teleportX").asInt();
+        int y = deathResult.path("teleportY").asInt();
+        sessionService.updatePresence(session, mapId, x, y, "down");
     }
 
     private void validateSameMap(WebSocketSession sessionA, WebSocketSession sessionB) {
