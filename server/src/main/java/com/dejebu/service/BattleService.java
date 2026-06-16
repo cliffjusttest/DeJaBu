@@ -327,19 +327,19 @@ public class BattleService {
                 PlannedAction plan = state.pendingActions.get(unit.getId());
                 if (plan == null) continue;
 
-                List<BattleUnit> followers = getComboFollowers(state, unit.getId());
+                List<BattleUnit> followers = getComboFollowers(state, unit);
                 if (!followers.isEmpty()) {
-                    executeComboAttack(state, unit, followers, plan, random, actionResult);
+                    executeComboAttack(state, unit, followers, plan, random, actionResult, true);
                 } else {
                     executeAllyAction(state, unit, plan, random, actionResult);
                 }
             } else {
                 List<BattleUnit> aliveAllies = state.allies.stream().filter(BattleUnit::isAlive).toList();
-                List<BattleUnit> enemyFollowers = getComboFollowers(state, unit.getId());
+                List<BattleUnit> enemyFollowers = getComboFollowers(state, unit);
                 if (!enemyFollowers.isEmpty()) {
                     PlannedAction enemyPlan = state.enemyComboPlans.get(unit.getId());
                     if (enemyPlan != null) {
-                        executeEnemyComboAttack(state, unit, enemyFollowers, enemyPlan, random, actionResult);
+                        executeComboAttack(state, unit, enemyFollowers, enemyPlan, random, actionResult, false);
                     }
                 } else {
                     EnemyBattleAi.EnemyAction action = EnemyBattleAi.chooseAction(unit, aliveAllies, random);
@@ -347,7 +347,10 @@ public class BattleService {
                     if ("skill".equals(action.type())) {
                         resolveSkill(state, unit, action.skillId(), action.targetId(), random, actionResult, 1.0);
                     } else {
-                        resolveEnemyBasicAttack(state, unit, action.targetId(), random, actionResult);
+                        BattleUnit defender = findUnit(state.allies, action.targetId()).orElse(null);
+                        if (defender != null && defender.isAlive()) {
+                            resolveBasicAttack(state, unit, defender, random, actionResult, 1.0, false, false);
+                        }
                     }
                 }
             }
@@ -396,6 +399,126 @@ public class BattleService {
 
         result.set("battle", toBattleSnapshot(state, actingUserId));
         return result;
+    }
+
+    // ── Damage Calculation ───────────────────────────────────────────────────
+
+    private record DamageHitResult(int damage, boolean critical) {}
+
+    private CharacterStats statsFor(BattleState state, BattleUnit unit) {
+        if (unit.getStats() != null) {
+            return unit.getStats();
+        }
+        return isAllyUnit(state, unit) ? state.playerStats : CharacterStats.zeroBase();
+    }
+
+    private DamageHitResult computeBasicAttackHit(
+            CharacterStats attackerStats,
+            CharacterStats defenderStats,
+            Element attackerElement,
+            Element defenderElement,
+            boolean defending,
+            ThreadLocalRandom random,
+            double damageMultiplier
+    ) {
+        int baseDamage = attackerStats.attackDamage();
+        boolean critical = attackerStats.rollCritical(random, defenderStats.luck());
+        if (critical) {
+            baseDamage *= 2;
+        }
+        int damage = applyElementDamage(baseDamage, attackerElement, defenderElement);
+        damage = (int) (damage * damageMultiplier);
+        damage = defenderStats.mitigateDamage(damage, defending);
+        return new DamageHitResult(damage, critical);
+    }
+
+    private DamageHitResult computeSkillHit(
+            CharacterStats actorStats,
+            CharacterStats defenderStats,
+            BattleSkillRuntime skill,
+            Element attackElement,
+            Element defenderElement,
+            boolean defending,
+            ThreadLocalRandom random,
+            double damageMultiplier
+    ) {
+        int baseDamage = SkillCombatCalculator.calculateDamage(actorStats, skill, random);
+        boolean critical = actorStats.rollCritical(random, defenderStats.luck());
+        if (critical) {
+            baseDamage *= 2;
+        }
+        int damage = applyElementDamage(baseDamage, attackElement, defenderElement);
+        damage = (int) (damage * damageMultiplier);
+        damage = defenderStats.mitigateDamage(damage, defending);
+        return new DamageHitResult(damage, critical);
+    }
+
+    private void applyBasicAttackHit(
+            BattleState state,
+            BattleUnit attacker,
+            BattleUnit target,
+            DamageHitResult hit,
+            ObjectNode result,
+            boolean comboOverflow,
+            boolean recordKillCredit
+    ) {
+        boolean wasAlive = target.isAlive();
+        if (comboOverflow) {
+            target.setHpRaw(target.getHp() - hit.damage());
+        } else {
+            target.setHp(target.getHp() - hit.damage());
+            if (recordKillCredit && wasAlive && !target.isAlive()) {
+                state.killCredits.computeIfAbsent(target.getId(), k -> new ArrayList<>()).add(attacker.getId());
+            }
+        }
+        appendMessage(result, buildAttackMessage(attacker.getName(), attacker.getElement(), target, hit.damage(), hit.critical()));
+        recordAttackEvent(result, attacker.getId(), target.getId(), hit.damage(), hit.critical());
+    }
+
+    private DamageHitResult resolveBasicAttack(
+            BattleState state,
+            BattleUnit attacker,
+            BattleUnit target,
+            ThreadLocalRandom random,
+            ObjectNode result,
+            double damageMultiplier,
+            boolean comboOverflow,
+            boolean recordKillCredit
+    ) {
+        boolean defending = state.defendingUnits.contains(target.getId());
+        DamageHitResult hit = computeBasicAttackHit(
+                statsFor(state, attacker),
+                statsFor(state, target),
+                attacker.getElement(),
+                target.getElement(),
+                defending,
+                random,
+                damageMultiplier
+        );
+        applyBasicAttackHit(state, attacker, target, hit, result, comboOverflow, recordKillCredit);
+        return hit;
+    }
+
+    private void applySkillDamageHit(
+            BattleState state,
+            BattleUnit actor,
+            BattleUnit target,
+            BattleUnit comboTarget,
+            DamageHitResult hit,
+            ObjectNode result,
+            boolean recordKillCredit
+    ) {
+        boolean comboOverflowTarget = comboTarget != null && target.getId() == comboTarget.getId();
+        boolean wasAlive = target.isAlive();
+        if (comboOverflowTarget) {
+            target.setHpRaw(target.getHp() - hit.damage());
+        } else {
+            target.setHp(target.getHp() - hit.damage());
+            if (recordKillCredit && wasAlive && !target.isAlive()) {
+                state.killCredits.computeIfAbsent(target.getId(), k -> new ArrayList<>()).add(actor.getId());
+            }
+        }
+        recordAttackEvent(result, actor.getId(), target.getId(), hit.damage(), hit.critical());
     }
 
     // ── Combo System ─────────────────────────────────────────────────────────
@@ -554,10 +677,11 @@ public class BattleService {
         return true;
     }
 
-    private List<BattleUnit> getComboFollowers(BattleState state, int leaderId) {
+    private List<BattleUnit> getComboFollowers(BattleState state, BattleUnit leader) {
+        List<BattleUnit> faction = isAllyUnit(state, leader) ? state.allies : state.enemies;
         return state.comboFollowers.entrySet().stream()
-                .filter(e -> e.getValue() == leaderId)
-                .map(e -> findUnit(state.allies, e.getKey()).orElse(null))
+                .filter(e -> e.getValue() == leader.getId())
+                .map(e -> findUnit(faction, e.getKey()).orElse(null))
                 .filter(u -> u != null)
                 .sorted(Comparator.comparingInt(BattleService::unitAgility).reversed()
                         .thenComparingInt(BattleUnit::getId))
@@ -570,33 +694,29 @@ public class BattleService {
             List<BattleUnit> followers,
             PlannedAction leaderPlan,
             ThreadLocalRandom random,
-            ObjectNode result
+            ObjectNode result,
+            boolean actorIsAlly
     ) {
-        int targetId = leaderPlan.targetId();
-        Optional<BattleUnit> targetOpt = findUnit(state.enemies, targetId);
-        if (targetOpt.isEmpty() || !targetOpt.get().isAlive()) {
-            targetOpt = pickFallbackEnemy(state);
-            if (targetOpt.isEmpty()) return;
-            appendMessage(result, "連擊目標已被擊倒，轉移至 " + targetOpt.get().getName());
+        BattleUnit comboTarget = resolveComboTarget(state, leaderPlan, actorIsAlly, random, result);
+        if (comboTarget == null) {
+            return;
         }
-        BattleUnit comboTarget = targetOpt.get();
 
         int total = 1 + followers.size();
         String names = buildComboNames(leader, followers);
         appendMessage(result, "【" + total + "人連擊】" + names + " 對 " + comboTarget.getName() + " 發動連擊！");
 
-        // Leader hits first; then each follower in agility order.
-        // Target death does NOT stop subsequent hits — damage overflows.
         resolveComboHit(state, leader, leaderPlan, comboTarget, random, result);
         for (BattleUnit follower : followers) {
-            PlannedAction fp = state.pendingActions.get(follower.getId());
-            if (fp != null) {
-                resolveComboHit(state, follower, fp, comboTarget, random, result);
+            PlannedAction plan = actorIsAlly
+                    ? state.pendingActions.get(follower.getId())
+                    : new PlannedAction("attack", comboTarget.getId(), null, null);
+            if (plan != null) {
+                resolveComboHit(state, follower, plan, comboTarget, random, result);
             }
         }
 
-        // If the combo target died during this combo, all participants share the kill credit
-        if (!comboTarget.isAlive()) {
+        if (actorIsAlly && !comboTarget.isAlive()) {
             List<Integer> credits = state.killCredits.computeIfAbsent(comboTarget.getId(), k -> new ArrayList<>());
             credits.clear();
             credits.add(leader.getId());
@@ -604,50 +724,35 @@ public class BattleService {
         }
     }
 
-    private void executeEnemyComboAttack(
+    private BattleUnit resolveComboTarget(
             BattleState state,
-            BattleUnit leader,
-            List<BattleUnit> followers,
             PlannedAction leaderPlan,
+            boolean actorIsAlly,
             ThreadLocalRandom random,
             ObjectNode result
     ) {
         int targetId = leaderPlan.targetId();
+        if (actorIsAlly) {
+            Optional<BattleUnit> targetOpt = findUnit(state.enemies, targetId);
+            if (targetOpt.isEmpty() || !targetOpt.get().isAlive()) {
+                targetOpt = pickFallbackEnemy(state);
+                if (targetOpt.isEmpty()) {
+                    return null;
+                }
+                appendMessage(result, "連擊目標已被擊倒，轉移至 " + targetOpt.get().getName());
+            }
+            return targetOpt.get();
+        }
+
         Optional<BattleUnit> targetOpt = findUnit(state.allies, targetId);
         if (targetOpt.isEmpty() || !targetOpt.get().isAlive()) {
             List<BattleUnit> aliveAllies = state.allies.stream().filter(BattleUnit::isAlive).toList();
-            if (aliveAllies.isEmpty()) return;
-            targetOpt = Optional.of(aliveAllies.get(random.nextInt(aliveAllies.size())));
+            if (aliveAllies.isEmpty()) {
+                return null;
+            }
+            return aliveAllies.get(random.nextInt(aliveAllies.size()));
         }
-        BattleUnit comboTarget = targetOpt.get();
-
-        int total = 1 + followers.size();
-        String names = buildComboNames(leader, followers);
-        appendMessage(result, "【" + total + "人連擊】" + names + " 對 " + comboTarget.getName() + " 發動連擊！");
-
-        resolveEnemyComboHit(state, leader, comboTarget, random, result);
-        for (BattleUnit follower : followers) {
-            resolveEnemyComboHit(state, follower, comboTarget, random, result);
-        }
-    }
-
-    private void resolveEnemyComboHit(
-            BattleState state,
-            BattleUnit attacker,
-            BattleUnit target,
-            ThreadLocalRandom random,
-            ObjectNode result
-    ) {
-        CharacterStats attackerStats = attacker.getStats() != null ? attacker.getStats() : CharacterStats.zeroBase();
-        boolean defending = state.defendingUnits.contains(target.getId());
-        int baseDamage = defending ? random.nextInt(1, 6) : attackerStats.attackDamage();
-        baseDamage = (int)(baseDamage * COMBO_DAMAGE_MULTIPLIER);
-        int damage = applyElementDamage(baseDamage, attacker.getElement(), target.getElement());
-        CharacterStats defenderStats = target.getStats() != null ? target.getStats() : state.playerStats;
-        damage = defenderStats.mitigateDamage(damage, defending);
-        target.setHpRaw(target.getHp() - damage);
-        appendMessage(result, buildAttackMessage(attacker.getName(), attacker.getElement(), target, damage, false));
-        recordAttackEvent(result, attacker.getId(), target.getId(), damage, false);
+        return targetOpt.get();
     }
 
     private String buildComboNames(BattleUnit leader, List<BattleUnit> followers) {
@@ -684,18 +789,7 @@ public class BattleService {
             ThreadLocalRandom random,
             ObjectNode result
     ) {
-        CharacterStats attackerStats = actor.getStats() != null ? actor.getStats() : state.playerStats;
-        CharacterStats defenderStats = target.getStats() != null ? target.getStats() : CharacterStats.zeroBase();
-        boolean defending = state.defendingUnits.contains(target.getId());
-        int baseDamage = attackerStats.attackDamage();
-        boolean critical = attackerStats.rollCritical(random, defenderStats.luck());
-        if (critical) baseDamage *= 2;
-        int damage = applyElementDamage(baseDamage, actor.getElement(), target.getElement());
-        damage = (int)(damage * COMBO_DAMAGE_MULTIPLIER);
-        damage = defenderStats.mitigateDamage(damage, defending);
-        target.setHpRaw(target.getHp() - damage);  // allow overflow past 0
-        appendMessage(result, buildAttackMessage(actor.getName(), actor.getElement(), target, damage, critical));
-        recordAttackEvent(result, actor.getId(), target.getId(), damage, critical);
+        resolveBasicAttack(state, actor, target, random, result, COMBO_DAMAGE_MULTIPLIER, true, false);
     }
 
     private void resolveComboSkill(
@@ -714,27 +808,21 @@ public class BattleService {
         message.append(actor.getName()).append(" 施放「").append(skill.getName()).append("」");
 
         int totalDamage = 0;
-        for (BattleUnit unit : state.enemies) {
+        for (BattleUnit unit : opponentsOf(state, actor)) {
             if (!affectedSlots.contains(unit.getSlot())) continue;
-            int baseDamage = SkillCombatCalculator.calculateDamage(actorStats, skill, random);
-            boolean critical = actorStats.rollCritical(random, unit.getStats() != null ? unit.getStats().luck() : 0);
-            if (critical) baseDamage *= 2;
-            int damage = applyElementDamage(baseDamage, attackElement, unit.getElement());
-            damage = (int)(damage * COMBO_DAMAGE_MULTIPLIER);
-            CharacterStats defenderStats = unit.getStats() != null ? unit.getStats() : CharacterStats.zeroBase();
             boolean defending = state.defendingUnits.contains(unit.getId());
-            damage = defenderStats.mitigateDamage(damage, defending);
-            if (unit.getId() == comboTarget.getId()) {
-                unit.setHpRaw(unit.getHp() - damage);  // combo target: overflow allowed
-            } else {
-                boolean wasAlive = unit.isAlive();
-                unit.setHp(unit.getHp() - damage);     // other AOE targets: normal
-                if (wasAlive && !unit.isAlive()) {
-                    state.killCredits.computeIfAbsent(unit.getId(), k -> new ArrayList<>()).add(actor.getId());
-                }
-            }
-            totalDamage += damage;
-            recordAttackEvent(result, actor.getId(), unit.getId(), damage, critical);
+            DamageHitResult hit = computeSkillHit(
+                    actorStats,
+                    statsFor(state, unit),
+                    skill,
+                    attackElement,
+                    unit.getElement(),
+                    defending,
+                    random,
+                    COMBO_DAMAGE_MULTIPLIER
+            );
+            applySkillDamageHit(state, actor, unit, comboTarget, hit, result, isAllyUnit(state, actor));
+            totalDamage += hit.damage();
         }
         message.append("，造成 ").append(totalDamage).append(" 點傷害");
         actor.consumeMp(skill.getMpCost());
@@ -922,26 +1010,13 @@ public class BattleService {
             throw new IllegalArgumentException("該目標已無法戰鬥");
         }
 
-        CharacterStats attackerStats = actor.getStats() != null ? actor.getStats() : state.playerStats;
-        CharacterStats defenderStats = target.getStats() != null ? target.getStats() : CharacterStats.zeroBase();
-        boolean defending = state.defendingUnits.contains(target.getId());
-        int baseDamage = attackerStats.attackDamage();
-        boolean critical = attackerStats.rollCritical(random, defenderStats.luck());
-        if (critical) baseDamage *= 2;
-        int damage = applyElementDamage(baseDamage, actor.getElement(), target.getElement());
-        damage = (int)(damage * damageMultiplier);
-        damage = defenderStats.mitigateDamage(damage, defending);
-        boolean wasAlive = target.isAlive();
-        target.setHp(target.getHp() - damage);
-        if (wasAlive && !target.isAlive()) {
-            state.killCredits.computeIfAbsent(target.getId(), k -> new ArrayList<>()).add(actor.getId());
-        }
-        result.put("damage", damage);
-        result.put("critical", critical);
+        DamageHitResult hit = resolveBasicAttack(
+                state, actor, target, random, result, damageMultiplier, false, true
+        );
+        result.put("damage", hit.damage());
+        result.put("critical", hit.critical());
         result.put("elementMultiplier", ElementRelation.damageMultiplier(actor.getElement(), target.getElement()));
         result.put("elementMatchup", ElementRelation.matchup(actor.getElement(), target.getElement()).name());
-        appendMessage(result, buildAttackMessage(actor.getName(), actor.getElement(), target, damage, critical));
-        recordAttackEvent(result, actor.getId(), targetId, damage, critical);
     }
 
     private void resolveSkill(
@@ -992,23 +1067,19 @@ public class BattleService {
             int totalDamage = 0;
             for (BattleUnit unit : opponentsOf(state, actor)) {
                 if (!affectedSlots.contains(unit.getSlot()) || !unit.isAlive()) continue;
-                int baseDamage = SkillCombatCalculator.calculateDamage(actorStats, skill, random);
-                boolean critical = actorStats.rollCritical(random, unit.getStats() != null ? unit.getStats().luck() : 0);
-                if (critical) baseDamage *= 2;
-                int damage = applyElementDamage(baseDamage, attackElement, unit.getElement());
-                damage = (int)(damage * damageMultiplier);
-                CharacterStats defenderStats = unit.getStats() != null
-                        ? unit.getStats()
-                        : (actorIsAlly ? CharacterStats.zeroBase() : state.playerStats);
                 boolean defending = state.defendingUnits.contains(unit.getId());
-                damage = defenderStats.mitigateDamage(damage, defending);
-                boolean wasAlive = unit.isAlive();
-                unit.setHp(unit.getHp() - damage);
-                if (actorIsAlly && wasAlive && !unit.isAlive()) {
-                    state.killCredits.computeIfAbsent(unit.getId(), k -> new ArrayList<>()).add(actor.getId());
-                }
-                totalDamage += damage;
-                recordAttackEvent(result, actor.getId(), unit.getId(), damage, critical);
+                DamageHitResult hit = computeSkillHit(
+                        actorStats,
+                        statsFor(state, unit),
+                        skill,
+                        attackElement,
+                        unit.getElement(),
+                        defending,
+                        random,
+                        damageMultiplier
+                );
+                applySkillDamageHit(state, actor, unit, null, hit, result, actorIsAlly);
+                totalDamage += hit.damage();
             }
             result.put("damage", totalDamage);
             message.append("，造成 ").append(totalDamage).append(" 點傷害");
@@ -1017,31 +1088,6 @@ public class BattleService {
         actor.consumeMp(skill.getMpCost());
         skill.markUsed();
         appendMessage(result, message.toString());
-    }
-
-    private void resolveEnemyBasicAttack(
-            BattleState state,
-            BattleUnit attacker,
-            int targetId,
-            ThreadLocalRandom random,
-            ObjectNode result
-    ) {
-        BattleUnit defender = findUnit(state.allies, targetId)
-                .orElseThrow(() -> new IllegalStateException("無效的敵方攻擊目標"));
-        if (!defender.isAlive()) return;
-
-        CharacterStats attackerStats = attacker.getStats() != null ? attacker.getStats() : CharacterStats.zeroBase();
-        boolean defending = state.defendingUnits.contains(defender.getId());
-        int baseEnemyDamage = defending
-                ? random.nextInt(1, 6)
-                : attackerStats.attackDamage();
-        int enemyDamage = applyElementDamage(baseEnemyDamage, attacker.getElement(), defender.getElement());
-        CharacterStats defenderStats = defender.getStats() != null ? defender.getStats() : state.playerStats;
-        enemyDamage = defenderStats.mitigateDamage(enemyDamage, defending);
-        defender.setHp(defender.getHp() - enemyDamage);
-        String counterMessage = buildAttackMessage(attacker.getName(), attacker.getElement(), defender, enemyDamage, false);
-        appendMessage(result, counterMessage);
-        recordAttackEvent(result, attacker.getId(), defender.getId(), enemyDamage, false);
     }
 
     // ── Experience Distribution ──────────────────────────────────────────────
