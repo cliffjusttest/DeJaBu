@@ -3,6 +3,7 @@ extends Node2D
 @onready var world_map: WorldMap = $World/WorldMap
 @onready var player: PlayerController = $World/Player
 @onready var other_players: OtherPlayersManager = $World/OtherPlayers
+@onready var visible_enemies: VisibleEnemyManager = $World/VisibleEnemies
 @onready var status_label: Label = $UI/StatusLabel
 @onready var log_label: RichTextLabel = $UI/LogLabel
 @onready var battle_scene: CanvasLayer = $BattleLayer/BattleScene
@@ -43,9 +44,11 @@ var _last_direction := "down"
 var _pending_sync_grid := Vector2i(-9999, -9999)
 var _awaiting_server := false
 var _game_started := false
+var _encounter_cooldown := EncounterCooldown.new()
 func _ready() -> void:
 	world_map.map_loaded.connect(_on_map_loaded)
 	other_players.setup(world_map)
+	visible_enemies.setup(world_map, _encounter_cooldown)
 	player.grid_cell_changed.connect(_on_grid_cell_changed)
 	battle_scene.battle_action_requested.connect(_on_battle_action_requested)
 	login_panel.authenticated.connect(_on_login_authenticated)
@@ -130,6 +133,7 @@ func _on_map_loaded() -> void:
 	player.setup(world_map, spawn)
 	GameState.player_world_position = player.global_position
 	other_players.setup(world_map)
+	visible_enemies.setup(world_map, _encounter_cooldown)
 	if not _pending_other_players.is_empty():
 		other_players.sync_players(_pending_other_players)
 		_pending_other_players.clear()
@@ -150,6 +154,7 @@ func _process(_delta: float) -> void:
 
 	player.set_input_direction(_read_movement_input())
 	GameState.player_world_position = player.global_position
+	visible_enemies.refresh_mask_visibility()
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not _game_started or not NetworkClient.is_server_connected():
@@ -250,6 +255,8 @@ func _on_connected() -> void:
 func _on_disconnected() -> void:
 	_game_started = false
 	other_players.clear_all()
+	visible_enemies.clear_all()
+	_encounter_cooldown.clear()
 	_pending_other_players.clear()
 	GameState.clear_auth()
 	_set_gameplay_visible(false)
@@ -296,6 +303,8 @@ func _on_message_received(type: String, payload: Dictionary) -> void:
 			_handle_party_state_payload(payload)
 		"PARTY_SYNC":
 			_handle_party_sync(payload)
+		"VISIBLE_ENEMY_UPDATE":
+			_handle_visible_enemy_update(payload)
 		"ERROR":
 			var err_msg := str(payload.get("message", "未知錯誤"))
 			_log("錯誤: %s" % err_msg)
@@ -355,6 +364,7 @@ func _handle_login_ok(payload: Dictionary) -> void:
 	if payload.has("party"):
 		GameState.apply_party_state(payload.get("party", {}))
 	_check_party_invite_prompt()
+	_apply_encounter_payload(payload)
 	_load_player_map()
 
 func _handle_move_ok(payload: Dictionary) -> void:
@@ -370,6 +380,8 @@ func _handle_move_ok(payload: Dictionary) -> void:
 		player.stop_movement()
 		_pending_sync_grid = Vector2i(-9999, -9999)
 		other_players.clear_all()
+		visible_enemies.clear_all()
+		_encounter_cooldown.clear()
 		_pending_other_players = payload.get("otherPlayers", [])
 		_log(payload.get("message", "傳送至 %s" % MapRegistry.get_map_name(new_map_id)))
 		if world_map.get_current_map_id() != new_map_id:
@@ -389,6 +401,7 @@ func _handle_move_ok(payload: Dictionary) -> void:
 		_pending_sync_grid = Vector2i(-9999, -9999)
 		_send_move(pending.x, pending.y, _last_direction)
 
+	_apply_encounter_payload(payload)
 	_update_status()
 
 func _handle_battle_start(payload: Dictionary) -> void:
@@ -440,12 +453,14 @@ func _handle_battle_result(payload: Dictionary) -> void:
 			_apply_battle_loot(payload)
 		elif not payload.has("deathResult"):
 			_log("戰鬥失敗...")
+		_apply_battle_end_cooldown(payload)
 		_end_battle()
 	elif payload.get("escaped", false):
 		_sync_player_hp_from_battle(GameState.battle_data)
 		_apply_death_result(payload)
 		if not payload.has("deathResult"):
 			_log("成功逃離戰鬥")
+		_apply_battle_end_cooldown(payload)
 		_end_battle()
 
 func _apply_death_result(payload: Dictionary) -> void:
@@ -727,6 +742,8 @@ func _handle_party_sync(payload: Dictionary) -> void:
 		player.stop_movement()
 		_pending_sync_grid = Vector2i(-9999, -9999)
 		other_players.clear_all()
+		visible_enemies.clear_all()
+		_encounter_cooldown.clear()
 		_pending_other_players = payload.get("otherPlayers", [])
 		_log(payload.get("message", "跟隨隊長傳送"))
 		if world_map.get_current_map_id() != new_map_id:
@@ -742,7 +759,31 @@ func _handle_party_sync(payload: Dictionary) -> void:
 
 	if payload.get("encounter", false):
 		_log("隊長遭遇野生怪物！")
+	_apply_encounter_payload(payload)
 	_update_status()
+
+func _handle_visible_enemy_update(payload: Dictionary) -> void:
+	var map_id := str(payload.get("mapId", ""))
+	if map_id.is_empty() or map_id != GameState.player_map_id:
+		return
+	if payload.has("visibleEnemies"):
+		visible_enemies.sync_enemies(payload.get("visibleEnemies", []))
+
+func _apply_encounter_payload(payload: Dictionary) -> void:
+	_encounter_cooldown.apply_server_snapshot(payload)
+	if payload.has("visibleEnemies"):
+		visible_enemies.sync_enemies(payload.get("visibleEnemies", []))
+	if payload.get("dangerZoneEntered", false):
+		_log("這裡充滿危險氣息...")
+	elif payload.has("message") and payload.get("inDangerZone", false) and not payload.get("encounter", false):
+		pass
+	visible_enemies.refresh_mask_visibility()
+
+func _apply_battle_end_cooldown(payload: Dictionary) -> void:
+	var visible_enemy_id := str(payload.get("visibleEnemyId", ""))
+	var from_danger_zone := bool(payload.get("fromDangerZone", false))
+	_encounter_cooldown.apply_battle_end(visible_enemy_id, from_danger_zone)
+	visible_enemies.refresh_mask_visibility()
 
 func _check_party_invite_prompt() -> void:
 	if GameState.pending_party_invite_from <= 0:

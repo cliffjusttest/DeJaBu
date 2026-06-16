@@ -32,7 +32,29 @@ public class EncounterService {
     }
 
     public ObjectNode createEncounter(String sessionId, int playerLevel, ThreadLocalRandom random) {
-        PendingEncounter encounter = new PendingEncounter(generateMonsters(playerLevel, random));
+        PendingEncounter encounter = new PendingEncounter(generateMonsters(playerLevel, random), null, false);
+        pendingEncounters.put(sessionId, encounter);
+        return toEncounterJson(encounter);
+    }
+
+    public ObjectNode createVisibleEncounter(
+            String sessionId,
+            int playerLevel,
+            String templateId,
+            String visibleEnemyId,
+            ThreadLocalRandom random
+    ) {
+        PendingEncounter encounter = new PendingEncounter(
+                generateMonstersFromTemplate(templateId, playerLevel, random),
+                visibleEnemyId,
+                false
+        );
+        pendingEncounters.put(sessionId, encounter);
+        return toEncounterJson(encounter);
+    }
+
+    public ObjectNode createDarkEncounter(String sessionId, int playerLevel, ThreadLocalRandom random) {
+        PendingEncounter encounter = new PendingEncounter(generateMonsters(playerLevel, random), null, true);
         pendingEncounters.put(sessionId, encounter);
         return toEncounterJson(encounter);
     }
@@ -51,6 +73,31 @@ public class EncounterService {
 
     public void clearEncounter(String sessionId) {
         pendingEncounters.remove(sessionId);
+    }
+
+    private List<WildMonsterInstance> generateMonstersFromTemplate(
+            String templateId,
+            int playerLevel,
+            ThreadLocalRandom random
+    ) {
+        MonsterTemplateEntity template = monsterTemplateRepository.findById(templateId)
+                .orElseThrow(() -> new IllegalStateException("怪物模板不存在: " + templateId));
+        int level = rollMonsterLevel(playerLevel, random);
+        var stats = MonsterStatsFactory.statsForLevel(template, level);
+        int maxHp = MonsterStatsFactory.maxHpForStats(stats);
+        List<WildMonsterInstance> monsters = new ArrayList<>();
+        monsters.add(new WildMonsterInstance(
+                101,
+                1,
+                template.getId(),
+                template.getName(),
+                template.getElement(),
+                level,
+                stats,
+                maxHp,
+                template.isCapturable()
+        ));
+        return monsters;
     }
 
     private List<WildMonsterInstance> generateMonsters(int playerLevel, ThreadLocalRandom random) {
@@ -105,13 +152,25 @@ public class EncounterService {
 
     public static class PendingEncounter {
         private final List<WildMonsterInstance> monsters;
+        private final String visibleEnemyId;
+        private final boolean fromDangerZone;
 
-        public PendingEncounter(List<WildMonsterInstance> monsters) {
+        public PendingEncounter(List<WildMonsterInstance> monsters, String visibleEnemyId, boolean fromDangerZone) {
             this.monsters = new ArrayList<>(monsters);
+            this.visibleEnemyId = visibleEnemyId;
+            this.fromDangerZone = fromDangerZone;
         }
 
         public List<WildMonsterInstance> getMonsters() {
             return monsters;
+        }
+
+        public String getVisibleEnemyId() {
+            return visibleEnemyId;
+        }
+
+        public boolean isFromDangerZone() {
+            return fromDangerZone;
         }
     }
 }

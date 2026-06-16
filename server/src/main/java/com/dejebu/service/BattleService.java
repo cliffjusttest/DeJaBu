@@ -380,6 +380,7 @@ public class BattleService {
             syncBattleResources(state, false, respawnedPlayerIds);
             activeBattles.remove(battleId);
             encounterService.clearEncounter(state.encounterKey);
+            appendEncounterMeta(result, state);
             result.set("battle", toBattleSnapshot(state, actingUserId));
             return result;
         }
@@ -416,10 +417,18 @@ public class BattleService {
             }
             activeBattles.remove(battleId);
             encounterService.clearEncounter(state.encounterKey);
+            appendEncounterMeta(result, state);
         }
 
         result.set("battle", toBattleSnapshot(state, actingUserId));
         return result;
+    }
+
+    private void appendEncounterMeta(ObjectNode result, BattleState state) {
+        if (state.visibleEnemyId != null) {
+            result.put("visibleEnemyId", state.visibleEnemyId);
+        }
+        result.put("fromDangerZone", state.fromDangerZone);
     }
 
     // ── Damage Calculation ───────────────────────────────────────────────────
@@ -1685,6 +1694,8 @@ public class BattleService {
         private final Map<Integer, List<Integer>> killCredits = new LinkedHashMap<>();
         private final Map<Integer, Integer> comboFollowers = new LinkedHashMap<>();
         private final Map<Integer, PlannedAction> enemyComboPlans = new LinkedHashMap<>();
+        private final String visibleEnemyId;
+        private final boolean fromDangerZone;
 
         private BattleState(
                 String sessionId,
@@ -1701,6 +1712,8 @@ public class BattleService {
         ) {
             this.sessionId = sessionId;
             this.encounterKey = sessionId;
+            this.visibleEnemyId = encounter.getVisibleEnemyId();
+            this.fromDangerZone = encounter.isFromDangerZone();
             this.userId = userId;
             this.playerName = playerName;
             this.playerElement = playerElement;
@@ -1749,6 +1762,8 @@ public class BattleService {
         ) {
             this.sessionId = leaderSessionId;
             this.encounterKey = battleId;
+            this.visibleEnemyId = encounter.getVisibleEnemyId();
+            this.fromDangerZone = encounter.isFromDangerZone();
             this.multiplayer = true;
 
             PartyMemberBattleContext leader = members.get(0);

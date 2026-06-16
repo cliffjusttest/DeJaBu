@@ -7,11 +7,40 @@
     },
     "forest": {
       "file": "forest.txt",
-      "name": "幽暗森林"
+      "name": "幽暗森林",
+      "visibleEnemies": [
+        { "id": "forest_wolf_1", "templateId": "wild_wolf", "x": 4, "y": 8, "chaseRange": 5, "loseRange": 8 },
+        { "id": "forest_wolf_2", "templateId": "wild_wolf", "x": 16, "y": 4, "chaseRange": 5, "loseRange": 8 },
+        { "id": "forest_wisp_1", "templateId": "shadow_wisp", "x": 8, "y": 12, "chaseRange": 5, "loseRange": 8 }
+      ],
+      "dangerZones": [
+        {
+          "id": "forest_upper_thicket",
+          "rect": { "x1": 10, "y1": 3, "x2": 14, "y2": 5 }
+        },
+        {
+          "id": "forest_left_thicket",
+          "rect": { "x1": 1, "y1": 10, "x2": 4, "y2": 10 }
+        },
+        {
+          "id": "forest_right_thicket",
+          "rect": { "x1": 14, "y1": 10, "x2": 17, "y2": 10 }
+        }
+      ]
     }
   },
   "teleports": {
     "village:12,6": { "map": "forest", "x": 9, "y": 3 },
     "forest:9,3": { "map": "village", "x": 12, "y": 6 }
+  },
+  "npcs": {
+    "village": [
+      { "id": "village_elder", "name": "村長", "x": 5, "y": 8, "spriteKey": "elder" },
+      { "id": "village_healer", "name": "村醫", "x": 4, "y": 11, "spriteKey": "healer" }
+    ],
+    "forest": [
+      { "id": "forest_merchant", "name": "行商", "x": 12, "y": 5, "spriteKey": "merchant" },
+      { "id": "forest_healer", "name": "森林醫師", "x": 5, "y": 10, "spriteKey": "healer" }
+    ]
   }
 }

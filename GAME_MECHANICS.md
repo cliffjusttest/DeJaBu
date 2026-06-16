@@ -73,8 +73,35 @@
 
 ### 戰鬥觸發
 
-- 世界地圖隨機遭遇觸發野外怪物戰鬥
-- 每場最多 **3 隻怪物**（模板：`wild_wolf`、`shadow_wisp`）
+#### 明雷（可見敵人）
+
+- 每張地圖在 `maps.json` 設定特定的明雷出生點（彼此間距 ≥ 4 格）
+- 明雷會主動追擊追擊範圍內最近的玩家（預設追擊 5 格、脫離 8 格）
+- 同一時間只追擊一名玩家；若該玩家進入戰鬥，改追其他可追擊範圍內的玩家
+- 接觸玩家（相鄰或同格）觸發戰鬥，怪物模板依明雷設定
+
+#### 暗雷（危險區域）
+
+- 特定危險區域（地圖 `dangerZones` 設定）內累計危險值
+- 進入危險區域提示：「這裡充滿危險氣息...」
+- 每走 1 步 +1 危險值，每場戰鬥 +3；離開危險區域重置
+- 危險值越高越容易遇敵（每點 +3% 機率，上限 80%）
+
+#### 戰鬥後冷卻（以隊長為準，組隊時全隊共用）
+
+| 冷卻類型 | 一般戰鬥 | 危險區域戰鬥 |
+|----------|----------|--------------|
+| 對應明雷屏蔽 / 不可觸發 | 20 秒 | 20 秒 |
+| 明雷追擊 | 5 秒 | 5 秒 |
+| 明雷戰鬥 | 5 秒 | 5 秒 |
+| 暗雷戰鬥 | 5 秒 | 3 秒 |
+
+- 客戶端同步屏蔽對應明雷顯示，伺服器同步阻擋觸發
+
+#### 戰鬥內容
+
+- 明雷：依該明雷的 `templateId` 生成 1 隻怪物
+- 暗雷：隨機野外遭遇（最多 3 隻，`wild_wolf`、`shadow_wisp`）
 - 怪物等級 = 玩家等級 ± 隨機偏移（-2 至 +3）
 
 ### 戰場配置（5×2 網格，共 10 格）
@@ -265,6 +292,12 @@
 - UI 顯示各成員是否已完成規劃
 - 等待所有**存活**我方單位都規劃完畢後統一執行
 
+### 組隊探索與遇敵
+
+- 僅隊長可移動；隊員透過 `PARTY_SYNC` 跟隨
+- 明雷追擊、暗雷遇敵、戰鬥後冷卻均以**隊長**為準，全隊共用同一場戰鬥
+- 隊長遭遇時，全隊一起進入戰鬥（僅隊長發起 `BATTLE_START`）
+
 ---
 
 ## 5. 夥伴（Companion）系統
@@ -359,8 +392,8 @@
 
 - 基於格子（Grid）的等距（Isometric）座標系
 - 地圖有可行走性格子（walkability grid）
-  - `W` = 可行走
-  - 其他字元 = 障礙物
+  - `.`、`P`、`=`、`@` = 可行走
+  - `#`、`T` 等 = 障礙物
 
 ### 地圖資料（`maps.json`）
 
@@ -370,8 +403,17 @@
 | 地圖格式 | 檔案路徑 + 顯示名稱 |
 | NPC 位置 | 指定格子座標 + sprite 鍵 |
 | 傳送點 | 座標 → 目標地圖 + 目標座標 |
+| 明雷（`visibleEnemies`） | 出生點 id、templateId、座標、chaseRange、loseRange；間距 ≥ 4 格 |
+| 危險區域（`dangerZones`） | id + `rect` 矩形或 `cells` 格子列表 |
 
 **玩家預設出生點：** village 地圖 (5, 5)
+
+**現有地圖配置：**
+
+| 地圖 | 明雷 | 危險區 |
+|------|------|--------|
+| village | 無 | 無 |
+| forest | 3 隻（2 野狼 + 1 幽影） | 3 處灌木叢 |
 
 ### 移動系統
 
@@ -379,10 +421,25 @@
 - 支援點擊移動（含尋路）
 - 動畫依移動方向切換（上 / 下 / 左 / 右）
 - 移動前檢查目標格可行走性
+- 每次換格向伺服器送 `MOVE`，收到 `MOVE_OK` 後才允許下一步
+
+### 明雷追擊（伺服器權威）
+
+- 玩家移動後，伺服器更新該地圖所有明雷的追擊狀態
+- 選取追擊範圍內最近且可追擊的玩家（不在冷卻、未在戰鬥中）
+- 每步向目標靠近一格；脫離 loseRange 或目標進入戰鬥時回到出生點
+- 位置透過 `MOVE_OK` 與 `VISIBLE_ENEMY_UPDATE` 同步至所有同地圖客戶端
+
+### 危險區域（暗雷）
+
+- 進入危險區域：`dangerZoneEntered: true`，提示「這裡充滿危險氣息...」
+- 離開危險區域：危險值重置為 0
+- 區域內每步累計危險值，暗雷遇敵機率 = `min(80%, 危險值 × 3%)`
 
 ### 多人可見性
 
 - 同地圖的其他玩家在世界上可見
+- 明雷位置對所有同地圖玩家同步
 
 ---
 
@@ -507,6 +564,13 @@
 | DIALOGUE_CHOICE | Client → Server | 選擇對話選項 |
 | QUEST_LIST | Client → Server | 請求任務列表 |
 | PARTY_INVITE | Client → Server | 邀請玩家入隊 |
+| LOGIN_OK | Server → Client | 登入成功；含 `visibleEnemies`、冷卻 snapshot |
+| MOVE_OK | Server → Client | 移動確認；可能含 `encounter`、`visibleEnemyId`、`fromDangerZone`、`wildMonsters`、`visibleEnemies`、`inDangerZone`、`dangerValue`、`dangerZoneEntered`、冷卻欄位 |
+| VISIBLE_ENEMY_UPDATE | Server → Client | 同地圖明雷位置廣播 |
+| BATTLE_RESULT | Server → Client | 回合結算；戰鬥結束時含 `visibleEnemyId`、`fromDangerZone` |
+| PARTY_SYNC | Server → Client | 隊員跟隨隊長；含 `encounter`、冷卻欄位 |
+
+**冷卻欄位**（`MOVE_OK`／`LOGIN_OK`／`PARTY_SYNC`）：`noVisibleEncounterMs`、`chaseCooldownMs`、`darkEncounterCooldownMs`、`maskedVisibleEnemies`。
 
 ### REST HTTP 端點
 
@@ -532,7 +596,10 @@
            ↓
        [世界探索：移動、與 NPC 對話]
            ↓
-       [隨機遭遇] ← [任意地圖行走時觸發]
+      ┌────┴────┐
+ [明雷追擊]  [危險區暗雷]
+  接觸觸發    累計危險值
+      └────┬────┘
            ↓
        [戰鬥回合：規劃 → 執行 → 重複]
            ↓
@@ -540,6 +607,8 @@
   [勝利]     [失敗 / 逃跑]
       ↓
   [獲得 EXP + 掉落物]
+      ↓
+  [戰鬥後冷卻：明雷屏蔽 / 追擊 / 遇敵]
       ↓
   [升等？→ 獲得技能點]
       ↓
@@ -571,5 +640,10 @@
 | 任務系統 | [QuestService.java](server/src/main/java/com/dejebu/service/QuestService.java) |
 | 商店系統 | [ShopService.java](server/src/main/java/com/dejebu/service/ShopService.java) |
 | 地圖服務 | [MapService.java](server/src/main/java/com/dejebu/service/MapService.java) |
+| 明雷追擊 | [VisibleEnemyService.java](server/src/main/java/com/dejebu/service/VisibleEnemyService.java) |
+| 危險區域 | [DangerZoneService.java](server/src/main/java/com/dejebu/service/DangerZoneService.java) |
+| 遇敵冷卻 | [EncounterCooldownService.java](server/src/main/java/com/dejebu/service/EncounterCooldownService.java) |
+| 野外遭遇 | [EncounterService.java](server/src/main/java/com/dejebu/service/EncounterService.java) |
+| 明雷渲染 | [visible_enemy_manager.gd](client/scripts/world/visible_enemy_manager.gd) |
 | 戰鬥 UI | [battle_scene.gd](client/scripts/battle/battle_scene.gd) |
 | 客戶端狀態 | [game_state.gd](client/scripts/game/game_state.gd) |

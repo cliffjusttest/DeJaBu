@@ -15,10 +15,13 @@ import com.dejebu.service.MapService;
 import com.dejebu.service.NpcService;
 import com.dejebu.service.PlayerPartyService;
 import com.dejebu.service.ProgressionService;
+import com.dejebu.service.DangerZoneService;
+import com.dejebu.service.EncounterCooldownService;
 import com.dejebu.service.EquipmentService;
 import com.dejebu.service.PlayerPresence;
 import com.dejebu.service.QuestService;
 import com.dejebu.service.SessionService;
+import com.dejebu.service.VisibleEnemyService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -54,6 +57,9 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
     private final QuestService questService;
     private final EquipmentService equipmentService;
     private final PlayerPartyService playerPartyService;
+    private final VisibleEnemyService visibleEnemyService;
+    private final EncounterCooldownService encounterCooldownService;
+    private final DangerZoneService dangerZoneService;
 
     public GameWebSocketHandler(ObjectMapper objectMapper,
                                 SessionService sessionService,
@@ -64,7 +70,10 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
                                 NpcService npcService,
                                 QuestService questService,
                                 EquipmentService equipmentService,
-                                PlayerPartyService playerPartyService) {
+                                PlayerPartyService playerPartyService,
+                                VisibleEnemyService visibleEnemyService,
+                                EncounterCooldownService encounterCooldownService,
+                                DangerZoneService dangerZoneService) {
         this.objectMapper = objectMapper;
         this.sessionService = sessionService;
         this.authService = authService;
@@ -75,6 +84,9 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
         this.questService = questService;
         this.equipmentService = equipmentService;
         this.playerPartyService = playerPartyService;
+        this.visibleEnemyService = visibleEnemyService;
+        this.encounterCooldownService = encounterCooldownService;
+        this.dangerZoneService = dangerZoneService;
     }
 
     @Override
@@ -188,6 +200,9 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
         response.put("onlineCount", sessionService.getOnlineCount());
         response.set("otherPlayers", buildOtherPlayersArray(user.getPlayerMapId(), session.getId()));
         response.set("party", buildPartyStateJson(user.getId()));
+        visibleEnemyService.ensureMapLoaded(user.getPlayerMapId());
+        response.set("visibleEnemies", visibleEnemyService.buildEnemyArray(user.getPlayerMapId()));
+        appendEncounterCooldown(response, user.getId());
         response.put("message", "歡迎回來，" + user.getDisplayName());
         broadcastPlayerJoin(session);
         return new GameMessage(MessageType.LOGIN_OK, response);
@@ -254,38 +269,120 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
             response.put("message", "傳送至 " + mapService.getMapName(resultMapId));
             response.put("encounter", false);
             encounterService.clearEncounter(resolveEncounterKey(session, userIdOptional.orElse(null)));
+            dangerZoneService.clear(resolveLeaderId(userIdOptional.orElse(null)));
             broadcastPlayerLeave(session, previousMapId, userIdOptional.orElse(null));
             broadcastPlayerJoin(session);
             response.set("otherPlayers", buildOtherPlayersArray(resultMapId, session.getId()));
+            visibleEnemyService.ensureMapLoaded(resultMapId);
+            response.set("visibleEnemies", visibleEnemyService.buildEnemyArray(resultMapId));
+            response.put("inDangerZone", false);
+            response.put("dangerValue", 0);
             userIdOptional.ifPresent(uid -> {
                 if (playerPartyService.isLeader(uid)) {
-                    syncPartyFollowers(session, uid, finalMapId, finalX, finalY, direction, true, false);
+                    syncPartyFollowers(session, uid, finalMapId, finalX, finalY, direction, true, false, null);
                 }
             });
             return new GameMessage(MessageType.MOVE_OK, response);
         }
 
-        boolean encounter = (x + y) % 5 == 0 && x != 0 && y != 0
-                && !npcService.hasNpcAt(resultMapId, resultX, resultY);
-        response.put("encounter", encounter);
+        Long leaderId = resolveLeaderId(userIdOptional.orElse(null));
+        DangerZoneService.DangerUpdate dangerUpdate = dangerZoneService.updatePosition(
+                leaderId, resultMapId, resultX, resultY, mapService
+        );
+        if (dangerUpdate.inDangerZone()) {
+            dangerZoneService.addStepDanger(leaderId);
+            dangerUpdate = new DangerZoneService.DangerUpdate(
+                    true,
+                    dangerUpdate.enteredDangerZone(),
+                    dangerZoneService.getDangerValue(leaderId),
+                    dangerUpdate.dangerZoneId()
+            );
+        }
+
+        boolean encounter = false;
+        String encounterMessage = null;
+        String visibleEnemyId = null;
         String encounterKey = resolveEncounterKey(session, userIdOptional.orElse(null));
-        if (encounter) {
+        ThreadLocalRandom random = ThreadLocalRandom.current();
+
+        List<VisibleEnemyService.PlayerTarget> chaseTargets = buildChaseTargets(resultMapId);
+        VisibleEnemyService.EncounterContactResult contact = visibleEnemyService.processMove(
+                resultMapId,
+                leaderId,
+                resultX,
+                resultY,
+                chaseTargets,
+                encounterCooldownService,
+                battleService,
+                playerPartyService
+        );
+
+        if (contact.triggered()) {
+            encounter = true;
+            visibleEnemyId = contact.enemyId();
+            encounterMessage = "遭遇野生怪物！";
             int playerLevel = userIdOptional
                     .flatMap(authService::findUserLevel)
                     .orElse(1);
-            ObjectNode encounterData = encounterService.createEncounter(
+            ObjectNode encounterData = encounterService.createVisibleEncounter(
                     encounterKey,
                     playerLevel,
-                    ThreadLocalRandom.current()
+                    contact.templateId(),
+                    contact.enemyId(),
+                    random
             );
             response.set("wildMonsters", encounterData.get("wildMonsters"));
-            response.put("message", "遭遇野生怪物！");
-        } else {
+            response.put("visibleEnemyId", contact.enemyId());
+            visibleEnemyService.releaseChaseTarget(leaderId);
+        } else if (dangerUpdate.inDangerZone()
+                && encounterCooldownService.canTriggerDarkEncounter(leaderId)) {
+            int chance = dangerZoneService.rollDarkEncounterChance(dangerUpdate.dangerValue(), new DangerZoneService.ThreadLocalRandomHolder());
+            if (chance > 0 && random.nextInt(100) < chance) {
+                encounter = true;
+                encounterMessage = "遭遇野生怪物！";
+                int playerLevel = userIdOptional
+                        .flatMap(authService::findUserLevel)
+                        .orElse(1);
+                ObjectNode encounterData = encounterService.createDarkEncounter(
+                        encounterKey,
+                        playerLevel,
+                        random
+                );
+                response.set("wildMonsters", encounterData.get("wildMonsters"));
+                response.put("fromDangerZone", true);
+            }
+        }
+
+        response.put("encounter", encounter);
+        if (encounterMessage != null) {
+            response.put("message", encounterMessage);
+        }
+        if (!encounter) {
             encounterService.clearEncounter(encounterKey);
         }
 
+        response.set("visibleEnemies", visibleEnemyService.buildEnemyArray(resultMapId));
+        response.put("inDangerZone", dangerUpdate.inDangerZone());
+        response.put("dangerValue", dangerUpdate.dangerValue());
+        if (dangerUpdate.enteredDangerZone() && !encounter) {
+            response.put("dangerZoneEntered", true);
+            response.put("message", "這裡充滿危險氣息...");
+        }
+        appendEncounterCooldown(response, leaderId);
+        broadcastVisibleEnemyUpdate(resultMapId);
+
         if (userIdOptional.isPresent() && playerPartyService.isLeader(userIdOptional.get())) {
-            syncPartyFollowers(session, userIdOptional.get(), resultMapId, resultX, resultY, direction, mapChanged, encounter);
+            syncPartyFollowers(
+                    session,
+                    userIdOptional.get(),
+                    resultMapId,
+                    resultX,
+                    resultY,
+                    direction,
+                    mapChanged,
+                    encounter,
+                    visibleEnemyId
+            );
         }
 
         broadcastPlayerMove(session);
@@ -307,10 +404,12 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
 
             String battleId = resolveBattleId(session, userId);
             String encounterKey = resolveEncounterKey(session, userId);
+            Long leaderId = resolveLeaderId(userId);
+            visibleEnemyService.releaseChaseTarget(leaderId);
 
             if (playerPartyService.isInParty(userId) && playerPartyService.isLeader(userId)) {
-                Long leaderId = playerPartyService.getLeaderId(userId);
-                List<Long> memberIds = playerPartyService.getMemberIds(leaderId);
+                Long partyLeaderId = playerPartyService.getLeaderId(userId);
+                List<Long> memberIds = playerPartyService.getMemberIds(partyLeaderId);
                 List<BattleService.PartyMemberBattleContext> members = new ArrayList<>();
                 int partyIndex = 0;
                 for (Long memberId : memberIds) {
@@ -431,6 +530,21 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
             personalizeBattleResult(result, userId);
             applyDeathTeleportPresence(session, userId, result);
             broadcastBattleResultToOthers(session.getId(), battleId, userId, result);
+
+            if (result.path("battleOver").asBoolean() || result.path("escaped").asBoolean()) {
+                Long leaderId = playerPartyService.isInParty(userId)
+                        ? playerPartyService.getLeaderId(userId)
+                        : userId;
+                String visibleEnemyId = result.has("visibleEnemyId")
+                        ? result.get("visibleEnemyId").asText()
+                        : null;
+                boolean fromDangerZone = result.path("fromDangerZone").asBoolean();
+                encounterCooldownService.applyBattleEndCooldown(leaderId, visibleEnemyId, fromDangerZone);
+                if (fromDangerZone) {
+                    dangerZoneService.addBattleDanger(leaderId);
+                }
+                visibleEnemyService.releaseChaseTarget(leaderId);
+            }
 
             return new GameMessage(MessageType.BATTLE_RESULT, result);
         } catch (IllegalStateException | IllegalArgumentException ex) {
@@ -730,7 +844,8 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
             int y,
             String direction,
             boolean mapChanged,
-            boolean encounter
+            boolean encounter,
+            String visibleEnemyId
     ) {
         for (Long memberId : playerPartyService.getMemberIds(leaderId)) {
             if (memberId.equals(leaderId)) {
@@ -748,9 +863,14 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
                 syncPayload.put("mapChanged", mapChanged);
                 syncPayload.put("encounter", encounter);
                 syncPayload.put("message", encounter ? "隊長遭遇野生怪物！" : "跟隨隊長移動");
+                if (visibleEnemyId != null) {
+                    syncPayload.put("visibleEnemyId", visibleEnemyId);
+                }
                 if (mapChanged) {
                     syncPayload.set("otherPlayers", buildOtherPlayersArray(mapId, memberSession.getId()));
+                    syncPayload.set("visibleEnemies", visibleEnemyService.buildEnemyArray(mapId));
                 }
+                appendEncounterCooldown(syncPayload, leaderId);
                 sendQuiet(memberSession, new GameMessage(MessageType.PARTY_SYNC, syncPayload));
                 broadcastPlayerMove(memberSession);
             });
@@ -884,5 +1004,53 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
                 sendQuiet(otherSession, new GameMessage(MessageType.BATTLE_RESULT, otherResult));
             });
         }
+    }
+
+    private Long resolveLeaderId(Long userId) {
+        if (userId == null) {
+            return null;
+        }
+        if (playerPartyService.isInParty(userId)) {
+            return playerPartyService.getLeaderId(userId);
+        }
+        return userId;
+    }
+
+    private List<VisibleEnemyService.PlayerTarget> buildChaseTargets(String mapId) {
+        List<VisibleEnemyService.PlayerTarget> targets = new ArrayList<>();
+        Set<Long> seen = new HashSet<>();
+        for (var entry : sessionService.getSessionsOnMap(mapId)) {
+            Optional<PlayerPresence> presenceOptional = sessionService.getPresence(entry.getValue());
+            if (presenceOptional.isEmpty()) {
+                continue;
+            }
+            PlayerPresence presence = presenceOptional.get();
+            Long leaderId = resolveLeaderId(presence.playerId());
+            if (leaderId == null || seen.contains(leaderId)) {
+                continue;
+            }
+            seen.add(leaderId);
+            targets.add(new VisibleEnemyService.PlayerTarget(leaderId, presence.x(), presence.y()));
+        }
+        return targets;
+    }
+
+    private void appendEncounterCooldown(ObjectNode node, Long leaderId) {
+        EncounterCooldownService.CooldownSnapshot snapshot = encounterCooldownService.snapshot(leaderId);
+        node.put("noVisibleEncounterMs", snapshot.noVisibleEncounterMs());
+        node.put("chaseCooldownMs", snapshot.noChaseMs());
+        node.put("darkEncounterCooldownMs", snapshot.noDarkEncounterMs());
+        if (!snapshot.maskedVisibleEnemyMs().isEmpty()) {
+            ObjectNode masked = objectMapper.createObjectNode();
+            snapshot.maskedVisibleEnemyMs().forEach(masked::put);
+            node.set("maskedVisibleEnemies", masked);
+        }
+    }
+
+    private void broadcastVisibleEnemyUpdate(String mapId) {
+        ObjectNode payload = objectMapper.createObjectNode();
+        payload.put("mapId", mapId);
+        payload.set("visibleEnemies", visibleEnemyService.buildEnemyArray(mapId));
+        broadcastToMap(mapId, null, new GameMessage(MessageType.VISIBLE_ENEMY_UPDATE, payload));
     }
 }

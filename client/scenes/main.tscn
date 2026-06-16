@@ -17,6 +17,7 @@
 [ext_resource type="PackedScene" path="res://scenes/party_panel.tscn" id="17_party"]
 
 [ext_resource type="Script" path="res://scripts/world/other_players_manager.gd" id="16_other_players"]
+[ext_resource type="Script" path="res://scripts/world/visible_enemy_manager.gd" id="18_visible_enemies"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_player"]
 radius = 10.0
@@ -44,6 +45,10 @@ script = ExtResource("3_player")
 [node name="OtherPlayers" type="Node2D" parent="World"]
 y_sort_enabled = true
 script = ExtResource("16_other_players")
+
+[node name="VisibleEnemies" type="Node2D" parent="World"]
+y_sort_enabled = true
+script = ExtResource("18_visible_enemies")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="World/Player"]
 shape = SubResource("CircleShape2D_player")
