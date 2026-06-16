@@ -49,8 +49,15 @@ class ProgressionServiceTest {
     }
 
     @Test
-    void monsterExpPenalizesHigherPlayerLevel() {
+    void monsterExpPenalizesHigherUnitLevel() {
         assertTrue(ProgressionService.monsterExp(20, 5) < ProgressionService.monsterExp(5, 5));
+    }
+
+    @Test
+    void monsterExpZeroWhenLevelGapIsTwentyOrMore() {
+        assertEquals(0, ProgressionService.monsterExp(25, 5));
+        assertEquals(0, ProgressionService.monsterExp(5, 25));
+        assertTrue(ProgressionService.monsterExp(24, 5) > 0);
     }
 
     @Test

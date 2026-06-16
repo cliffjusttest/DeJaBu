@@ -17,6 +17,7 @@ public class ProgressionService {
     public static final int MAX_LEVEL = 99;
     public static final int SKILL_POINTS_PER_LEVEL = 1;
     public static final double EXP_LOSS_RATE = 0.10;
+    public static final int MAX_EXP_LEVEL_GAP = 20;
     private static final double EXP_LEVEL_EXPONENT = 2.22;
 
     private final UserRepository userRepository;
@@ -34,17 +35,20 @@ public class ProgressionService {
         return (int) Math.floor(10 * Math.pow(Math.max(1, level), EXP_LEVEL_EXPONENT));
     }
 
-    public static int monsterExp(int playerLevel, int monsterLevel) {
+    public static int monsterExp(int unitLevel, int monsterLevel) {
         int ml = Math.max(1, monsterLevel);
-        double exponent = (playerLevel - ml) / 10.0;
+        if (Math.abs(unitLevel - ml) >= MAX_EXP_LEVEL_GAP) {
+            return 0;
+        }
+        double exponent = (unitLevel - ml) / 10.0;
         double factor = 1.0 / (1.0 + Math.exp(exponent));
         return (int) Math.floor(5 * ml * factor);
     }
 
-    public static int expFromEncounter(int playerLevel, List<WildMonsterInstance> monsters) {
+    public static int expFromEncounter(int unitLevel, List<WildMonsterInstance> monsters) {
         int total = 0;
         for (WildMonsterInstance monster : monsters) {
-            total += monsterExp(playerLevel, monster.getLevel());
+            total += monsterExp(unitLevel, monster.getLevel());
         }
         return total;
     }

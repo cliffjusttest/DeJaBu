@@ -1265,8 +1265,8 @@ public class BattleService {
             int monsterLevel = Math.max(1, enemy.getLevel());
 
             for (BattleUnit ally : state.allies) {
-                int playerLevel = playerLevelForUnit(state, ally);
-                int monsterExp = ProgressionService.monsterExp(playerLevel, monsterLevel);
+                int unitLevel = expUnitLevel(state, ally);
+                int monsterExp = ProgressionService.monsterExp(unitLevel, monsterLevel);
                 int sharedPart = (int) (monsterExp * 0.75);
                 unitExpMap.merge(ally.getId(), sharedPart, Integer::sum);
             }
@@ -1275,8 +1275,8 @@ public class BattleService {
             for (int killerId : killers) {
                 BattleUnit killer = findAllyById(state, killerId);
                 if (killer == null) continue;
-                int playerLevel = playerLevelForUnit(state, killer);
-                int monsterExp = ProgressionService.monsterExp(playerLevel, monsterLevel);
+                int unitLevel = expUnitLevel(state, killer);
+                int monsterExp = ProgressionService.monsterExp(unitLevel, monsterLevel);
                 int sharedPart = (int) (monsterExp * 0.75);
                 int killerBonus = monsterExp - sharedPart;
                 unitExpMap.merge(killerId, killerBonus, Integer::sum);
@@ -1285,12 +1285,9 @@ public class BattleService {
         return unitExpMap;
     }
 
-    private static int playerLevelForUnit(BattleState state, BattleUnit ally) {
+    private static int expUnitLevel(BattleState state, BattleUnit ally) {
         if (ally.isCompanion()) {
-            Long ownerId = ally.getOwnerUserId();
-            if (ownerId != null) {
-                return state.userLevels.getOrDefault(ownerId, state.playerLevel);
-            }
+            return ally.getLevel();
         }
         for (var entry : state.userPlayerUnitIds.entrySet()) {
             if (entry.getValue() == ally.getId()) {
