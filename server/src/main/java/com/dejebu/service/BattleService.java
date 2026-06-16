@@ -97,7 +97,6 @@ public class BattleService {
                 .orElseThrow(() -> new IllegalStateException("沒有待處理的野外遭遇，請先遭遇野生怪物"));
         encounterService.consumeEncounter(sessionId);
         List<BattleUnit> partyCompanions = companionService.loadPartyBattleUnits(userId, 10);
-
         List<BattleSkillRuntime> playerSkills = skillService.loadRuntimeSkillsForUser(userId);
         BattleState state = new BattleState(
                 sessionId,
@@ -115,7 +114,82 @@ public class BattleService {
         equipEnemySkills(state);
         state.consumables.addAll(loadConsumables(userId));
         activeBattles.put(sessionId, state);
-        return toBattleSnapshot(state);
+        return toBattleSnapshot(state, userId);
+    }
+
+    @Transactional(readOnly = true)
+    public ObjectNode startPartyBattle(
+            String battleId,
+            String leaderSessionId,
+            List<PartyMemberBattleContext> members,
+            PendingEncounter encounter
+    ) {
+        if (members.isEmpty()) {
+            throw new IllegalStateException("組隊戰鬥成員為空");
+        }
+
+        List<BattleUnit> allies = new ArrayList<>();
+        Map<Long, Integer> userPlayerUnitIds = new HashMap<>();
+        int nextUnitId = 1;
+        for (PartyMemberBattleContext member : members) {
+            int memberPlayerUnitId = nextUnitId++;
+            userPlayerUnitIds.put(member.userId(), memberPlayerUnitId);
+
+            BattleUnit playerUnit = BattleUnit.player(
+                    memberPlayerUnitId,
+                    BattleFormation.multiplayerPlayerSlot(member.partyIndex()),
+                    member.playerName(),
+                    member.playerElement(),
+                    member.playerStats().maxHp(),
+                    member.playerCurrentHp(),
+                    member.playerStats().maxMp(),
+                    member.playerCurrentMp(),
+                    member.playerLevel(),
+                    member.playerStats()
+            );
+            playerUnit.setSkills(skillService.loadRuntimeSkillsForUser(member.userId()));
+            playerUnit.setOwnerUserId(member.userId());
+            allies.add(playerUnit);
+
+            List<BattleUnit> memberCompanions = companionService.loadPartyBattleUnits(
+                    member.userId(),
+                    nextUnitId,
+                    BattleFormation.maxCompanionsPerPlayerInParty(),
+                    BattleFormation.multiplayerCompanionSlot(member.partyIndex())
+            );
+            for (BattleUnit companion : memberCompanions) {
+                nextUnitId = Math.max(nextUnitId, companion.getId() + 1);
+            }
+            allies.addAll(memberCompanions);
+        }
+
+        BattleState state = new BattleState(battleId, leaderSessionId, members, encounter, allies, userPlayerUnitIds);
+        equipEnemySkills(state);
+        for (PartyMemberBattleContext member : members) {
+            state.consumablesByUser.put(member.userId(), loadConsumables(member.userId()));
+        }
+        activeBattles.put(battleId, state);
+        return toBattleSnapshot(state, members.get(0).userId());
+    }
+
+    public boolean hasActiveBattle(String battleId) {
+        return activeBattles.containsKey(battleId);
+    }
+
+    public Set<String> getParticipantSessionIds(String battleId) {
+        BattleState state = activeBattles.get(battleId);
+        if (state == null) {
+            return Set.of();
+        }
+        return new HashSet<>(state.participantSessionIds);
+    }
+
+    public ObjectNode getBattleSnapshot(String battleId, Long forUserId) {
+        BattleState state = activeBattles.get(battleId);
+        if (state == null) {
+            return null;
+        }
+        return toBattleSnapshot(state, forUserId);
     }
 
     private List<ConsumableInfo> loadConsumables(Long userId) {
@@ -149,8 +223,16 @@ public class BattleService {
     // ── Planning Phase ───────────────────────────────────────────────────────
 
     @Transactional
-    public ObjectNode resolveAction(String sessionId, String action, Integer targetId, Integer actorId, Long skillId, Long itemId) {
-        BattleState state = activeBattles.get(sessionId);
+    public ObjectNode resolveAction(
+            String battleId,
+            Long actingUserId,
+            String action,
+            Integer targetId,
+            Integer actorId,
+            Long skillId,
+            Long itemId
+    ) {
+        BattleState state = activeBattles.get(battleId);
         if (state == null) {
             throw new IllegalStateException("No active battle for session");
         }
@@ -160,6 +242,9 @@ public class BattleService {
 
         BattleUnit actor = findUnit(state.allies, actorId)
                 .orElseThrow(() -> new IllegalArgumentException("無效的行動單位"));
+        if (actor.getOwnerUserId() != null && !actor.getOwnerUserId().equals(actingUserId)) {
+            throw new IllegalArgumentException("只能為自己的單位指定行動");
+        }
         if (!actor.isAlive()) {
             throw new IllegalArgumentException("該單位已無法戰鬥");
         }
@@ -169,7 +254,7 @@ public class BattleService {
 
         validatePlanAction(state, actor, action, targetId, skillId, itemId);
         state.pendingActions.put(actorId, new PlannedAction(action, targetId, skillId, itemId));
-        state.activeActorId = findNextUnplannedActor(state);
+        state.activeActorId = findNextUnplannedActorForUser(state, actingUserId);
 
         boolean allPlanned = aliveAlliesInActionOrder(state).stream()
                 .allMatch(u -> state.pendingActions.containsKey(u.getId()));
@@ -177,11 +262,11 @@ public class BattleService {
         if (!allPlanned) {
             ObjectNode result = objectMapper.createObjectNode();
             result.put("roundExecuted", false);
-            result.set("battle", toBattleSnapshot(state));
+            result.set("battle", toBattleSnapshot(state, actingUserId));
             return result;
         }
 
-        return executeRound(state, sessionId);
+        return executeRound(state, battleId, actingUserId);
     }
 
     private void validatePlanAction(BattleState state, BattleUnit actor, String action, Integer targetId, Long skillId, Long itemId) {
@@ -213,7 +298,7 @@ public class BattleService {
             }
             case "item" -> {
                 if (itemId == null || itemId <= 0) throw new IllegalArgumentException("請指定道具");
-                findConsumable(state, itemId)
+                findConsumableForOwner(state, actor, itemId)
                         .orElseThrow(() -> new IllegalArgumentException("背包中沒有此道具"));
             }
             case "defend", "flee" -> { /* always valid */ }
@@ -223,7 +308,7 @@ public class BattleService {
 
     // ── Round Execution ──────────────────────────────────────────────────────
 
-    private ObjectNode executeRound(BattleState state, String sessionId) {
+    private ObjectNode executeRound(BattleState state, String battleId, Long actingUserId) {
         ThreadLocalRandom random = ThreadLocalRandom.current();
         ObjectNode result = objectMapper.createObjectNode();
         result.put("roundExecuted", true);
@@ -277,9 +362,9 @@ public class BattleService {
         if (result.path("escaped").asBoolean()) {
             state.defendingUnits.clear();
             syncBattleResources(state);
-            activeBattles.remove(sessionId);
-            encounterService.clearEncounter(state.sessionId);
-            result.set("battle", toBattleSnapshot(state));
+            activeBattles.remove(battleId);
+            encounterService.clearEncounter(state.encounterKey);
+            result.set("battle", toBattleSnapshot(state, actingUserId));
             return result;
         }
 
@@ -305,11 +390,11 @@ public class BattleService {
                 result.put("victory", false);
             }
             syncBattleResources(state);
-            activeBattles.remove(sessionId);
-            encounterService.clearEncounter(state.sessionId);
+            activeBattles.remove(battleId);
+            encounterService.clearEncounter(state.encounterKey);
         }
 
-        result.set("battle", toBattleSnapshot(state));
+        result.set("battle", toBattleSnapshot(state, actingUserId));
         return result;
     }
 
@@ -707,7 +792,14 @@ public class BattleService {
     }
 
     private void resolveItemUse(BattleState state, BattleUnit actor, Long itemId, ObjectNode result) {
-        ConsumableInfo info = findConsumable(state, itemId)
+        Long ownerUserId = actor.getOwnerUserId() != null ? actor.getOwnerUserId() : state.userId;
+        List<ConsumableInfo> ownerConsumables = state.multiplayer
+                ? state.consumablesByUser.getOrDefault(ownerUserId, List.of())
+                : state.consumables;
+
+        ConsumableInfo info = ownerConsumables.stream()
+                .filter(c -> c.itemId() == itemId)
+                .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("背包中沒有此道具"));
 
         int healed = 0;
@@ -718,13 +810,22 @@ public class BattleService {
         }
 
         // Update in-memory cache
-        state.consumables.remove(info);
-        if (info.quantity() > 1) {
-            state.consumables.add(new ConsumableInfo(info.itemId(), info.name(), info.healHp(), info.quantity() - 1));
+        if (state.multiplayer) {
+            List<ConsumableInfo> updated = new ArrayList<>(ownerConsumables);
+            updated.remove(info);
+            if (info.quantity() > 1) {
+                updated.add(new ConsumableInfo(info.itemId(), info.name(), info.healHp(), info.quantity() - 1));
+            }
+            state.consumablesByUser.put(ownerUserId, updated);
+        } else {
+            state.consumables.remove(info);
+            if (info.quantity() > 1) {
+                state.consumables.add(new ConsumableInfo(info.itemId(), info.name(), info.healHp(), info.quantity() - 1));
+            }
         }
 
         // Persist inventory change
-        inventoryRepository.findByUserIdAndItemId(state.userId, itemId)
+        inventoryRepository.findByUserIdAndItemId(ownerUserId, itemId)
                 .stream().findFirst()
                 .ifPresent(inv -> {
                     if (inv.getQuantity() <= 1) {
@@ -764,12 +865,21 @@ public class BattleService {
             throw new IllegalArgumentException("該目標已無法戰鬥");
         }
 
-        User user = userRepository.findById(state.userId)
+        User user = userRepository.findById(
+                actor.getOwnerUserId() != null ? actor.getOwnerUserId() : state.userId
+        )
                 .orElseThrow(() -> new IllegalStateException("玩家不存在"));
 
+        int capturePlayerLevel = state.multiplayer
+                ? state.userLevels.getOrDefault(user.getId(), state.playerLevel)
+                : state.playerLevel;
+        CharacterStats capturePlayerStats = state.multiplayer
+                ? state.userStats.getOrDefault(user.getId(), state.playerStats)
+                : state.playerStats;
+
         CaptureResult captureResult = companionService.evaluateCapture(
-                state.playerLevel,
-                state.playerStats,
+                capturePlayerLevel,
+                capturePlayerStats,
                 target.getLevel(),
                 target.getHp(),
                 target.getMaxHp(),
@@ -929,6 +1039,55 @@ public class BattleService {
     private void appendVictoryExpResult(ObjectNode result, BattleState state) {
         Map<Integer, Integer> unitExpMap = computeExpDistribution(state);
 
+        if (state.multiplayer) {
+            ArrayNode playerResults = objectMapper.createArrayNode();
+            ArrayNode allCompanionResults = objectMapper.createArrayNode();
+            for (Long memberId : state.participantUserIds) {
+                int playerUnitId = state.userPlayerUnitIds.get(memberId);
+                int playerExpGained = unitExpMap.getOrDefault(playerUnitId, 0);
+                ProgressionResult playerResult = progressionService.applyVictoryExp(memberId, playerExpGained);
+                ObjectNode memberNode = objectMapper.createObjectNode();
+                memberNode.put("playerId", memberId);
+                memberNode.put("expGained", playerResult.expGained());
+                memberNode.put("playerExp", playerResult.playerExp());
+                memberNode.put("expToNextLevel", playerResult.expToNextLevel());
+                memberNode.put("playerLevel", playerResult.playerLevel());
+                memberNode.put("skillPoints", playerResult.skillPoints());
+                if (playerResult.leveledUp()) {
+                    memberNode.put("leveledUp", true);
+                    memberNode.put("previousLevel", playerResult.previousLevel());
+                    memberNode.put("levelsGained", playerResult.levelsGained());
+                    memberNode.put("skillPointsGained", playerResult.skillPointsGained());
+                }
+                playerResults.add(memberNode);
+
+                for (BattleUnit ally : state.allies) {
+                    if (ally.getId() == playerUnitId || !ally.isCompanion()) continue;
+                    if (ally.getOwnerUserId() == null || !ally.getOwnerUserId().equals(memberId)) continue;
+                    int expGained = unitExpMap.getOrDefault(ally.getId(), 0);
+                    if (expGained <= 0) continue;
+                    companionService.findPartySlotForBattleUnit(memberId, ally)
+                            .flatMap(partySlot -> progressionService.applyExpToCompanion(memberId, partySlot, expGained))
+                            .ifPresent(cr -> {
+                                ObjectNode node = objectMapper.createObjectNode();
+                                node.put("playerId", memberId);
+                                node.put("companionId", cr.companionId());
+                                node.put("name", cr.name());
+                                node.put("expGained", cr.expGained());
+                                node.put("previousLevel", cr.previousLevel());
+                                node.put("newLevel", cr.newLevel());
+                                node.put("leveledUp", cr.leveledUp());
+                                allCompanionResults.add(node);
+                            });
+                }
+            }
+            result.set("playerExpResults", playerResults);
+            if (!allCompanionResults.isEmpty()) {
+                result.set("companionExpResults", allCompanionResults);
+            }
+            return;
+        }
+
         int playerExpGained = unitExpMap.getOrDefault(state.playerUnitId, 0);
         ProgressionResult playerResult = progressionService.applyVictoryExp(state.userId, playerExpGained);
 
@@ -974,6 +1133,32 @@ public class BattleService {
                 .filter(id -> id != null && !id.isEmpty())
                 .toList();
         if (killedTemplateIds.isEmpty()) {
+            return;
+        }
+
+        if (state.multiplayer) {
+            ArrayNode lootResults = objectMapper.createArrayNode();
+            for (Long memberId : state.participantUserIds) {
+                LootService.BattleLootResult loot = lootService.grantBattleLoot(
+                        memberId, killedTemplateIds, ThreadLocalRandom.current());
+                ObjectNode lootNode = objectMapper.createObjectNode();
+                lootNode.put("playerId", memberId);
+                lootNode.put("goldGained", loot.goldGained());
+                lootNode.put("playerGold", loot.playerGold());
+                if (!loot.items().isEmpty()) {
+                    ArrayNode dropsArray = objectMapper.createArrayNode();
+                    for (LootService.DroppedItem drop : loot.items()) {
+                        ObjectNode dropNode = objectMapper.createObjectNode();
+                        dropNode.put("itemId", drop.itemId());
+                        dropNode.put("name", drop.name());
+                        dropNode.put("quantity", drop.quantity());
+                        dropsArray.add(dropNode);
+                    }
+                    lootNode.set("itemDrops", dropsArray);
+                }
+                lootResults.add(lootNode);
+            }
+            result.set("lootResults", lootResults);
             return;
         }
 
@@ -1144,6 +1329,17 @@ public class BattleService {
     }
 
     private void syncBattleHp(BattleState state) {
+        if (state.multiplayer) {
+            for (Long memberId : state.participantUserIds) {
+                int playerUnitId = state.userPlayerUnitIds.get(memberId);
+                state.allies.stream()
+                        .filter(unit -> unit.getId() == playerUnitId)
+                        .findFirst()
+                        .ifPresent(playerUnit -> authService.syncPlayerHp(memberId, Math.max(1, playerUnit.getHp())));
+                companionService.syncPartyHp(memberId, state.allies, playerUnitId);
+            }
+            return;
+        }
         state.allies.stream()
                 .filter(unit -> unit.getId() == state.playerUnitId)
                 .findFirst()
@@ -1152,6 +1348,17 @@ public class BattleService {
     }
 
     private void syncBattleMp(BattleState state) {
+        if (state.multiplayer) {
+            for (Long memberId : state.participantUserIds) {
+                int playerUnitId = state.userPlayerUnitIds.get(memberId);
+                state.allies.stream()
+                        .filter(unit -> unit.getId() == playerUnitId)
+                        .findFirst()
+                        .ifPresent(playerUnit -> authService.syncPlayerMp(memberId, playerUnit.getMp()));
+                companionService.syncPartyMp(memberId, state.allies, playerUnitId);
+            }
+            return;
+        }
         state.allies.stream()
                 .filter(unit -> unit.getId() == state.playerUnitId)
                 .findFirst()
@@ -1167,7 +1374,28 @@ public class BattleService {
         }
     }
 
+    private Optional<ConsumableInfo> findConsumableForOwner(BattleState state, BattleUnit actor, Long itemId) {
+        Long ownerId = actor.getOwnerUserId() != null ? actor.getOwnerUserId() : state.userId;
+        if (state.multiplayer) {
+            return state.consumablesByUser.getOrDefault(ownerId, List.of()).stream()
+                    .filter(c -> c.itemId() == itemId)
+                    .findFirst();
+        }
+        return findConsumable(state, itemId);
+    }
+
     private Optional<ConsumableInfo> findConsumable(BattleState state, Long itemId) {
+        if (state.multiplayer) {
+            for (List<ConsumableInfo> list : state.consumablesByUser.values()) {
+                Optional<ConsumableInfo> found = list.stream()
+                        .filter(c -> c.itemId() == itemId)
+                        .findFirst();
+                if (found.isPresent()) {
+                    return found;
+                }
+            }
+            return Optional.empty();
+        }
         return state.consumables.stream()
                 .filter(c -> c.itemId() == itemId)
                 .findFirst();
@@ -1193,8 +1421,9 @@ public class BattleService {
 
     // ── Battle Snapshot ──────────────────────────────────────────────────────
 
-    private ObjectNode toBattleSnapshot(BattleState state) {
+    private ObjectNode toBattleSnapshot(BattleState state, Long forUserId) {
         ObjectNode battle = objectMapper.createObjectNode();
+        battle.put("multiplayer", state.multiplayer);
         battle.put("playerName", state.playerName);
         battle.put("playerLevel", state.playerLevel);
         battle.put("playerElement", state.playerElement.getCode());
@@ -1203,8 +1432,26 @@ public class BattleService {
         battle.set("allies", unitsToJson(state.allies));
         battle.set("enemies", unitsToJson(state.enemies));
 
+        Long viewUserId = forUserId != null ? forUserId : state.userId;
+        if (state.multiplayer && viewUserId != null) {
+            battle.put("playerName", state.userNames.getOrDefault(viewUserId, state.playerName));
+            battle.put("playerLevel", state.userLevels.getOrDefault(viewUserId, state.playerLevel));
+            Element viewElement = state.userElements.get(viewUserId);
+            if (viewElement != null) {
+                battle.put("playerElement", viewElement.getCode());
+                battle.put("playerElementName", viewElement.getDisplayName());
+            }
+            CharacterStats viewStats = state.userStats.get(viewUserId);
+            if (viewStats != null) {
+                battle.set("playerStats", viewStats.toJsonNode(objectMapper));
+            }
+        }
+
+        int playerUnitId = state.multiplayer && viewUserId != null
+                ? state.userPlayerUnitIds.getOrDefault(viewUserId, state.playerUnitId)
+                : state.playerUnitId;
         BattleUnit playerUnit = state.allies.stream()
-                .filter(unit -> unit.getId() == state.playerUnitId)
+                .filter(unit -> unit.getId() == playerUnitId)
                 .findFirst()
                 .orElse(state.allies.get(0));
         battle.put("playerHp", playerUnit.getHp());
@@ -1219,10 +1466,16 @@ public class BattleService {
         battle.put("enemyName", state.enemies.size() == 1
                 ? state.enemies.get(0).getName()
                 : state.enemies.size() + " 名敵人");
-        battle.put("activeActorId", state.activeActorId);
+        battle.put("activeActorId", state.multiplayer && viewUserId != null
+                ? findNextUnplannedActorForUser(state, viewUserId)
+                : state.activeActorId);
         battle.set("plannedActorIds", idsToJson(state.pendingActions.keySet()));
+
         ArrayNode consumablesNode = objectMapper.createArrayNode();
-        for (ConsumableInfo c : state.consumables) {
+        List<ConsumableInfo> consumables = state.multiplayer && viewUserId != null
+                ? state.consumablesByUser.getOrDefault(viewUserId, List.of())
+                : state.consumables;
+        for (ConsumableInfo c : consumables) {
             ObjectNode cn = objectMapper.createObjectNode();
             cn.put("id", c.itemId());
             cn.put("name", c.name());
@@ -1232,6 +1485,16 @@ public class BattleService {
         }
         battle.set("consumables", consumablesNode);
         return battle;
+    }
+
+    private int findNextUnplannedActorForUser(BattleState state, Long userId) {
+        return state.allies.stream()
+                .filter(BattleUnit::isAlive)
+                .filter(u -> u.getOwnerUserId() != null && u.getOwnerUserId().equals(userId))
+                .filter(u -> !state.pendingActions.containsKey(u.getId()))
+                .map(BattleUnit::getId)
+                .findFirst()
+                .orElse(state.userPlayerUnitIds.getOrDefault(userId, state.playerUnitId));
     }
 
     private ArrayNode idsToJson(Set<Integer> ids) {
@@ -1250,27 +1513,46 @@ public class BattleService {
 
     private record PlannedAction(String action, Integer targetId, Long skillId, Long itemId) {}
 
+    public record PartyMemberBattleContext(
+            Long userId,
+            String sessionId,
+            String playerName,
+            Element playerElement,
+            CharacterStats playerStats,
+            int playerLevel,
+            int playerCurrentHp,
+            int playerCurrentMp,
+            int partyIndex
+    ) {}
+
     private record ConsumableInfo(long itemId, String name, int healHp, int quantity) {}
 
     private static class BattleState {
         private final String sessionId;
+        private final String encounterKey;
         private final Long userId;
         private final String playerName;
         private final Element playerElement;
         private final CharacterStats playerStats;
         private final int playerLevel;
         private final int playerUnitId;
+        private final boolean multiplayer;
+        private final List<Long> participantUserIds = new ArrayList<>();
+        private final Set<String> participantSessionIds = new HashSet<>();
+        private final Map<Long, Integer> userPlayerUnitIds = new HashMap<>();
+        private final Map<Long, String> userNames = new HashMap<>();
+        private final Map<Long, Element> userElements = new HashMap<>();
+        private final Map<Long, CharacterStats> userStats = new HashMap<>();
+        private final Map<Long, Integer> userLevels = new HashMap<>();
         private final List<BattleUnit> allies = new ArrayList<>();
         private final List<BattleUnit> enemies = new ArrayList<>();
         private int activeActorId;
         private final Map<Integer, PlannedAction> pendingActions = new LinkedHashMap<>();
         private final Set<Integer> defendingUnits = new HashSet<>();
         private final List<ConsumableInfo> consumables = new ArrayList<>();
-        // enemyUnitId → list of ally unit ids that landed the killing blow
+        private final Map<Long, List<ConsumableInfo>> consumablesByUser = new HashMap<>();
         private final Map<Integer, List<Integer>> killCredits = new LinkedHashMap<>();
-        // followerUnitId → leaderUnitId for active combos this round
         private final Map<Integer, Integer> comboFollowers = new LinkedHashMap<>();
-        // enemyComboLeaderId → pre-assigned PlannedAction for enemy combo leaders
         private final Map<Integer, PlannedAction> enemyComboPlans = new LinkedHashMap<>();
 
         private BattleState(
@@ -1287,13 +1569,22 @@ public class BattleService {
                 List<BattleSkillRuntime> playerSkills
         ) {
             this.sessionId = sessionId;
+            this.encounterKey = sessionId;
             this.userId = userId;
             this.playerName = playerName;
             this.playerElement = playerElement;
             this.playerStats = playerStats;
             this.playerLevel = playerLevel;
             this.playerUnitId = 1;
+            this.multiplayer = false;
             this.activeActorId = playerUnitId;
+            this.participantUserIds.add(userId);
+            this.participantSessionIds.add(sessionId);
+            this.userPlayerUnitIds.put(userId, playerUnitId);
+            this.userNames.put(userId, playerName);
+            this.userElements.put(userId, playerElement);
+            this.userStats.put(userId, playerStats);
+            this.userLevels.put(userId, playerLevel);
 
             BattleUnit playerUnit = BattleUnit.player(
                     playerUnitId,
@@ -1308,8 +1599,47 @@ public class BattleService {
                     playerStats
             );
             playerUnit.setSkills(playerSkills);
+            playerUnit.setOwnerUserId(userId);
             allies.add(playerUnit);
             allies.addAll(partyCompanions);
+
+            for (WildMonsterInstance monster : encounter.getMonsters()) {
+                enemies.add(monster.toBattleUnit());
+            }
+        }
+
+        private BattleState(
+                String battleId,
+                String leaderSessionId,
+                List<PartyMemberBattleContext> members,
+                PendingEncounter encounter,
+                List<BattleUnit> prebuiltAllies,
+                Map<Long, Integer> prebuiltUserPlayerUnitIds
+        ) {
+            this.sessionId = leaderSessionId;
+            this.encounterKey = battleId;
+            this.multiplayer = true;
+
+            PartyMemberBattleContext leader = members.get(0);
+            this.userId = leader.userId();
+            this.playerName = leader.playerName();
+            this.playerElement = leader.playerElement();
+            this.playerStats = leader.playerStats();
+            this.playerLevel = leader.playerLevel();
+            this.playerUnitId = prebuiltUserPlayerUnitIds.get(leader.userId());
+            this.activeActorId = this.playerUnitId;
+
+            for (PartyMemberBattleContext member : members) {
+                participantUserIds.add(member.userId());
+                participantSessionIds.add(member.sessionId());
+                userNames.put(member.userId(), member.playerName());
+                userElements.put(member.userId(), member.playerElement());
+                userStats.put(member.userId(), member.playerStats());
+                userLevels.put(member.userId(), member.playerLevel());
+                userPlayerUnitIds.put(member.userId(), prebuiltUserPlayerUnitIds.get(member.userId()));
+            }
+
+            allies.addAll(prebuiltAllies);
 
             for (WildMonsterInstance monster : encounter.getMonsters()) {
                 enemies.add(monster.toBattleUnit());

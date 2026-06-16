@@ -144,7 +144,8 @@ func _render_list(companions: Variant) -> void:
 		child.queue_free()
 
 	var party_count := _count_party_members(companions)
-	party_label.text = "出戰隊伍：%d / %d" % [party_count, MAX_PARTY]
+	var max_party := GameState.party_max_companions if GameState.in_player_party else MAX_PARTY
+	party_label.text = "出戰隊伍：%d / %d" % [party_count, max_party]
 
 	if typeof(companions) != TYPE_ARRAY or companions.is_empty():
 		var empty_label := Label.new()
@@ -195,7 +196,7 @@ func _render_list(companions: Variant) -> void:
 			action.pressed.connect(_on_party_pressed.bind(companion_id, false))
 		else:
 			action.text = "出戰"
-			action.disabled = party_count >= MAX_PARTY
+			action.disabled = party_count >= max_party
 			action.pressed.connect(_on_party_pressed.bind(companion_id, true))
 		row.add_child(action)
 

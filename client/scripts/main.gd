@@ -26,12 +26,15 @@ extends Node2D
 @onready var status_layer: CanvasLayer = $StatusLayer
 @onready var shop_panel: Control = $ShopLayer/ShopPanel
 @onready var shop_layer: CanvasLayer = $ShopLayer
+@onready var party_panel: Control = $PartyLayer/PartyPanel
+@onready var party_layer: CanvasLayer = $PartyLayer
 @onready var skills_button: Button = $UI/SkillsButton
 @onready var companions_button: Button = $UI/CompanionsButton
 @onready var quests_button: Button = $UI/QuestsButton
 @onready var equipment_button: Button = $UI/EquipmentButton
 @onready var hotkey_button: Button = $UI/HotkeyButton
 @onready var status_button: Button = $UI/StatusButton
+@onready var party_button: Button = $UI/PartyButton
 @onready var world: Node2D = $World
 @onready var ui: CanvasLayer = $UI
 
@@ -59,12 +62,14 @@ func _ready() -> void:
 	hotkey_panel.closed.connect(_on_hotkey_panel_closed)
 	status_panel.closed.connect(_on_status_panel_closed)
 	shop_panel.closed.connect(_on_shop_panel_closed)
+	party_panel.closed.connect(_on_party_panel_closed)
 	skills_button.pressed.connect(_on_skills_button_pressed)
 	companions_button.pressed.connect(_on_companions_button_pressed)
 	quests_button.pressed.connect(_on_quests_button_pressed)
 	equipment_button.pressed.connect(_on_equipment_button_pressed)
 	hotkey_button.pressed.connect(_on_hotkey_button_pressed)
 	status_button.pressed.connect(_on_status_button_pressed)
+	party_button.pressed.connect(_on_party_button_pressed)
 	NetworkClient.connected.connect(_on_connected)
 	NetworkClient.disconnected.connect(_on_disconnected)
 	NetworkClient.connection_failed.connect(_on_connection_failed)
@@ -76,6 +81,7 @@ func _ready() -> void:
 	equipment_button.hide()
 	hotkey_button.hide()
 	status_button.hide()
+	party_button.hide()
 	status_label.text = "DeJaBu - 請登入"
 
 func _on_login_authenticated(auth_data: Dictionary) -> void:
@@ -134,6 +140,13 @@ func _process(_delta: float) -> void:
 		player.set_input_direction(Vector2.ZERO)
 		return
 	_check_nearby_npc()
+	_update_nearby_players_for_party()
+
+	if not GameState.can_control_movement():
+		player.set_input_direction(Vector2.ZERO)
+		player.stop_movement()
+		GameState.player_world_position = player.global_position
+		return
 
 	player.set_input_direction(_read_movement_input())
 	GameState.player_world_position = player.global_position
@@ -148,11 +161,15 @@ func _unhandled_input(event: InputEvent) -> void:
 	if GameState.mode != GameState.Mode.EXPLORE:
 		return
 
-	if skill_tree_layer.visible or companion_layer.visible or quest_layer.visible or equipment_layer.visible or hotkey_layer.visible or status_layer.visible:
+	if skill_tree_layer.visible or companion_layer.visible or quest_layer.visible or equipment_layer.visible or hotkey_layer.visible or status_layer.visible or party_layer.visible:
 		return
 
 	if event is InputEventKey and event.pressed and not event.echo:
 		match event.keycode:
+			KEY_G:
+				_toggle_party_panel()
+				get_viewport().set_input_as_handled()
+				return
 			KEY_C:
 				_toggle_status_panel()
 				get_viewport().set_input_as_handled()
@@ -201,6 +218,9 @@ func _read_movement_input() -> Vector2:
 	return Vector2.ZERO
 
 func _handle_click_move() -> void:
+	if not GameState.can_control_movement():
+		_log("組隊時只有隊長可以移動")
+		return
 	var world_pos := _get_mouse_world_position()
 	if not world_map.is_world_walkable(world_pos):
 		_log("無法移動至該位置")
@@ -266,6 +286,16 @@ func _on_message_received(type: String, payload: Dictionary) -> void:
 			other_players.handle_leave(payload)
 		"PLAYER_MOVE":
 			other_players.handle_move(payload)
+		"PARTY_INVITE_OK":
+			_handle_party_invite_ok(payload)
+		"PARTY_ACCEPT_OK":
+			_handle_party_state_payload(payload)
+		"PARTY_UPDATE":
+			_handle_party_update(payload)
+		"PARTY_LEAVE_OK":
+			_handle_party_state_payload(payload)
+		"PARTY_SYNC":
+			_handle_party_sync(payload)
 		"ERROR":
 			var err_msg := str(payload.get("message", "未知錯誤"))
 			_log("錯誤: %s" % err_msg)
@@ -322,6 +352,9 @@ func _handle_login_ok(payload: Dictionary) -> void:
 		player.apply_appearance(GameState.player_appearance)
 
 	_pending_other_players = payload.get("otherPlayers", [])
+	if payload.has("party"):
+		GameState.apply_party_state(payload.get("party", {}))
+	_check_party_invite_prompt()
 	_load_player_map()
 
 func _handle_move_ok(payload: Dictionary) -> void:
@@ -349,7 +382,8 @@ func _handle_move_ok(payload: Dictionary) -> void:
 		player.stop_movement()
 		_pending_sync_grid = Vector2i(-9999, -9999)
 		_log(payload.get("message", "遭遇野生怪物！"))
-		NetworkClient.start_battle()
+		if GameState.is_party_leader or not GameState.in_player_party:
+			NetworkClient.start_battle()
 	elif _pending_sync_grid != Vector2i(-9999, -9999):
 		var pending := _pending_sync_grid
 		_pending_sync_grid = Vector2i(-9999, -9999)
@@ -592,6 +626,113 @@ func _set_gameplay_visible(visible: bool) -> void:
 	equipment_button.visible = visible
 	hotkey_button.visible = visible
 	status_button.visible = visible
+	party_button.visible = visible
+
+func _update_nearby_players_for_party() -> void:
+	var nearby: Array = []
+	for child in other_players.get_children():
+		if child.has_method("get_player_id"):
+			var player_id := int(child.get_player_id())
+			if player_id > 0:
+				nearby.append({
+					"playerId": player_id,
+					"playerName": child.get_player_name(),
+					"playerLevel": child.get_player_level()
+				})
+	GameState.nearby_players_for_party = nearby
+
+func _handle_party_invite_ok(payload: Dictionary) -> void:
+	if payload.has("inviterId"):
+		GameState.pending_party_invite_from = int(payload.get("inviterId", 0))
+		GameState.pending_party_invite_name = str(payload.get("inviterName", "旅人"))
+		_check_party_invite_prompt()
+		return
+	_log(payload.get("message", "已送出組隊邀請"))
+	if party_layer.visible:
+		party_panel.show_message(str(payload.get("message", "")))
+
+func _handle_party_update(payload: Dictionary) -> void:
+	GameState.apply_party_state(payload)
+	_log("組隊狀態已更新")
+	if party_layer.visible:
+		party_panel.refresh()
+	_update_status()
+
+func _handle_party_state_payload(payload: Dictionary) -> void:
+	if payload.has("party"):
+		GameState.apply_party_state(payload.get("party", {}))
+	_log(payload.get("message", "組隊狀態已更新"))
+	if party_layer.visible:
+		party_panel.refresh()
+	_update_status()
+
+func _handle_party_sync(payload: Dictionary) -> void:
+	_awaiting_server = false
+	var new_x := int(payload.get("x", GameState.player_x))
+	var new_y := int(payload.get("y", GameState.player_y))
+	var new_map_id := str(payload.get("mapId", GameState.player_map_id))
+	GameState.player_x = new_x
+	GameState.player_y = new_y
+	GameState.player_map_id = new_map_id
+
+	if payload.get("mapChanged", false):
+		player.stop_movement()
+		_pending_sync_grid = Vector2i(-9999, -9999)
+		other_players.clear_all()
+		_pending_other_players = payload.get("otherPlayers", [])
+		_log(payload.get("message", "跟隨隊長傳送"))
+		if world_map.get_current_map_id() != new_map_id:
+			world_map.load_map_by_id(new_map_id)
+		else:
+			_on_map_loaded()
+		return
+
+	player.stop_movement()
+	var spawn := world_map.find_spawn_point(Vector2i(new_x, new_y))
+	player.setup(world_map, spawn)
+	_log(payload.get("message", "跟隨隊長移動"))
+
+	if payload.get("encounter", false):
+		_log("隊長遭遇野生怪物！")
+	_update_status()
+
+func _check_party_invite_prompt() -> void:
+	if GameState.pending_party_invite_from <= 0:
+		return
+	_log("收到來自 %s 的組隊邀請（組隊面板可接受）" % GameState.pending_party_invite_name)
+
+func _on_party_button_pressed() -> void:
+	_toggle_party_panel()
+
+func _toggle_party_panel() -> void:
+	if party_layer.visible:
+		party_panel.hide()
+		party_layer.hide()
+	else:
+		skill_tree_layer.hide()
+		companion_layer.hide()
+		quest_layer.hide()
+		equipment_layer.hide()
+		hotkey_layer.hide()
+		status_layer.hide()
+		shop_layer.hide()
+		party_layer.show()
+		party_panel.open()
+
+func _on_party_panel_closed() -> void:
+	party_panel.hide()
+	party_layer.hide()
+	_update_status()
+
+func accept_party_invite() -> void:
+	if GameState.pending_party_invite_from > 0:
+		NetworkClient.party_accept()
+
+func decline_party_invite() -> void:
+	if GameState.pending_party_invite_from > 0:
+		NetworkClient.party_decline()
+		GameState.pending_party_invite_from = 0
+		GameState.pending_party_invite_name = ""
 
 func _on_skills_button_pressed() -> void:
 	_toggle_skill_tree()
@@ -719,7 +860,12 @@ func _update_status() -> void:
 		_: mode_text = "探索"
 	var pos := GameState.player_world_position
 	var map_name := world_map.get_map_name() if world_map.get_current_map_id() == GameState.player_map_id else MapRegistry.get_map_name(GameState.player_map_id)
-	status_label.text = "%s | Lv.%d | HP %d/%d | MP %d/%d | 金幣 %d | %s | X: %.0f  Y: %.0f | 模式: %s%s" % [
+	var party_text := ""
+	if GameState.in_player_party:
+		party_text = " | 組隊 %d人" % GameState.party_members.size()
+		if not GameState.is_party_leader:
+			party_text += "（跟隨隊長）"
+	status_label.text = "%s | Lv.%d | HP %d/%d | MP %d/%d | 金幣 %d | %s | X: %.0f  Y: %.0f | 模式: %s%s%s" % [
 		GameState.player_name,
 		GameState.player_level,
 		GameState.player_current_hp,
@@ -731,7 +877,8 @@ func _update_status() -> void:
 		pos.x,
 		pos.y,
 		mode_text,
-		GameState.last_message
+		GameState.last_message,
+		party_text
 	]
 
 func _log(text: String) -> void:

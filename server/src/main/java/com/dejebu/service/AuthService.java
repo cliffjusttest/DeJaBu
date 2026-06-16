@@ -137,6 +137,11 @@ public class AuthService {
                 .map(User::getLevel);
     }
 
+    @Transactional(readOnly = true)
+    public Optional<User> findUserById(Long userId) {
+        return userRepository.findById(userId);
+    }
+
     @Transactional
     public void updatePlayerPosition(Long userId, String mapId, int x, int y) {
         userRepository.findById(userId).ifPresent(user -> {

@@ -27,6 +27,7 @@ public class BattleUnit {
     private final CharacterStats stats;
     private final boolean wild;
     private final boolean capturable;
+    private Long ownerUserId;
     private final List<BattleSkillRuntime> skills = new ArrayList<>();
 
     private BattleUnit(
@@ -198,6 +199,14 @@ public class BattleUnit {
         return templateId != null && !wild;
     }
 
+    public Long getOwnerUserId() {
+        return ownerUserId;
+    }
+
+    public void setOwnerUserId(Long ownerUserId) {
+        this.ownerUserId = ownerUserId;
+    }
+
     public List<BattleSkillRuntime> getSkills() {
         return Collections.unmodifiableList(skills);
     }
@@ -238,6 +247,9 @@ public class BattleUnit {
         node.put("wild", wild);
         node.put("capturable", capturable);
         node.put("companion", isCompanion());
+        if (ownerUserId != null) {
+            node.put("ownerUserId", ownerUserId);
+        }
         if (templateId != null) {
             node.put("templateId", templateId);
         }

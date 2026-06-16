@@ -7,6 +7,7 @@ const PlayerSpriteFactoryScript = preload("res://scripts/world/player_sprite_fac
 const MOVE_DURATION := 0.25
 
 var player_id: int = -1
+var player_level: int = 1
 
 var _world_map: WorldMap
 var _facing := "down"
@@ -45,6 +46,7 @@ func setup(world_map: WorldMap) -> void:
 
 func apply_payload(payload: Dictionary) -> void:
 	player_id = int(payload.get("playerId", player_id))
+	player_level = int(payload.get("playerLevel", player_level))
 	name_label.text = str(payload.get("playerName", ""))
 	if payload.has("playerAppearance"):
 		sprite.modulate = CharacterAppearanceData.tint_for(str(payload.get("playerAppearance")))
@@ -76,6 +78,15 @@ func move_to(grid_x: int, grid_y: int, direction: String) -> void:
 	_play_directional_animation(true)
 	_tween.tween_property(self, "global_position", target, MOVE_DURATION)
 	_tween.tween_callback(func(): _play_directional_animation(false))
+
+func get_player_id() -> int:
+	return player_id
+
+func get_player_name() -> String:
+	return name_label.text
+
+func get_player_level() -> int:
+	return player_level
 
 func _update_facing(direction: String) -> void:
 	if direction.is_empty():

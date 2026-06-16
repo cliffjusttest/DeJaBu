@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 
 @Service
@@ -40,6 +41,7 @@ public class CompanionService {
     private final CompanionSkillRepository companionSkillRepository;
     private final UserRepository userRepository;
     private final EquipmentService equipmentService;
+    private final PlayerPartyService playerPartyService;
 
     public CompanionService(
             UserCompanionRepository userCompanionRepository,
@@ -47,7 +49,8 @@ public class CompanionService {
             MonsterTemplateSkillRepository monsterTemplateSkillRepository,
             CompanionSkillRepository companionSkillRepository,
             UserRepository userRepository,
-            EquipmentService equipmentService
+            EquipmentService equipmentService,
+            PlayerPartyService playerPartyService
     ) {
         this.userCompanionRepository = userCompanionRepository;
         this.monsterTemplateRepository = monsterTemplateRepository;
@@ -55,6 +58,7 @@ public class CompanionService {
         this.companionSkillRepository = companionSkillRepository;
         this.userRepository = userRepository;
         this.equipmentService = equipmentService;
+        this.playerPartyService = playerPartyService;
     }
 
     @Transactional(readOnly = true)
@@ -97,9 +101,19 @@ public class CompanionService {
             if (companion.getPartySlot() != null) {
                 return new CompanionListResponse(listCompanionDtos(user), "此夥伴已在出戰隊伍中", user.getSkillPoints());
             }
+            int maxCompanions = playerPartyService.isInParty(user.getId())
+                    ? BattleFormation.maxCompanionsPerPlayerInParty()
+                    : MAX_PARTY_COMPANIONS;
+            long activeCount = userCompanionRepository.countByUserIdAndPartySlotIsNotNull(user.getId());
+            if (activeCount >= maxCompanions) {
+                String limitMessage = maxCompanions == 1
+                        ? "組隊模式下最多只能出戰 1 名夥伴"
+                        : "出戰名額已滿，最多 " + maxCompanions + " 名";
+                throw new IllegalArgumentException(limitMessage);
+            }
             Integer freeSlot = resolvePartySlot(user.getId());
             if (freeSlot == null) {
-                throw new IllegalArgumentException("出戰名額已滿，最多 " + MAX_PARTY_COMPANIONS + " 名");
+                throw new IllegalArgumentException("出戰名額已滿，最多 " + maxCompanions + " 名");
             }
             companion.setPartySlot(freeSlot);
         } else {
@@ -113,10 +127,19 @@ public class CompanionService {
 
     @Transactional(readOnly = true)
     public List<BattleUnit> loadPartyBattleUnits(Long userId, int nextUnitIdStart) {
+        return loadPartyBattleUnits(userId, nextUnitIdStart, MAX_PARTY_COMPANIONS, -1);
+    }
+
+    @Transactional(readOnly = true)
+    public List<BattleUnit> loadPartyBattleUnits(Long userId, int nextUnitIdStart, int maxCompanions, int battleSlotOverride) {
         List<UserCompanion> party = userCompanionRepository.findByUserIdAndPartySlotIsNotNullOrderByPartySlotAsc(userId);
         List<BattleUnit> units = new ArrayList<>();
         int nextId = nextUnitIdStart;
+        int loaded = 0;
         for (UserCompanion companion : party) {
+            if (loaded >= maxCompanions) {
+                break;
+            }
             if (companion.getCurrentHp() <= 0) {
                 continue;
             }
@@ -127,9 +150,12 @@ public class CompanionService {
             int battleMaxMp = battleStats.maxMp();
             int currentHp = Math.min(Math.max(0, companion.getCurrentHp()), battleMaxHp);
             int currentMp = Math.min(Math.max(0, companion.resolveCurrentMp()), battleMaxMp);
+            int battleSlot = battleSlotOverride >= 0
+                    ? battleSlotOverride
+                    : BattleFormation.partySlotToBattleSlot(companion.getPartySlot());
             BattleUnit unit = BattleUnit.companion(
                     nextId++,
-                    BattleFormation.partySlotToBattleSlot(companion.getPartySlot()),
+                    battleSlot,
                     template.getId(),
                     companion.getNickname(),
                     template.getElement(),
@@ -141,7 +167,9 @@ public class CompanionService {
                     currentMp
             );
             unit.setSkills(loadRuntimeSkillsForCompanion(companion.getId()));
+            unit.setOwnerUserId(userId);
             units.add(unit);
+            loaded++;
         }
         return units;
     }
@@ -235,14 +263,13 @@ public class CompanionService {
     @Transactional
     public void syncPartyHp(Long userId, List<BattleUnit> allies, int playerUnitId) {
         for (BattleUnit ally : allies) {
-            if (ally.getId() == playerUnitId || ally.getTemplateId() == null) {
+            if (ally.getId() == playerUnitId || !ally.isCompanion()) {
                 continue;
             }
-            int partySlot = BattleFormation.battleSlotToPartySlot(ally.getSlot());
-            if (partySlot < 0) {
+            if (ally.getOwnerUserId() != null && !ally.getOwnerUserId().equals(userId)) {
                 continue;
             }
-            userCompanionRepository.findByUserIdAndPartySlot(userId, partySlot)
+            findCompanionForBattleUnit(userId, ally)
                     .ifPresent(companion -> {
                         companion.setCurrentHp(ally.getHp());
                         userCompanionRepository.save(companion);
@@ -253,19 +280,33 @@ public class CompanionService {
     @Transactional
     public void syncPartyMp(Long userId, List<BattleUnit> allies, int playerUnitId) {
         for (BattleUnit ally : allies) {
-            if (ally.getId() == playerUnitId || ally.getTemplateId() == null) {
+            if (ally.getId() == playerUnitId || !ally.isCompanion()) {
                 continue;
             }
-            int partySlot = BattleFormation.battleSlotToPartySlot(ally.getSlot());
-            if (partySlot < 0) {
+            if (ally.getOwnerUserId() != null && !ally.getOwnerUserId().equals(userId)) {
                 continue;
             }
-            userCompanionRepository.findByUserIdAndPartySlot(userId, partySlot)
+            findCompanionForBattleUnit(userId, ally)
                     .ifPresent(companion -> {
                         companion.setCurrentMp(ally.getMp());
                         userCompanionRepository.save(companion);
                     });
         }
+    }
+
+    private Optional<UserCompanion> findCompanionForBattleUnit(Long userId, BattleUnit ally) {
+        int partySlot = BattleFormation.battleSlotToPartySlot(ally.getSlot());
+        if (partySlot >= 0) {
+            return userCompanionRepository.findByUserIdAndPartySlot(userId, partySlot);
+        }
+        return userCompanionRepository.findByUserIdAndPartySlotIsNotNullOrderByPartySlotAsc(userId).stream()
+                .filter(companion -> companion.getNickname().equals(ally.getName()))
+                .findFirst();
+    }
+
+    public Optional<Integer> findPartySlotForBattleUnit(Long userId, BattleUnit ally) {
+        return findCompanionForBattleUnit(userId, ally)
+                .map(UserCompanion::getPartySlot);
     }
 
     private List<CompanionDto> listCompanionDtos(User user) {

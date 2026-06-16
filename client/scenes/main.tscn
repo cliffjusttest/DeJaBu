@@ -14,6 +14,7 @@
 [ext_resource type="PackedScene" uid="uid://dejebu_hotkey_panel" path="res://scenes/hotkey_settings_panel.tscn" id="13_hotkey"]
 [ext_resource type="PackedScene" uid="uid://dejebu_status_panel" path="res://scenes/status_panel.tscn" id="14_status"]
 [ext_resource type="PackedScene" uid="uid://dejebu_shop_panel" path="res://scenes/shop_panel.tscn" id="15_shop"]
+[ext_resource type="PackedScene" path="res://scenes/party_panel.tscn" id="17_party"]
 
 [ext_resource type="Script" path="res://scripts/world/other_players_manager.gd" id="16_other_players"]
 
@@ -74,7 +75,7 @@ offset_left = 20.0
 offset_top = 55.0
 offset_right = 900.0
 offset_bottom = 100.0
-text = "探索: WASD / 點擊移動 | 狀態 C / 技能 K / 夥伴 P / 任務 J / 背包 E / 快捷鍵 H / 對話 F | 戰鬥: 1 攻擊 / 4 捕捉（擇一）/ 2 防禦 / 3 逃跑"
+text = "探索: WASD / 點擊移動 | 狀態 C / 技能 K / 夥伴 P / 組隊 G / 任務 J / 背包 E / 快捷鍵 H / 對話 F | 戰鬥: 1 攻擊 / 4 捕捉（擇一）/ 2 防禦 / 3 逃跑"
 
 [node name="LogLabel" type="RichTextLabel" parent="UI"]
 offset_left = 20.0
@@ -125,6 +126,13 @@ offset_top = 330.0
 offset_right = 670.0
 offset_bottom = 365.0
 text = "狀態 [C]"
+
+[node name="PartyButton" type="Button" parent="UI"]
+offset_left = 680.0
+offset_top = 330.0
+offset_right = 780.0
+offset_bottom = 365.0
+text = "組隊"
 
 [node name="BattleLayer" type="CanvasLayer" parent="."]
 
@@ -183,4 +191,10 @@ visible = false
 visible = false
 
 [node name="ShopPanel" parent="ShopLayer" instance=ExtResource("15_shop")]
+visible = false
+
+[node name="PartyLayer" type="CanvasLayer" parent="."]
+visible = false
+
+[node name="PartyPanel" parent="PartyLayer" instance=ExtResource("17_party")]
 visible = false

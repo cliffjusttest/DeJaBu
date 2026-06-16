@@ -115,3 +115,18 @@ func dialogue_choice(npc_id: String, node_key: String, choice_index: int) -> voi
 
 func request_quest_list() -> void:
 	send_message("QUEST_LIST")
+
+func party_invite(player_id: int) -> void:
+	send_message("PARTY_INVITE", {"playerId": player_id})
+
+func party_accept() -> void:
+	send_message("PARTY_ACCEPT")
+
+func party_decline() -> void:
+	send_message("PARTY_DECLINE")
+
+func party_leave() -> void:
+	send_message("PARTY_LEAVE")
+
+func party_kick(player_id: int) -> void:
+	send_message("PARTY_KICK", {"playerId": player_id})

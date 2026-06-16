@@ -119,4 +119,25 @@ public class SessionService {
         }
         return result;
     }
+
+    public Optional<WebSocketSession> getSession(String sessionId) {
+        return Optional.ofNullable(sessions.get(sessionId));
+    }
+
+    public Optional<WebSocketSession> findSessionByUserId(Long userId) {
+        for (Map.Entry<String, Long> entry : userIds.entrySet()) {
+            if (entry.getValue().equals(userId)) {
+                return Optional.ofNullable(sessions.get(entry.getKey()));
+            }
+        }
+        return Optional.empty();
+    }
+
+    public List<WebSocketSession> findSessionsByUserIds(List<Long> userIds) {
+        List<WebSocketSession> result = new ArrayList<>();
+        for (Long userId : userIds) {
+            findSessionByUserId(userId).ifPresent(result::add);
+        }
+        return result;
+    }
 }

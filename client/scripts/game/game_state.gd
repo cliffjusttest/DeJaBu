@@ -31,6 +31,43 @@ var active_quests: Array = []
 var dialogue_npc_id := ""
 var dialogue_node_key := ""
 
+var in_player_party := false
+var is_party_leader := false
+var party_leader_id := 0
+var party_members: Array = []
+var party_max_size := 5
+var party_max_companions := 1
+var pending_party_invite_from := 0
+var pending_party_invite_name := ""
+var nearby_players_for_party: Array = []
+
+func apply_party_state(party: Dictionary) -> void:
+	in_player_party = bool(party.get("inParty", false))
+	is_party_leader = bool(party.get("isLeader", false))
+	party_leader_id = int(party.get("leaderId", 0))
+	party_max_size = int(party.get("maxSize", 5))
+	party_max_companions = int(party.get("maxCompanionsPerPlayer", 1))
+	party_members = party.get("members", [])
+	if party.has("pendingInviteFrom"):
+		pending_party_invite_from = int(party.get("pendingInviteFrom", 0))
+		pending_party_invite_name = str(party.get("pendingInviteFromName", ""))
+	else:
+		pending_party_invite_from = 0
+		pending_party_invite_name = ""
+
+func clear_party_state() -> void:
+	in_player_party = false
+	is_party_leader = false
+	party_leader_id = 0
+	party_members = []
+	pending_party_invite_from = 0
+	pending_party_invite_name = ""
+
+func can_control_movement() -> bool:
+	if not in_player_party:
+		return true
+	return is_party_leader
+
 func apply_auth(data: Dictionary) -> void:
 	auth_token = str(data.get("token", ""))
 	player_id = int(data.get("playerId", 0))
@@ -71,6 +108,7 @@ func clear_auth() -> void:
 	active_quests = []
 	dialogue_npc_id = ""
 	dialogue_node_key = ""
+	clear_party_state()
 	is_authenticated = false
 
 func reset_battle() -> void:

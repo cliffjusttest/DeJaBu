@@ -1,6 +1,7 @@
 package com.dejebu.websocket;
 
 import com.dejebu.entity.User;
+import com.dejebu.game.BattleFormation;
 import com.dejebu.game.CharacterStats;
 import com.dejebu.game.Element;
 import com.dejebu.protocol.GameMessage;
@@ -9,8 +10,10 @@ import com.dejebu.game.MapTeleportTarget;
 import com.dejebu.service.AuthService;
 import com.dejebu.service.BattleService;
 import com.dejebu.service.EncounterService;
+import com.dejebu.service.EncounterService.PendingEncounter;
 import com.dejebu.service.MapService;
 import com.dejebu.service.NpcService;
+import com.dejebu.service.PlayerPartyService;
 import com.dejebu.service.ProgressionService;
 import com.dejebu.service.EquipmentService;
 import com.dejebu.service.PlayerPresence;
@@ -30,8 +33,10 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
 @Component
@@ -48,6 +53,7 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
     private final NpcService npcService;
     private final QuestService questService;
     private final EquipmentService equipmentService;
+    private final PlayerPartyService playerPartyService;
 
     public GameWebSocketHandler(ObjectMapper objectMapper,
                                 SessionService sessionService,
@@ -57,7 +63,8 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
                                 MapService mapService,
                                 NpcService npcService,
                                 QuestService questService,
-                                EquipmentService equipmentService) {
+                                EquipmentService equipmentService,
+                                PlayerPartyService playerPartyService) {
         this.objectMapper = objectMapper;
         this.sessionService = sessionService;
         this.authService = authService;
@@ -67,6 +74,7 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
         this.npcService = npcService;
         this.questService = questService;
         this.equipmentService = equipmentService;
+        this.playerPartyService = playerPartyService;
     }
 
     @Override
@@ -89,14 +97,25 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
             case NPC_INTERACT -> handleNpcInteract(session, incoming.getPayload());
             case DIALOGUE_CHOICE -> handleDialogueChoice(session, incoming.getPayload());
             case QUEST_LIST -> handleQuestList(session);
+            case PARTY_INVITE -> handlePartyInvite(session, incoming.getPayload());
+            case PARTY_ACCEPT -> handlePartyAccept(session);
+            case PARTY_DECLINE -> handlePartyDecline(session);
+            case PARTY_LEAVE -> handlePartyLeave(session);
+            case PARTY_KICK -> handlePartyKick(session, incoming.getPayload());
             default -> error("Unsupported message type: " + incoming.getType());
         };
 
         send(session, response);
     }
 
-    @Override
+	@Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
+        sessionService.getUserId(session).ifPresent(userId -> {
+            if (playerPartyService.isInParty(userId)) {
+                encounterService.clearEncounter(playerPartyService.partyBattleId(playerPartyService.getLeaderId(userId)));
+            }
+            playerPartyService.onDisconnect(userId);
+        });
         encounterService.clearEncounter(session.getId());
         sessionService.getPresence(session).ifPresent(presence ->
                 broadcastPlayerLeave(session, presence.mapId(), presence.playerId()));
@@ -168,6 +187,7 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
         response.put("sessionId", session.getId());
         response.put("onlineCount", sessionService.getOnlineCount());
         response.set("otherPlayers", buildOtherPlayersArray(user.getPlayerMapId(), session.getId()));
+        response.set("party", buildPartyStateJson(user.getId()));
         response.put("message", "歡迎回來，" + user.getDisplayName());
         broadcastPlayerJoin(session);
         return new GameMessage(MessageType.LOGIN_OK, response);
@@ -176,6 +196,11 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
     private GameMessage handleMove(WebSocketSession session, JsonNode payload) {
         if (!sessionService.isAuthenticated(session)) {
             return error("尚未登入");
+        }
+
+        Long userId = sessionService.getUserId(session).orElse(null);
+        if (userId != null && playerPartyService.isInParty(userId) && !playerPartyService.isLeader(userId)) {
+            return error("組隊時只有隊長可以移動");
         }
 
         int x = payload.path("x").asInt();
@@ -228,29 +253,39 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
         if (mapChanged) {
             response.put("message", "傳送至 " + mapService.getMapName(resultMapId));
             response.put("encounter", false);
-            encounterService.clearEncounter(session.getId());
+            encounterService.clearEncounter(resolveEncounterKey(session, userIdOptional.orElse(null)));
             broadcastPlayerLeave(session, previousMapId, userIdOptional.orElse(null));
             broadcastPlayerJoin(session);
             response.set("otherPlayers", buildOtherPlayersArray(resultMapId, session.getId()));
+            userIdOptional.ifPresent(userId -> {
+                if (playerPartyService.isLeader(userId)) {
+                    syncPartyFollowers(session, userId, resultMapId, resultX, resultY, direction, true, false);
+                }
+            });
             return new GameMessage(MessageType.MOVE_OK, response);
         }
 
         boolean encounter = (x + y) % 5 == 0 && x != 0 && y != 0
                 && !npcService.hasNpcAt(resultMapId, resultX, resultY);
         response.put("encounter", encounter);
+        String encounterKey = resolveEncounterKey(session, userIdOptional.orElse(null));
         if (encounter) {
             int playerLevel = userIdOptional
                     .flatMap(authService::findUserLevel)
                     .orElse(1);
             ObjectNode encounterData = encounterService.createEncounter(
-                    session.getId(),
+                    encounterKey,
                     playerLevel,
                     ThreadLocalRandom.current()
             );
             response.set("wildMonsters", encounterData.get("wildMonsters"));
             response.put("message", "遭遇野生怪物！");
         } else {
-            encounterService.clearEncounter(session.getId());
+            encounterService.clearEncounter(encounterKey);
+        }
+
+        if (userIdOptional.isPresent() && playerPartyService.isLeader(userIdOptional.get())) {
+            syncPartyFollowers(session, userIdOptional.get(), resultMapId, resultX, resultY, direction, mapChanged, encounter);
         }
 
         broadcastPlayerMove(session);
@@ -265,6 +300,70 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
         try {
             Long userId = sessionService.getUserId(session)
                     .orElseThrow(() -> new IllegalStateException("尚未登入"));
+
+            if (playerPartyService.isInParty(userId) && !playerPartyService.isLeader(userId)) {
+                return error("只有隊長可以發起戰鬥");
+            }
+
+            String battleId = resolveBattleId(session, userId);
+            String encounterKey = resolveEncounterKey(session, userId);
+
+            if (playerPartyService.isInParty(userId) && playerPartyService.isLeader(userId)) {
+                Long leaderId = playerPartyService.getLeaderId(userId);
+                List<Long> memberIds = playerPartyService.getMemberIds(leaderId);
+                List<BattleService.PartyMemberBattleContext> members = new ArrayList<>();
+                int partyIndex = 0;
+                for (Long memberId : memberIds) {
+                    WebSocketSession memberSession = sessionService.findSessionByUserId(memberId)
+                            .orElseThrow(() -> new IllegalStateException("隊友尚未連線"));
+                    String memberName = sessionService.getPlayerName(memberSession).orElse("旅人");
+                    Element memberElement = authService.findUserElement(memberId).orElse(Element.FIRE);
+                    CharacterStats baseStats = authService.findUserStats(memberId).orElse(CharacterStats.zeroBase());
+                    CharacterStats equipBonus = equipmentService.getTotalEquipmentBonus(memberId);
+                    CharacterStats memberStats = baseStats.withBonus(equipBonus);
+                    int memberLevel = authService.findUserLevel(memberId).orElse(1);
+                    User memberUser = authService.findUserById(memberId)
+                            .orElseThrow(() -> new IllegalStateException("玩家不存在"));
+                    members.add(new BattleService.PartyMemberBattleContext(
+                            memberId,
+                            memberSession.getId(),
+                            memberName,
+                            memberElement,
+                            memberStats,
+                            memberLevel,
+                            memberUser.resolveCurrentHp(),
+                            memberUser.resolveCurrentMp(),
+                            partyIndex++
+                    ));
+                }
+
+                PendingEncounter encounter = encounterService.consumeEncounter(encounterKey);
+                battleService.startPartyBattle(
+                        battleId,
+                        session.getId(),
+                        members,
+                        encounter
+                );
+
+                ObjectNode response = objectMapper.createObjectNode();
+                response.set("battle", battleService.getBattleSnapshot(battleId, userId));
+                response.put("message", "進入組隊戰鬥！");
+                GameMessage startMessage = new GameMessage(MessageType.BATTLE_START, response);
+
+                for (BattleService.PartyMemberBattleContext member : members) {
+                    if (member.sessionId().equals(session.getId())) {
+                        continue;
+                    }
+                    sessionService.getSession(member.sessionId()).ifPresent(memberSession -> {
+                        ObjectNode memberResponse = objectMapper.createObjectNode();
+                        memberResponse.set("battle", battleService.getBattleSnapshot(battleId, member.userId()));
+                        memberResponse.put("message", "隊長遭遇戰鬥，進入組隊戰鬥！");
+                        sendQuiet(memberSession, new GameMessage(MessageType.BATTLE_START, memberResponse));
+                    });
+                }
+                return startMessage;
+            }
+
             String playerName = sessionService.getPlayerName(session).orElse("旅人");
             Element playerElement = authService.findUserElement(userId).orElse(Element.FIRE);
             CharacterStats baseStats = authService.findUserStats(userId).orElse(CharacterStats.zeroBase());
@@ -273,7 +372,7 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
             int playerLevel = authService.findUserLevel(userId).orElse(1);
 
             ObjectNode battle = battleService.startBattle(
-                    session.getId(),
+                    battleId,
                     userId,
                     playerName,
                     playerElement,
@@ -296,22 +395,24 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
         }
 
         try {
+            Long userId = sessionService.getUserId(session)
+                    .orElseThrow(() -> new IllegalStateException("尚未登入"));
+            String battleId = resolveBattleId(session, userId);
             String action = payload.path("action").asText();
             Integer targetId = payload.has("targetId") ? payload.get("targetId").asInt() : null;
             Integer actorId = payload.has("actorId") ? payload.get("actorId").asInt() : null;
             Long skillId = payload.has("skillId") ? payload.get("skillId").asLong() : null;
             Long itemId = payload.has("itemId") ? payload.get("itemId").asLong() : null;
-            ObjectNode result = battleService.resolveAction(session.getId(), action, targetId, actorId, skillId, itemId);
+            ObjectNode result = battleService.resolveAction(battleId, userId, action, targetId, actorId, skillId, itemId);
 
             if (result.path("battleOver").asBoolean() && result.path("victory").asBoolean()) {
-                Optional<Long> userIdOpt = sessionService.getUserId(session);
-                if (userIdOpt.isPresent()) {
-                    JsonNode killedNode = result.get("killedTemplateIds");
-                    if (killedNode != null && killedNode.isArray()) {
-                        List<String> templateIds = new ArrayList<>();
-                        for (JsonNode id : killedNode) templateIds.add(id.asText());
-                        List<QuestService.KillProgress> progress = questService.recordKills(userIdOpt.get(), templateIds);
-                        if (!progress.isEmpty()) {
+                JsonNode killedNode = result.get("killedTemplateIds");
+                if (killedNode != null && killedNode.isArray()) {
+                    List<String> templateIds = new ArrayList<>();
+                    for (JsonNode id : killedNode) templateIds.add(id.asText());
+                    for (Long memberId : playerPartyService.getMemberIdsIfInParty(userId)) {
+                        List<QuestService.KillProgress> progress = questService.recordKills(memberId, templateIds);
+                        if (!progress.isEmpty() && memberId.equals(userId)) {
                             ArrayNode progressArray = objectMapper.createArrayNode();
                             for (QuestService.KillProgress kp : progress) {
                                 ObjectNode kpNode = objectMapper.createObjectNode();
@@ -326,6 +427,9 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
                     }
                 }
             }
+
+            personalizeBattleResult(result, userId);
+            broadcastBattleResultToOthers(session.getId(), battleId, userId, result);
 
             return new GameMessage(MessageType.BATTLE_RESULT, result);
         } catch (IllegalStateException | IllegalArgumentException ex) {
@@ -452,5 +556,306 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
             ObjectNode payload = presenceToJson(presence);
             broadcastToMap(presence.mapId(), session.getId(), new GameMessage(MessageType.PLAYER_MOVE, payload));
         });
+    }
+
+    private GameMessage handlePartyInvite(WebSocketSession session, JsonNode payload) {
+        if (!sessionService.isAuthenticated(session)) {
+            return error("尚未登入");
+        }
+        try {
+            Long inviterId = sessionService.getUserId(session)
+                    .orElseThrow(() -> new IllegalStateException("尚未登入"));
+            long inviteeId = payload.path("playerId").asLong(0);
+            if (inviteeId <= 0) {
+                return error("請指定要邀請的玩家");
+            }
+            WebSocketSession inviteeSession = sessionService.findSessionByUserId(inviteeId)
+                    .orElseThrow(() -> new IllegalArgumentException("對方不在線上"));
+            validateSameMap(session, inviteeSession);
+
+            playerPartyService.invite(inviterId, inviteeId);
+
+            ObjectNode notify = objectMapper.createObjectNode();
+            notify.put("inviterId", inviterId);
+            notify.put("inviterName", sessionService.getPlayerName(session).orElse("旅人"));
+            sendQuiet(inviteeSession, new GameMessage(MessageType.PARTY_INVITE_OK, notify));
+
+            ObjectNode response = objectMapper.createObjectNode();
+            response.put("message", "已送出組隊邀請");
+            return new GameMessage(MessageType.PARTY_INVITE_OK, response);
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            return error(ex.getMessage());
+        }
+    }
+
+    private GameMessage handlePartyAccept(WebSocketSession session) {
+        if (!sessionService.isAuthenticated(session)) {
+            return error("尚未登入");
+        }
+        try {
+            Long userId = sessionService.getUserId(session)
+                    .orElseThrow(() -> new IllegalStateException("尚未登入"));
+            Long inviterId = playerPartyService.getPendingInvite(userId)
+                    .orElseThrow(() -> new IllegalArgumentException("沒有待接受的組隊邀請"));
+            WebSocketSession inviterSession = sessionService.findSessionByUserId(inviterId)
+                    .orElseThrow(() -> new IllegalArgumentException("邀請者不在線上"));
+            validateSameMap(session, inviterSession);
+
+            List<Long> memberIds = playerPartyService.acceptInvite(userId);
+            Long leaderId = playerPartyService.getLeaderId(userId);
+            broadcastPartyUpdate(memberIds, leaderId);
+
+            ObjectNode response = objectMapper.createObjectNode();
+            response.set("party", buildPartyStateJson(userId));
+            response.put("message", "已加入組隊");
+            return new GameMessage(MessageType.PARTY_ACCEPT_OK, response);
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            return error(ex.getMessage());
+        }
+    }
+
+    private GameMessage handlePartyDecline(WebSocketSession session) {
+        if (!sessionService.isAuthenticated(session)) {
+            return error("尚未登入");
+        }
+        Long userId = sessionService.getUserId(session).orElse(null);
+        if (userId != null) {
+            playerPartyService.declineInvite(userId);
+        }
+        ObjectNode response = objectMapper.createObjectNode();
+        response.put("message", "已拒絕組隊邀請");
+        return new GameMessage(MessageType.PARTY_DECLINE, response);
+    }
+
+    private GameMessage handlePartyLeave(WebSocketSession session) {
+        if (!sessionService.isAuthenticated(session)) {
+            return error("尚未登入");
+        }
+        try {
+            Long userId = sessionService.getUserId(session)
+                    .orElseThrow(() -> new IllegalStateException("尚未登入"));
+            List<Long> remaining = playerPartyService.leave(userId);
+            if (!remaining.isEmpty()) {
+                broadcastPartyUpdate(remaining, playerPartyService.getLeaderId(remaining.get(0)));
+            }
+            ObjectNode soloParty = buildPartyStateJson(userId);
+            sendQuiet(session, new GameMessage(MessageType.PARTY_UPDATE, soloParty));
+
+            ObjectNode response = objectMapper.createObjectNode();
+            response.set("party", soloParty);
+            response.put("message", "已離開組隊");
+            return new GameMessage(MessageType.PARTY_LEAVE_OK, response);
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            return error(ex.getMessage());
+        }
+    }
+
+    private GameMessage handlePartyKick(WebSocketSession session, JsonNode payload) {
+        if (!sessionService.isAuthenticated(session)) {
+            return error("尚未登入");
+        }
+        try {
+            Long leaderId = sessionService.getUserId(session)
+                    .orElseThrow(() -> new IllegalStateException("尚未登入"));
+            long targetId = payload.path("playerId").asLong(0);
+            if (targetId <= 0) {
+                return error("請指定要踢出的玩家");
+            }
+            playerPartyService.kick(leaderId, targetId);
+            List<Long> remaining = playerPartyService.getMemberIds(leaderId);
+            broadcastPartyUpdate(remaining, leaderId);
+
+            sessionService.findSessionByUserId(targetId).ifPresent(targetSession -> {
+                ObjectNode soloParty = buildPartyStateJson(targetId);
+                sendQuiet(targetSession, new GameMessage(MessageType.PARTY_UPDATE, soloParty));
+            });
+
+            ObjectNode response = objectMapper.createObjectNode();
+            response.set("party", buildPartyStateJson(leaderId));
+            response.put("message", "已將玩家移出隊伍");
+            return new GameMessage(MessageType.PARTY_KICK, response);
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            return error(ex.getMessage());
+        }
+    }
+
+    private ObjectNode buildPartyStateJson(Long userId) {
+        ObjectNode party = objectMapper.createObjectNode();
+        boolean inParty = playerPartyService.isInParty(userId);
+        party.put("inParty", inParty);
+        party.put("isLeader", playerPartyService.isLeader(userId));
+        party.put("maxSize", PlayerPartyService.MAX_PARTY_SIZE);
+        party.put("maxCompanionsPerPlayer", BattleFormation.maxCompanionsPerPlayerInParty());
+
+        ArrayNode members = objectMapper.createArrayNode();
+        if (inParty) {
+            Long leaderId = playerPartyService.getLeaderId(userId);
+            party.put("leaderId", leaderId);
+            for (Long memberId : playerPartyService.getMemberIds(leaderId)) {
+                ObjectNode memberNode = objectMapper.createObjectNode();
+                memberNode.put("playerId", memberId);
+                sessionService.findSessionByUserId(memberId).ifPresent(memberSession ->
+                        memberNode.put("playerName", sessionService.getPlayerName(memberSession).orElse("旅人")));
+                authService.findUserLevel(memberId).ifPresent(level -> memberNode.put("playerLevel", level));
+                memberNode.put("isLeader", memberId.equals(leaderId));
+                members.add(memberNode);
+            }
+        }
+        party.set("members", members);
+
+        playerPartyService.getPendingInvite(userId).ifPresent(inviterId -> {
+            party.put("pendingInviteFrom", inviterId);
+            sessionService.findSessionByUserId(inviterId).ifPresent(inviterSession ->
+                    party.put("pendingInviteFromName", sessionService.getPlayerName(inviterSession).orElse("旅人")));
+        });
+
+        return party;
+    }
+
+    private void broadcastPartyUpdate(List<Long> memberIds, Long leaderId) {
+        for (Long memberId : memberIds) {
+            sessionService.findSessionByUserId(memberId).ifPresent(memberSession -> {
+                ObjectNode partyState = buildPartyStateJson(memberId);
+                sendQuiet(memberSession, new GameMessage(MessageType.PARTY_UPDATE, partyState));
+            });
+        }
+    }
+
+    private void syncPartyFollowers(
+            WebSocketSession leaderSession,
+            Long leaderId,
+            String mapId,
+            int x,
+            int y,
+            String direction,
+            boolean mapChanged,
+            boolean encounter
+    ) {
+        for (Long memberId : playerPartyService.getMemberIds(leaderId)) {
+            if (memberId.equals(leaderId)) {
+                continue;
+            }
+            sessionService.findSessionByUserId(memberId).ifPresent(memberSession -> {
+                authService.updatePlayerPosition(memberId, mapId, x, y);
+                sessionService.updatePresence(memberSession, mapId, x, y, direction);
+
+                ObjectNode syncPayload = objectMapper.createObjectNode();
+                syncPayload.put("x", x);
+                syncPayload.put("y", y);
+                syncPayload.put("mapId", mapId);
+                syncPayload.put("direction", direction);
+                syncPayload.put("mapChanged", mapChanged);
+                syncPayload.put("encounter", encounter);
+                syncPayload.put("message", encounter ? "隊長遭遇野生怪物！" : "跟隨隊長移動");
+                if (mapChanged) {
+                    syncPayload.set("otherPlayers", buildOtherPlayersArray(mapId, memberSession.getId()));
+                }
+                sendQuiet(memberSession, new GameMessage(MessageType.PARTY_SYNC, syncPayload));
+                broadcastPlayerMove(memberSession);
+            });
+        }
+    }
+
+    private String resolveBattleId(WebSocketSession session, Long userId) {
+        if (userId != null && playerPartyService.isInParty(userId)) {
+            return playerPartyService.partyBattleId(playerPartyService.getLeaderId(userId));
+        }
+        return session.getId();
+    }
+
+    private String resolveEncounterKey(WebSocketSession session, Long userId) {
+        if (userId != null && playerPartyService.isInParty(userId)) {
+            return playerPartyService.partyBattleId(playerPartyService.getLeaderId(userId));
+        }
+        return session.getId();
+    }
+
+    private void personalizeBattleResult(ObjectNode result, Long userId) {
+        String battleId = playerPartyService.isInParty(userId)
+                ? playerPartyService.partyBattleId(playerPartyService.getLeaderId(userId))
+                : null;
+
+        if (battleId != null && result.has("battle")) {
+            ObjectNode battleSnapshot = battleService.getBattleSnapshot(battleId, userId);
+            if (battleSnapshot != null) {
+                result.set("battle", battleSnapshot);
+            }
+        }
+
+        if (result.has("playerExpResults")) {
+            for (JsonNode entry : result.get("playerExpResults")) {
+                if (entry.path("playerId").asLong() == userId) {
+                    result.put("expGained", entry.path("expGained").asInt());
+                    result.put("playerExp", entry.path("playerExp").asInt());
+                    result.put("expToNextLevel", entry.path("expToNextLevel").asInt());
+                    result.put("playerLevel", entry.path("playerLevel").asInt());
+                    result.put("skillPoints", entry.path("skillPoints").asInt());
+                    if (entry.path("leveledUp").asBoolean()) {
+                        result.put("leveledUp", true);
+                        result.put("previousLevel", entry.path("previousLevel").asInt());
+                        result.put("levelsGained", entry.path("levelsGained").asInt());
+                        result.put("skillPointsGained", entry.path("skillPointsGained").asInt());
+                    }
+                }
+            }
+        }
+
+        if (result.has("lootResults")) {
+            for (JsonNode entry : result.get("lootResults")) {
+                if (entry.path("playerId").asLong() == userId) {
+                    result.put("goldGained", entry.path("goldGained").asInt());
+                    result.put("playerGold", entry.path("playerGold").asInt());
+                    if (entry.has("itemDrops")) {
+                        result.set("itemDrops", entry.get("itemDrops"));
+                    }
+                }
+            }
+        }
+
+        if (result.has("companionExpResults")) {
+            ArrayNode myCompanions = objectMapper.createArrayNode();
+            for (JsonNode entry : result.get("companionExpResults")) {
+                if (entry.path("playerId").asLong() == userId) {
+                    myCompanions.add(entry);
+                }
+            }
+            if (!myCompanions.isEmpty()) {
+                result.set("companionExpResults", myCompanions);
+            }
+        }
+    }
+
+    private void validateSameMap(WebSocketSession sessionA, WebSocketSession sessionB) {
+        PlayerPresence presenceA = sessionService.getPresence(sessionA)
+                .orElseThrow(() -> new IllegalStateException("無法確認你的位置"));
+        PlayerPresence presenceB = sessionService.getPresence(sessionB)
+                .orElseThrow(() -> new IllegalStateException("無法確認對方位置"));
+        if (!presenceA.mapId().equals(presenceB.mapId())) {
+            throw new IllegalArgumentException("須與對方在同一張地圖才能組隊");
+        }
+    }
+
+    private void broadcastBattleResultToOthers(String requesterSessionId, String battleId, Long userId, ObjectNode result) {
+        Set<String> sessionIds = new HashSet<>(battleService.getParticipantSessionIds(battleId));
+        if (sessionIds.isEmpty() && playerPartyService.isInParty(userId)) {
+            for (Long memberId : playerPartyService.getMemberIdsIfInParty(userId)) {
+                sessionService.findSessionByUserId(memberId).ifPresent(s -> sessionIds.add(s.getId()));
+            }
+        }
+
+        for (String sessionId : sessionIds) {
+            if (sessionId.equals(requesterSessionId)) {
+                continue;
+            }
+            sessionService.getSession(sessionId).ifPresent(otherSession -> {
+                Long otherUserId = sessionService.getUserId(otherSession).orElse(null);
+                if (otherUserId == null) {
+                    return;
+                }
+                ObjectNode otherResult = result.deepCopy();
+                personalizeBattleResult(otherResult, otherUserId);
+                sendQuiet(otherSession, new GameMessage(MessageType.BATTLE_RESULT, otherResult));
+            });
+        }
     }
 }

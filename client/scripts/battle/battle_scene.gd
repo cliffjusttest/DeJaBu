@@ -424,9 +424,34 @@ func _cancel_target_selection() -> void:
 
 func _default_hint_text() -> String:
 	var actor_name := _selected_actor_name()
-	if _is_companion_actor():
-		return "為 %s 指定行動 | 1 攻擊 / 2 防禦 / 3 逃跑 / 5 技能 / 6 道具" % actor_name
-	return "為 %s 指定行動 | 1 攻擊 / 4 捕捉 / 2 防禦 / 3 逃跑 / 5 技能 / 6 道具" % actor_name
+	var waiting := _waiting_for_other_players_text()
+	if waiting.is_empty():
+		if _is_companion_actor():
+			return "為 %s 指定行動 | 1 攻擊 / 2 防禦 / 3 逃跑 / 5 技能 / 6 道具" % actor_name
+		return "為 %s 指定行動 | 1 攻擊 / 4 捕捉 / 2 防禦 / 3 逃跑 / 5 技能 / 6 道具" % actor_name
+	return "%s | %s" % [waiting, "為 %s 指定行動" % actor_name]
+
+func _waiting_for_other_players_text() -> String:
+	if not bool(GameState.battle_data.get("multiplayer", false)):
+		return ""
+	var waiting_names: Array = []
+	for unit_data in GameState.battle_data.get("allies", []):
+		if typeof(unit_data) != TYPE_DICTIONARY:
+			continue
+		var unit: Dictionary = unit_data
+		if int(unit.get("ownerUserId", GameState.player_id)) == GameState.player_id:
+			continue
+		var unit_id := int(unit.get("id", 0))
+		if unit_id <= 0 or not bool(unit.get("alive", true)):
+			continue
+		if unit_id in _planned_actor_ids:
+			continue
+		var owner_name := str(unit.get("name", ""))
+		if owner_name not in waiting_names:
+			waiting_names.append(owner_name)
+	if waiting_names.is_empty():
+		return ""
+	return "等待其他玩家指定行動"
 
 func _selected_actor_name() -> String:
 	for slot in _ally_slots:
@@ -466,6 +491,11 @@ func _refresh_target_highlights() -> void:
 			can_select = can_select and bool(slot.unit_data.get("alive", true))
 		slot.set_selectable(can_select)
 
+func _is_my_unit(unit_data: Dictionary) -> bool:
+	if not unit_data.has("ownerUserId"):
+		return true
+	return int(unit_data.get("ownerUserId", 0)) == GameState.player_id
+
 func _refresh_actor_highlights() -> void:
 	var selecting_target := _target_mode != TargetMode.NONE
 	for slot in _ally_slots:
@@ -473,14 +503,16 @@ func _refresh_actor_highlights() -> void:
 		if _target_mode == TargetMode.SKILL and _pending_skill_targets_allies:
 			slot.set_actor_highlight(false)
 			continue
+		var is_mine := slot.unit_data.is_empty() or _is_my_unit(slot.unit_data)
 		var can_choose := (
 			_actions_enabled
 			and not selecting_target
 			and alive
+			and is_mine
 			and not _has_planned(slot.unit_id)
 		)
 		slot.set_actor_choosable(can_choose)
-		slot.set_actor_highlight(slot.unit_id == _selected_actor_id and alive)
+		slot.set_actor_highlight(slot.unit_id == _selected_actor_id and alive and is_mine)
 
 func _on_enemy_slot_pressed(_slot_index: int, unit_id: int) -> void:
 	if _target_mode == TargetMode.NONE or not _actions_enabled:
@@ -503,6 +535,8 @@ func _on_ally_slot_pressed(_slot_index: int, unit_id: int) -> void:
 		battle_action_requested.emit("skill", unit_id, _selected_actor_id, skill_id, -1)
 		return
 	if _target_mode != TargetMode.NONE:
+		return
+	if not _is_my_unit(slot.unit_data):
 		return
 	if _has_planned(unit_id):
 		return
