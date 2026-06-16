@@ -1262,22 +1262,51 @@ public class BattleService {
         Map<Integer, Integer> unitExpMap = new LinkedHashMap<>();
         for (BattleUnit enemy : state.enemies) {
             if (enemy.isAlive()) continue; // only dead enemies yield exp
-            int monsterExp = Math.max(1, enemy.getLevel()) * 5;
-            int sharedPart = (int)(monsterExp * 0.75);
-            int killerBonus = monsterExp - sharedPart;
+            int monsterLevel = Math.max(1, enemy.getLevel());
 
-            // Shared portion to all allies
             for (BattleUnit ally : state.allies) {
+                int playerLevel = playerLevelForUnit(state, ally);
+                int monsterExp = ProgressionService.monsterExp(playerLevel, monsterLevel);
+                int sharedPart = (int) (monsterExp * 0.75);
                 unitExpMap.merge(ally.getId(), sharedPart, Integer::sum);
             }
 
-            // Killer bonus to kill credit holders
             List<Integer> killers = state.killCredits.getOrDefault(enemy.getId(), List.of());
             for (int killerId : killers) {
+                BattleUnit killer = findAllyById(state, killerId);
+                if (killer == null) continue;
+                int playerLevel = playerLevelForUnit(state, killer);
+                int monsterExp = ProgressionService.monsterExp(playerLevel, monsterLevel);
+                int sharedPart = (int) (monsterExp * 0.75);
+                int killerBonus = monsterExp - sharedPart;
                 unitExpMap.merge(killerId, killerBonus, Integer::sum);
             }
         }
         return unitExpMap;
+    }
+
+    private static int playerLevelForUnit(BattleState state, BattleUnit ally) {
+        if (ally.isCompanion()) {
+            Long ownerId = ally.getOwnerUserId();
+            if (ownerId != null) {
+                return state.userLevels.getOrDefault(ownerId, state.playerLevel);
+            }
+        }
+        for (var entry : state.userPlayerUnitIds.entrySet()) {
+            if (entry.getValue() == ally.getId()) {
+                return state.userLevels.getOrDefault(entry.getKey(), ally.getLevel());
+            }
+        }
+        return state.userLevels.getOrDefault(state.userId, state.playerLevel);
+    }
+
+    private static BattleUnit findAllyById(BattleState state, int unitId) {
+        for (BattleUnit ally : state.allies) {
+            if (ally.getId() == unitId) {
+                return ally;
+            }
+        }
+        return null;
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

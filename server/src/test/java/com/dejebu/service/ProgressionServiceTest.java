@@ -38,83 +38,89 @@ class ProgressionServiceTest {
     }
 
     @Test
-    void expFromEncounterSumsMonsterLevels() {
+    void expFromEncounterUsesLevelScalingFormula() {
         List<WildMonsterInstance> monsters = List.of(
                 monster(1),
                 monster(3),
                 monster(2)
         );
 
-        assertEquals(30, ProgressionService.expFromEncounter(monsters));
+        assertEquals(15, ProgressionService.expFromEncounter(1, monsters));
+    }
+
+    @Test
+    void monsterExpPenalizesHigherPlayerLevel() {
+        assertTrue(ProgressionService.monsterExp(20, 5) < ProgressionService.monsterExp(5, 5));
     }
 
     @Test
     void expToNextLevelScalesWithCurrentLevel() {
-        assertEquals(100, ProgressionService.expToNextLevel(1));
-        assertEquals(500, ProgressionService.expToNextLevel(5));
+        assertEquals(10, ProgressionService.expToNextLevel(1));
+        assertEquals(316, ProgressionService.expToNextLevel(5));
+        assertEquals(0, ProgressionService.expToNextLevel(99));
     }
 
     @Test
     void applyVictoryExpAccumulatesWithoutLevelUp() {
-        User user = user(1, 0, 10);
+        User user = user(1, 0, 1);
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        ProgressionResult result = progressionService.applyVictoryExp(1L, 15);
+        ProgressionResult result = progressionService.applyVictoryExp(1L, 5);
 
-        assertEquals(15, result.playerExp());
+        assertEquals(5, result.playerExp());
         assertEquals(1, result.playerLevel());
         assertFalse(result.leveledUp());
-        assertEquals(10, result.skillPoints());
+        assertEquals(1, result.skillPoints());
     }
 
     @Test
     void applyVictoryExpLevelsUpAndGrantsSkillPoints() {
-        User user = user(1, 90, 10);
+        User user = user(1, 8, 1);
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        ProgressionResult result = progressionService.applyVictoryExp(1L, 15);
+        ProgressionResult result = progressionService.applyVictoryExp(1L, 5);
 
-        assertEquals(5, result.playerExp());
+        assertEquals(3, result.playerExp());
         assertEquals(2, result.playerLevel());
         assertTrue(result.leveledUp());
         assertEquals(1, result.levelsGained());
-        assertEquals(2, result.skillPointsGained());
-        assertEquals(12, result.skillPoints());
-        assertEquals(200, result.expToNextLevel());
+        assertEquals(1, result.skillPointsGained());
+        assertEquals(2, result.skillPoints());
+        assertEquals(45, result.expToNextLevel());
     }
 
     @Test
     void applyVictoryExpCanGainMultipleLevels() {
-        User user = user(1, 0, 10);
+        User user = user(1, 0, 1);
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         ProgressionResult result = progressionService.applyVictoryExp(1L, 350);
 
-        assertEquals(50, result.playerExp());
-        assertEquals(3, result.playerLevel());
-        assertEquals(2, result.levelsGained());
-        assertEquals(4, result.skillPointsGained());
+        assertEquals(185, result.playerExp());
+        assertEquals(4, result.playerLevel());
+        assertEquals(3, result.levelsGained());
+        assertEquals(3, result.skillPointsGained());
     }
 
     @Test
     void applyVictoryExpPersistsUser() {
-        User user = user(1, 0, 10);
+        User user = user(1, 0, 1);
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        progressionService.applyVictoryExp(1L, 15);
+        progressionService.applyVictoryExp(1L, 5);
 
         ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
         verify(userRepository).save(captor.capture());
-        assertEquals(15, captor.getValue().getExp());
+        assertEquals(5, captor.getValue().getExp());
     }
 
     @Test
     void applyExpLossReducesCurrentExpWithoutLevelDown() {
-        User user = user(5, 80, 10);
+        User user = user(5, 80, 1);
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 

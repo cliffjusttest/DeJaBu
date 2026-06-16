@@ -75,7 +75,7 @@ public class User {
     private int statAgility = CharacterStats.BASE_VALUE;
 
     @Column(name = "skill_points", nullable = false)
-    private int skillPoints = 10;
+    private int skillPoints = 1;
 
     @Column(nullable = false)
     private int level = 1;
