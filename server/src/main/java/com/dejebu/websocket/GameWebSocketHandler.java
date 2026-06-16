@@ -239,7 +239,7 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
         String finalMapId = resultMapId;
         int finalX = resultX;
         int finalY = resultY;
-        userIdOptional.ifPresent(userId -> authService.updatePlayerPosition(userId, finalMapId, finalX, finalY));
+        userIdOptional.ifPresent(uid -> authService.updatePlayerPosition(uid, finalMapId, finalX, finalY));
         sessionService.updatePresence(session, resultMapId, resultX, resultY, direction);
 
         ObjectNode response = objectMapper.createObjectNode();
@@ -257,9 +257,9 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
             broadcastPlayerLeave(session, previousMapId, userIdOptional.orElse(null));
             broadcastPlayerJoin(session);
             response.set("otherPlayers", buildOtherPlayersArray(resultMapId, session.getId()));
-            userIdOptional.ifPresent(userId -> {
-                if (playerPartyService.isLeader(userId)) {
-                    syncPartyFollowers(session, userId, resultMapId, resultX, resultY, direction, true, false);
+            userIdOptional.ifPresent(uid -> {
+                if (playerPartyService.isLeader(uid)) {
+                    syncPartyFollowers(session, uid, finalMapId, finalX, finalY, direction, true, false);
                 }
             });
             return new GameMessage(MessageType.MOVE_OK, response);

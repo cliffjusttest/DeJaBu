@@ -780,7 +780,7 @@ public class BattleService {
                     appendMessage(result, actor.getName() + " 的捕捉目標已被擊倒，跳過行動");
                     return;
                 }
-                resolveCapture(state, plan.targetId(), random, result);
+                resolveCapture(state, actor, plan.targetId(), random, result);
             }
             case "defend" -> {
                 state.defendingUnits.add(actor.getId());
@@ -855,6 +855,7 @@ public class BattleService {
 
     private void resolveCapture(
             BattleState state,
+            BattleUnit actor,
             Integer targetId,
             ThreadLocalRandom random,
             ObjectNode result

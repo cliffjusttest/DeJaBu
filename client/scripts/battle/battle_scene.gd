@@ -536,7 +536,8 @@ func _on_ally_slot_pressed(_slot_index: int, unit_id: int) -> void:
 		return
 	if _target_mode != TargetMode.NONE:
 		return
-	if not _is_my_unit(slot.unit_data):
+	var battle_slot := _find_slot_by_unit_id(unit_id)
+	if battle_slot == null or not _is_my_unit(battle_slot.unit_data):
 		return
 	if _has_planned(unit_id):
 		return
