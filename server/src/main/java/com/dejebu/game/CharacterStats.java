@@ -19,7 +19,6 @@ public record CharacterStats(
     public static final int BASE_VALUE = 0;
     public static final int FREE_POINTS = 10;
     public static final int MIN_VALUE = 0;
-    public static final int MAX_VALUE = 99;
 
     public static CharacterStats zeroBase() {
         return new CharacterStats(BASE_VALUE, BASE_VALUE, BASE_VALUE, BASE_VALUE, BASE_VALUE, BASE_VALUE, BASE_VALUE);
@@ -62,29 +61,28 @@ public record CharacterStats(
     }
 
     public int maxHp() {
-        return 50 + vitality * 5;
+        return vitality * 20;
     }
 
     public int maxMp() {
-        return 20 + intelligence * 3 + spirit * 2;
+        return spirit * 5;
     }
 
-    public int rollAttackDamage(ThreadLocalRandom random) {
-        int min = Math.max(1, might / 2 + 3);
-        int max = Math.max(min + 1, might + 9);
-        return random.nextInt(min, max) + intelligence / 5;
+    public int attackDamage() {
+        return Math.max(1, might);
     }
 
     public int mitigateDamage(int rawDamage, boolean defending) {
-        int reduction = defense / 4 + spirit / 8;
+        int reduction = defense;
         if (defending) {
-            reduction += defense / 2;
+            reduction += defense;
         }
         return Math.max(1, rawDamage - reduction);
     }
 
-    public boolean rollCritical(ThreadLocalRandom random) {
-        return random.nextInt(100) < luck * 2;
+    public boolean rollCritical(ThreadLocalRandom random, int defenderLuck) {
+        int critRate = Math.max(0, luck - defenderLuck);
+        return random.nextInt(100) < critRate;
     }
 
     public double fleeChance() {
@@ -93,13 +91,13 @@ public record CharacterStats(
 
     public CharacterStats withBonus(CharacterStats bonus) {
         return new CharacterStats(
-                Math.min(MAX_VALUE, might + bonus.might()),
-                Math.min(MAX_VALUE, intelligence + bonus.intelligence()),
-                Math.min(MAX_VALUE, vitality + bonus.vitality()),
-                Math.min(MAX_VALUE, defense + bonus.defense()),
-                Math.min(MAX_VALUE, spirit + bonus.spirit()),
-                Math.min(MAX_VALUE, luck + bonus.luck()),
-                Math.min(MAX_VALUE, agility + bonus.agility())
+                might + bonus.might(),
+                intelligence + bonus.intelligence(),
+                vitality + bonus.vitality(),
+                defense + bonus.defense(),
+                spirit + bonus.spirit(),
+                luck + bonus.luck(),
+                agility + bonus.agility()
         );
     }
 
@@ -116,8 +114,8 @@ public record CharacterStats(
     }
 
     private void validateStat(String label, int value) {
-        if (value < MIN_VALUE || value > MAX_VALUE) {
-            throw new IllegalArgumentException(label + "必須介於 " + MIN_VALUE + " 與 " + MAX_VALUE + " 之間");
+        if (value < MIN_VALUE) {
+            throw new IllegalArgumentException(label + "不可小於 " + MIN_VALUE);
         }
     }
 }

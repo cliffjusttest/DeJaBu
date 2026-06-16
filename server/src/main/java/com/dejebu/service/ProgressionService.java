@@ -101,7 +101,7 @@ public class ProgressionService {
         companion.setStatSpirit(companion.getStatSpirit() + 1);
         companion.setStatLuck(companion.getStatLuck() + 1);
         companion.setStatAgility(companion.getStatAgility() + 1);
-        companion.setMaxHp(50 + companion.getStatVitality() * 5);
+        companion.setMaxHp(companion.toStats().maxHp());
         companion.setMaxMp(companion.toStats().maxMp());
     }
 }

@@ -26,7 +26,7 @@ class EquipmentServiceTest {
         assertEquals(2, bonus.vitality());
         assertEquals(5, bonus.defense());
         assertEquals(2, bonus.agility());
-        assertEquals(60, bonus.withBonus(CharacterStats.zeroBase()).maxHp());
+        assertEquals(40, bonus.withBonus(CharacterStats.zeroBase()).maxHp());
     }
 
     @Test

@@ -640,7 +640,7 @@ public class BattleService {
     ) {
         CharacterStats attackerStats = attacker.getStats() != null ? attacker.getStats() : CharacterStats.zeroBase();
         boolean defending = state.defendingUnits.contains(target.getId());
-        int baseDamage = defending ? random.nextInt(1, 6) : attackerStats.rollAttackDamage(random);
+        int baseDamage = defending ? random.nextInt(1, 6) : attackerStats.attackDamage();
         baseDamage = (int)(baseDamage * COMBO_DAMAGE_MULTIPLIER);
         int damage = applyElementDamage(baseDamage, attacker.getElement(), target.getElement());
         CharacterStats defenderStats = target.getStats() != null ? target.getStats() : state.playerStats;
@@ -685,11 +685,14 @@ public class BattleService {
             ObjectNode result
     ) {
         CharacterStats attackerStats = actor.getStats() != null ? actor.getStats() : state.playerStats;
-        int baseDamage = attackerStats.rollAttackDamage(random);
-        boolean critical = attackerStats.rollCritical(random);
+        CharacterStats defenderStats = target.getStats() != null ? target.getStats() : CharacterStats.zeroBase();
+        boolean defending = state.defendingUnits.contains(target.getId());
+        int baseDamage = attackerStats.attackDamage();
+        boolean critical = attackerStats.rollCritical(random, defenderStats.luck());
         if (critical) baseDamage *= 2;
         int damage = applyElementDamage(baseDamage, actor.getElement(), target.getElement());
         damage = (int)(damage * COMBO_DAMAGE_MULTIPLIER);
+        damage = defenderStats.mitigateDamage(damage, defending);
         target.setHpRaw(target.getHp() - damage);  // allow overflow past 0
         appendMessage(result, buildAttackMessage(actor.getName(), actor.getElement(), target, damage, critical));
         recordAttackEvent(result, actor.getId(), target.getId(), damage, critical);
@@ -714,10 +717,13 @@ public class BattleService {
         for (BattleUnit unit : state.enemies) {
             if (!affectedSlots.contains(unit.getSlot())) continue;
             int baseDamage = SkillCombatCalculator.calculateDamage(actorStats, skill, random);
-            boolean critical = actorStats.rollCritical(random);
+            boolean critical = actorStats.rollCritical(random, unit.getStats() != null ? unit.getStats().luck() : 0);
             if (critical) baseDamage *= 2;
             int damage = applyElementDamage(baseDamage, attackElement, unit.getElement());
             damage = (int)(damage * COMBO_DAMAGE_MULTIPLIER);
+            CharacterStats defenderStats = unit.getStats() != null ? unit.getStats() : CharacterStats.zeroBase();
+            boolean defending = state.defendingUnits.contains(unit.getId());
+            damage = defenderStats.mitigateDamage(damage, defending);
             if (unit.getId() == comboTarget.getId()) {
                 unit.setHpRaw(unit.getHp() - damage);  // combo target: overflow allowed
             } else {
@@ -917,11 +923,14 @@ public class BattleService {
         }
 
         CharacterStats attackerStats = actor.getStats() != null ? actor.getStats() : state.playerStats;
-        int baseDamage = attackerStats.rollAttackDamage(random);
-        boolean critical = attackerStats.rollCritical(random);
+        CharacterStats defenderStats = target.getStats() != null ? target.getStats() : CharacterStats.zeroBase();
+        boolean defending = state.defendingUnits.contains(target.getId());
+        int baseDamage = attackerStats.attackDamage();
+        boolean critical = attackerStats.rollCritical(random, defenderStats.luck());
         if (critical) baseDamage *= 2;
         int damage = applyElementDamage(baseDamage, actor.getElement(), target.getElement());
         damage = (int)(damage * damageMultiplier);
+        damage = defenderStats.mitigateDamage(damage, defending);
         boolean wasAlive = target.isAlive();
         target.setHp(target.getHp() - damage);
         if (wasAlive && !target.isAlive()) {
@@ -984,15 +993,15 @@ public class BattleService {
             for (BattleUnit unit : opponentsOf(state, actor)) {
                 if (!affectedSlots.contains(unit.getSlot()) || !unit.isAlive()) continue;
                 int baseDamage = SkillCombatCalculator.calculateDamage(actorStats, skill, random);
-                boolean critical = actorStats.rollCritical(random);
+                boolean critical = actorStats.rollCritical(random, unit.getStats() != null ? unit.getStats().luck() : 0);
                 if (critical) baseDamage *= 2;
                 int damage = applyElementDamage(baseDamage, attackElement, unit.getElement());
                 damage = (int)(damage * damageMultiplier);
-                if (!actorIsAlly) {
-                    CharacterStats defenderStats = unit.getStats() != null ? unit.getStats() : state.playerStats;
-                    boolean defending = state.defendingUnits.contains(unit.getId());
-                    damage = defenderStats.mitigateDamage(damage, defending);
-                }
+                CharacterStats defenderStats = unit.getStats() != null
+                        ? unit.getStats()
+                        : (actorIsAlly ? CharacterStats.zeroBase() : state.playerStats);
+                boolean defending = state.defendingUnits.contains(unit.getId());
+                damage = defenderStats.mitigateDamage(damage, defending);
                 boolean wasAlive = unit.isAlive();
                 unit.setHp(unit.getHp() - damage);
                 if (actorIsAlly && wasAlive && !unit.isAlive()) {
@@ -1025,7 +1034,7 @@ public class BattleService {
         boolean defending = state.defendingUnits.contains(defender.getId());
         int baseEnemyDamage = defending
                 ? random.nextInt(1, 6)
-                : attackerStats.rollAttackDamage(random);
+                : attackerStats.attackDamage();
         int enemyDamage = applyElementDamage(baseEnemyDamage, attacker.getElement(), defender.getElement());
         CharacterStats defenderStats = defender.getStats() != null ? defender.getStats() : state.playerStats;
         enemyDamage = defenderStats.mitigateDamage(enemyDamage, defending);

@@ -63,10 +63,10 @@ static func remaining_points(stats: Dictionary) -> int:
 	return FREE_POINTS - total_points(stats)
 
 static func max_hp(stats: Dictionary) -> int:
-	return 50 + int(stats.get(VITALITY, BASE_VALUE)) * 5
+	return int(stats.get(VITALITY, BASE_VALUE)) * 20
 
 static func max_mp(stats: Dictionary) -> int:
-	return 20 + int(stats.get(INTELLIGENCE, BASE_VALUE)) * 3 + int(stats.get(SPIRIT, BASE_VALUE)) * 2
+	return int(stats.get(SPIRIT, BASE_VALUE)) * 5
 
 static func summary_text(stats: Dictionary) -> String:
 	var parts: PackedStringArray = []
