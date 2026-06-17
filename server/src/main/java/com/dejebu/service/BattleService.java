@@ -43,8 +43,8 @@ import java.util.concurrent.ThreadLocalRandom;
 @Service
 public class BattleService {
 
-    private static final double COMBO_CHANCE = 0.5;
     private static final int COMBO_AGILITY_THRESHOLD = 15;
+    private static final double COMBO_KILL_EXP_BONUS_RATE = 0.1;
     private static final double COMBO_DAMAGE_MULTIPLIER = 1.1;
 
     private final ObjectMapper objectMapper;
@@ -622,7 +622,7 @@ public class BattleService {
             if (j >= sorted.size()) { i++; continue; }
             BattleUnit partner = sorted.get(j);
             if (Math.abs(unitAgility(leader) - unitAgility(partner)) > COMBO_AGILITY_THRESHOLD) { i++; continue; }
-            if (random.nextDouble() < COMBO_CHANCE) {
+            if (random.nextDouble() < comboChance(state, true, partner)) {
                 assigned.add(leader.getId());
                 assigned.add(partner.getId());
                 state.comboFollowers.put(partner.getId(), leader.getId());
@@ -632,7 +632,7 @@ public class BattleService {
                     if (k >= sorted.size()) break;
                     BattleUnit ext = sorted.get(k);
                     if (Math.abs(unitAgility(leader) - unitAgility(ext)) > COMBO_AGILITY_THRESHOLD) break;
-                    if (random.nextDouble() < COMBO_CHANCE) {
+                    if (random.nextDouble() < comboChance(state, true, ext)) {
                         assigned.add(ext.getId());
                         state.comboFollowers.put(ext.getId(), leader.getId());
                         k++;
@@ -657,7 +657,7 @@ public class BattleService {
             if (j >= sorted.size()) { i++; continue; }
             BattleUnit partner = sorted.get(j);
             if (Math.abs(unitAgility(leader) - unitAgility(partner)) > COMBO_AGILITY_THRESHOLD) { i++; continue; }
-            if (random.nextDouble() < COMBO_CHANCE) {
+            if (random.nextDouble() < comboChance(state, false, partner)) {
                 assigned.add(leader.getId());
                 assigned.add(partner.getId());
                 state.comboFollowers.put(partner.getId(), leader.getId());
@@ -669,7 +669,7 @@ public class BattleService {
                     if (k >= sorted.size()) break;
                     BattleUnit ext = sorted.get(k);
                     if (Math.abs(unitAgility(leader) - unitAgility(ext)) > COMBO_AGILITY_THRESHOLD) break;
-                    if (random.nextDouble() < COMBO_CHANCE) {
+                    if (random.nextDouble() < comboChance(state, false, ext)) {
                         assigned.add(ext.getId());
                         state.comboFollowers.put(ext.getId(), leader.getId());
                         k++;
@@ -751,6 +751,7 @@ public class BattleService {
             credits.clear();
             credits.add(leader.getId());
             followers.forEach(f -> credits.add(f.getId()));
+            state.comboKillEnemyIds.add(comboTarget.getId());
         }
     }
 
@@ -1297,6 +1298,7 @@ public class BattleService {
             }
 
             List<Integer> killers = state.killCredits.getOrDefault(enemy.getId(), List.of());
+            boolean comboKill = state.comboKillEnemyIds.contains(enemy.getId());
             for (int killerId : killers) {
                 BattleUnit killer = findAllyById(state, killerId);
                 if (killer == null) continue;
@@ -1305,9 +1307,25 @@ public class BattleService {
                 int sharedPart = (int) (monsterExp * 0.75);
                 int killerBonus = monsterExp - sharedPart;
                 unitExpMap.merge(killerId, killerBonus, Integer::sum);
+                if (comboKill) {
+                    int comboBonus = (int) (monsterExp * COMBO_KILL_EXP_BONUS_RATE);
+                    unitExpMap.merge(killerId, comboBonus, Integer::sum);
+                }
             }
         }
         return unitExpMap;
+    }
+
+    private static double comboChance(BattleState state, boolean allyCombo, BattleUnit pairingUnit) {
+        double ourAvgLevel = averageAliveLevel(allyCombo ? state.allies : state.enemies);
+        double enemyAvgLevel = averageAliveLevel(allyCombo ? state.enemies : state.allies);
+        double luckTerm = Math.max(0.1, unitLuck(pairingUnit) * 0.001);
+        double chance = 0.5 + (ourAvgLevel - enemyAvgLevel) * 0.05 + luckTerm;
+        return Math.max(0, Math.min(0.95, chance));
+    }
+
+    private static double averageAliveLevel(List<BattleUnit> units) {
+        return units.stream().filter(BattleUnit::isAlive).mapToInt(BattleUnit::getLevel).average().orElse(1.0);
     }
 
     private static int expUnitLevel(BattleState state, BattleUnit ally) {
@@ -1393,6 +1411,11 @@ public class BattleService {
     private static int unitAgility(BattleUnit unit) {
         CharacterStats stats = unit.getStats();
         return stats != null ? stats.agility() : 0;
+    }
+
+    private static int unitLuck(BattleUnit unit) {
+        CharacterStats stats = unit.getStats();
+        return stats != null ? stats.luck() : 0;
     }
 
     private boolean isBattleOver(BattleState state) {
@@ -1708,6 +1731,7 @@ public class BattleService {
         private final List<ConsumableInfo> consumables = new ArrayList<>();
         private final Map<Long, List<ConsumableInfo>> consumablesByUser = new HashMap<>();
         private final Map<Integer, List<Integer>> killCredits = new LinkedHashMap<>();
+        private final Set<Integer> comboKillEnemyIds = new HashSet<>();
         private final Map<Integer, Integer> comboFollowers = new LinkedHashMap<>();
         private final Map<Integer, PlannedAction> enemyComboPlans = new LinkedHashMap<>();
         private final String visibleEnemyId;
