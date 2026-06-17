@@ -40,7 +40,7 @@ public class HospitalService {
                         .thenComparingInt(hospital -> manhattanDistance(hospital, mapId, x, y))
                         .thenComparing(HospitalEntity::getId))
                 .map(this::toLocation)
-                .orElseGet(() -> toLocation(hospitals.getFirst()));
+                .orElseGet(() -> toLocation(hospitals.get(0)));
     }
 
     @Transactional(readOnly = true)
