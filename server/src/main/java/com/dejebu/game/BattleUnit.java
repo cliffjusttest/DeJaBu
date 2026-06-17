@@ -6,7 +6,9 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class BattleUnit {
 
@@ -29,6 +31,7 @@ public class BattleUnit {
     private final boolean capturable;
     private Long ownerUserId;
     private final List<BattleSkillRuntime> skills = new ArrayList<>();
+    private final Set<Long> activeBuffSkillIds = new HashSet<>();
 
     private BattleUnit(
             int id,
@@ -229,6 +232,19 @@ public class BattleUnit {
         for (BattleSkillRuntime skill : skills) {
             skill.tickCooldown();
         }
+    }
+
+    public boolean hasActiveBuff() {
+        return !activeBuffSkillIds.isEmpty();
+    }
+
+    public boolean hasBuff(long skillId) {
+        return activeBuffSkillIds.contains(skillId);
+    }
+
+    public void applyBuff(long skillId) {
+        activeBuffSkillIds.clear();
+        activeBuffSkillIds.add(skillId);
     }
 
     public ObjectNode toJsonNode(ObjectMapper objectMapper) {

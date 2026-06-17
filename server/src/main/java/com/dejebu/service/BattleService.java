@@ -345,7 +345,8 @@ public class BattleService {
                         executeComboAttack(state, unit, enemyFollowers, enemyPlan, random, actionResult, false);
                     }
                 } else {
-                    EnemyBattleAi.EnemyAction action = EnemyBattleAi.chooseAction(unit, aliveAllies, random);
+                    List<BattleUnit> teammates = state.enemies;
+                    EnemyBattleAi.EnemyAction action = EnemyBattleAi.chooseAction(unit, teammates, aliveAllies, random);
                     if (action == null) continue;
                     if ("skill".equals(action.type())) {
                         resolveSkill(state, unit, action.skillId(), action.targetId(), random, actionResult, 1.0);
@@ -701,7 +702,7 @@ public class BattleService {
         // Skills must be individually combo-eligible
         if ("skill".equals(plan.action())) {
             BattleSkillRuntime skill = ally.findSkill(plan.skillId());
-            if (skill == null || !skill.isComboEligible() || skill.isHealSkill()) return false;
+            if (skill == null || !skill.isComboEligible() || skill.isSupportSkill()) return false;
             if (!skill.canUse(ally.getMp())) return false;
         }
         return true;
@@ -888,7 +889,7 @@ public class BattleService {
                 List<BattleUnit> pool = skillTargetPool(state, actor, skill);
                 Optional<BattleUnit> target = findUnit(pool, plan.targetId());
                 int resolveSkillTargetId = plan.targetId();
-                if (!skill.isHealSkill() && skill.getTargetSide() != SkillTargetSide.ALLY && (target.isEmpty() || !target.get().isAlive())) {
+                if (!skill.isSupportSkill() && skill.getTargetSide() != SkillTargetSide.ALLY && (target.isEmpty() || !target.get().isAlive())) {
                     Optional<BattleUnit> fallback = pickFallbackEnemy(state);
                     if (fallback.isEmpty()) {
                         appendMessage(result, actor.getName() + " 的技能目標已被擊倒，無其他目標");
@@ -1088,7 +1089,7 @@ public class BattleService {
         List<BattleUnit> targetPool = skillTargetPool(state, actor, skill);
         BattleUnit anchor = findUnit(targetPool, targetId)
                 .orElseThrow(() -> new IllegalArgumentException("無效的技能目標"));
-        if (!anchor.isAlive() && !skill.isHealSkill() && skill.getTargetSide() != SkillTargetSide.ALLY) {
+        if (!anchor.isAlive() && !skill.isSupportSkill() && skill.getTargetSide() != SkillTargetSide.ALLY) {
             throw new IllegalArgumentException("該目標已無法戰鬥");
         }
 
@@ -1110,6 +1111,25 @@ public class BattleService {
             }
             result.put("heal", totalHeal);
             message.append("，回復 ").append(totalHeal).append(" 點生命");
+        } else if (skill.isReviveSkill()) {
+            int revivedCount = 0;
+            for (BattleUnit unit : alliesOf(state, actor)) {
+                if (!affectedSlots.contains(unit.getSlot()) || unit.isAlive()) continue;
+                unit.setHp(Math.max(1, unit.getMaxHp() / 4));
+                revivedCount++;
+            }
+            result.put("revived", revivedCount);
+            message.append("，復活 ").append(revivedCount).append(" 名單位");
+        } else if (skill.isBuffSkill()) {
+            int buffedCount = 0;
+            for (BattleUnit unit : alliesOf(state, actor)) {
+                if (!affectedSlots.contains(unit.getSlot()) || !unit.isAlive()) continue;
+                if (unit.hasActiveBuff() || unit.hasBuff(skill.getSkillId())) continue;
+                unit.applyBuff(skill.getSkillId());
+                buffedCount++;
+            }
+            result.put("buffed", buffedCount);
+            message.append("，施加輔助效果於 ").append(buffedCount).append(" 名單位");
         } else {
             int totalDamage = 0;
             for (BattleUnit unit : opponentsOf(state, actor)) {

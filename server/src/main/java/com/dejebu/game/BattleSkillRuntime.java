@@ -19,6 +19,7 @@ public class BattleSkillRuntime {
     private final int mpCost;
     private final SkillTargetSide targetSide;
     private final SkillTargetRange targetRange;
+    private final SkillEffectType effectType;
     private final boolean comboEligible;
     private int cooldownRemaining;
 
@@ -34,6 +35,7 @@ public class BattleSkillRuntime {
             int mpCost,
             SkillTargetSide targetSide,
             SkillTargetRange targetRange,
+            SkillEffectType effectType,
             boolean comboEligible
     ) {
         this.skillId = skillId;
@@ -47,6 +49,7 @@ public class BattleSkillRuntime {
         this.mpCost = mpCost;
         this.targetSide = targetSide;
         this.targetRange = targetRange;
+        this.effectType = effectType != null ? effectType : SkillEffectType.DAMAGE;
         this.comboEligible = comboEligible;
     }
 
@@ -63,6 +66,7 @@ public class BattleSkillRuntime {
                 skill.getMpCost(),
                 skill.getTargetSide(),
                 skill.getTargetRange(),
+                skill.getEffectType(),
                 skill.isComboEligible()
         );
     }
@@ -111,6 +115,10 @@ public class BattleSkillRuntime {
         return targetRange;
     }
 
+    public SkillEffectType getEffectType() {
+        return effectType;
+    }
+
     public boolean isComboEligible() {
         return comboEligible;
     }
@@ -128,9 +136,19 @@ public class BattleSkillRuntime {
     }
 
     public boolean isHealSkill() {
-        return targetSide == SkillTargetSide.ALLY
-                && mightCoefficient.compareTo(BigDecimal.ZERO) == 0
-                && intelligenceCoefficient.compareTo(BigDecimal.ZERO) > 0;
+        return effectType == SkillEffectType.HEAL;
+    }
+
+    public boolean isReviveSkill() {
+        return effectType == SkillEffectType.REVIVE;
+    }
+
+    public boolean isBuffSkill() {
+        return effectType == SkillEffectType.BUFF;
+    }
+
+    public boolean isSupportSkill() {
+        return isHealSkill() || isReviveSkill() || isBuffSkill();
     }
 
     public void markUsed() {

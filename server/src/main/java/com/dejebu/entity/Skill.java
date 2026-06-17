@@ -1,5 +1,6 @@
 package com.dejebu.entity;
 
+import com.dejebu.game.SkillEffectType;
 import com.dejebu.game.SkillElement;
 import com.dejebu.game.SkillTargetRange;
 import com.dejebu.game.SkillTargetSide;
@@ -66,6 +67,10 @@ public class Skill {
 
     @Column(name = "combo_eligible", nullable = false)
     private boolean comboEligible = true;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "effect_type", nullable = false, length = 16)
+    private SkillEffectType effectType = SkillEffectType.DAMAGE;
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
@@ -183,6 +188,14 @@ public class Skill {
 
     public void setComboEligible(boolean comboEligible) {
         this.comboEligible = comboEligible;
+    }
+
+    public SkillEffectType getEffectType() {
+        return effectType;
+    }
+
+    public void setEffectType(SkillEffectType effectType) {
+        this.effectType = effectType != null ? effectType : SkillEffectType.DAMAGE;
     }
 
     public Set<Skill> getPrerequisites() {
