@@ -85,8 +85,12 @@ public record CharacterStats(
         return random.nextInt(100) < critRate;
     }
 
-    public double fleeChance() {
-        return Math.min(0.85, 0.35 + luck * 0.02);
+    public double fleeChance(int level, int enemyMaxAgility, int enemyMaxLuck, int enemyMaxLevel) {
+        double chance = 0.35
+                + (agility - enemyMaxAgility) * 0.01
+                + (luck - enemyMaxLuck) * 0.01
+                + (level - enemyMaxLevel) * 0.1;
+        return Math.max(0.1, Math.min(0.95, chance));
     }
 
     public CharacterStats withBonus(CharacterStats bonus) {

@@ -64,6 +64,18 @@ class CharacterStatsTest {
     }
 
     @Test
+    void fleeChanceUsesAgilityLuckAndLevelDifference() {
+        CharacterStats escaper = new CharacterStats(0, 0, 0, 0, 0, 10, 15);
+        assertEquals(0.40, escaper.fleeChance(10, 10, 10, 10), 0.0001);
+
+        CharacterStats weakEscaper = new CharacterStats(0, 0, 0, 0, 0, 0, 0);
+        assertEquals(0.1, weakEscaper.fleeChance(1, 50, 50, 50));
+
+        CharacterStats strongEscaper = new CharacterStats(0, 0, 0, 0, 0, 100, 100);
+        assertEquals(0.95, strongEscaper.fleeChance(100, 0, 0, 0));
+    }
+
+    @Test
     void validateRejectsNegativeStats() {
         CharacterStats invalid = new CharacterStats(-1, 0, 0, 0, 0, 0, 0);
         assertThrows(IllegalArgumentException.class, invalid::validate);

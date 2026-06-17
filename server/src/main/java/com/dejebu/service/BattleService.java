@@ -970,7 +970,23 @@ public class BattleService {
 
     private void resolveFlee(BattleState state, BattleUnit actor, ThreadLocalRandom random, ObjectNode result) {
         CharacterStats fleeStats = actor.getStats() != null ? actor.getStats() : state.playerStats;
-        boolean escaped = random.nextDouble() < fleeStats.fleeChance();
+        int enemyMaxAgility = 0;
+        int enemyMaxLuck = 0;
+        int enemyMaxLevel = 0;
+        for (BattleUnit enemy : state.enemies) {
+            if (!enemy.isAlive()) {
+                continue;
+            }
+            CharacterStats enemyStats = enemy.getStats();
+            if (enemyStats != null) {
+                enemyMaxAgility = Math.max(enemyMaxAgility, enemyStats.agility());
+                enemyMaxLuck = Math.max(enemyMaxLuck, enemyStats.luck());
+            }
+            enemyMaxLevel = Math.max(enemyMaxLevel, enemy.getLevel());
+        }
+        boolean escaped = random.nextDouble() < fleeStats.fleeChance(
+                actor.getLevel(), enemyMaxAgility, enemyMaxLuck, enemyMaxLevel
+        );
         result.put("escaped", escaped);
         appendMessage(result, escaped
                 ? actor.getName() + " 帶領隊伍成功逃脫！"
