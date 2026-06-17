@@ -6,18 +6,18 @@ package com.dejebu.game;
  * [0] [1] [2] [3] [4]
  * [5] [6] [7] [8] [9]
  * </pre>
- * 角色固定在第 7 格；夥伴出戰槽依序對應前方、左、右、左外、右外。
+ * 單人：角色在 7，夥伴依隊伍索引在 2、1、3、0、4。
+ * 組隊：隊長在 7，其他玩家依序在 6、8、5、9；各玩家的夥伴在其角色正前方（角色格 - 5）。
  */
 public final class BattleFormation {
 
     public static final int PLAYER_SLOT = 7;
 
-    private static final int[] PARTY_BATTLE_SLOTS = {2, 6, 8, 5, 9};
+    /** 單人：夥伴出戰槽依隊伍索引對應的戰鬥格 */
+    private static final int[] PARTY_BATTLE_SLOTS = {2, 1, 3, 0, 4};
 
-    /** 多人組隊：每位玩家的角色格位（依隊伍順序，0 = 隊長） */
+    /** 組隊：每位玩家的角色格（索引 0 = 隊長） */
     private static final int[] MULTIPLAYER_PLAYER_SLOTS = {7, 6, 8, 5, 9};
-    /** 多人組隊：每位玩家的夥伴格位 */
-    private static final int[] MULTIPLAYER_COMPANION_SLOTS = {2, 0, 1, 3, 4};
 
     private BattleFormation() {
     }
@@ -49,11 +49,13 @@ public final class BattleFormation {
         return MULTIPLAYER_PLAYER_SLOTS[partyIndex];
     }
 
+    /** 角色正前方的夥伴格（下排角色格 - 5 = 上排夥伴格） */
+    public static int companionSlotInFrontOf(int playerSlot) {
+        return playerSlot - 5;
+    }
+
     public static int multiplayerCompanionSlot(int partyIndex) {
-        if (partyIndex < 0 || partyIndex >= MULTIPLAYER_COMPANION_SLOTS.length) {
-            throw new IllegalArgumentException("Invalid multiplayer party index: " + partyIndex);
-        }
-        return MULTIPLAYER_COMPANION_SLOTS[partyIndex];
+        return companionSlotInFrontOf(multiplayerPlayerSlot(partyIndex));
     }
 
     public static int maxMultiplayerPartySize() {

@@ -321,14 +321,11 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
             encounter = true;
             visibleEnemyId = contact.enemyId();
             encounterMessage = "遭遇野生怪物！";
-            int playerLevel = userIdOptional
-                    .flatMap(authService::findUserLevel)
-                    .orElse(1);
             ObjectNode encounterData = encounterService.createVisibleEncounter(
                     encounterKey,
-                    playerLevel,
                     contact.templateId(),
                     contact.enemyId(),
+                    resultMapId,
                     random
             );
             response.set("wildMonsters", encounterData.get("wildMonsters"));
@@ -340,12 +337,9 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
             if (chance > 0 && random.nextInt(100) < chance) {
                 encounter = true;
                 encounterMessage = "遭遇野生怪物！";
-                int playerLevel = userIdOptional
-                        .flatMap(authService::findUserLevel)
-                        .orElse(1);
                 ObjectNode encounterData = encounterService.createDarkEncounter(
                         encounterKey,
-                        playerLevel,
+                        resultMapId,
                         random
                 );
                 response.set("wildMonsters", encounterData.get("wildMonsters"));

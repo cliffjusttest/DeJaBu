@@ -1,6 +1,7 @@
 package com.dejebu.service;
 
 import com.dejebu.game.DangerZone;
+import com.dejebu.game.MapEncounterSettings;
 import com.dejebu.game.MapTeleportTarget;
 import com.dejebu.game.VisibleEnemySpawn;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -32,6 +33,7 @@ public class MapService {
     private final Map<String, MapTeleportTarget> teleports = new HashMap<>();
     private final Map<String, List<VisibleEnemySpawn>> visibleEnemies = new HashMap<>();
     private final Map<String, List<DangerZone>> dangerZones = new HashMap<>();
+    private final Map<String, MapEncounterSettings> encounterSettings = new HashMap<>();
     private String defaultMapId = "village";
 
     public MapService(ObjectMapper objectMapper) {
@@ -56,6 +58,7 @@ public class MapService {
             mapLines.put(mapId, readMapFile(fileName));
             visibleEnemies.put(mapId, parseVisibleEnemies(mapId, mapNode.path("visibleEnemies")));
             dangerZones.put(mapId, parseDangerZones(mapNode.path("dangerZones")));
+            encounterSettings.put(mapId, parseEncounterSettings(mapNode));
         });
 
         JsonNode teleportsNode = config.path("teleports");
@@ -108,6 +111,14 @@ public class MapService {
         return dangerZones.getOrDefault(mapId, List.of());
     }
 
+    public MapEncounterSettings getEncounterSettings(String mapId) {
+        return encounterSettings.getOrDefault(mapId, MapEncounterSettings.DEFAULT);
+    }
+
+    public Set<String> getMapIds() {
+        return Set.copyOf(mapLines.keySet());
+    }
+
     public Optional<DangerZone> findDangerZoneAt(String mapId, int x, int y) {
         for (DangerZone zone : getDangerZones(mapId)) {
             if (zone.contains(x, y)) {
@@ -158,6 +169,12 @@ public class MapService {
                 }
             }
         }
+    }
+
+    private MapEncounterSettings parseEncounterSettings(JsonNode mapNode) {
+        int maxVisibleEnemies = mapNode.path("maxVisibleEnemies").asInt(MapEncounterSettings.DEFAULT.maxVisibleEnemies());
+        int maxDarkEnemies = mapNode.path("maxDarkEnemies").asInt(MapEncounterSettings.DEFAULT.maxDarkEnemies());
+        return new MapEncounterSettings(maxVisibleEnemies, maxDarkEnemies);
     }
 
     private List<DangerZone> parseDangerZones(JsonNode zonesNode) {

@@ -8,6 +8,8 @@
     "forest": {
       "file": "forest.txt",
       "name": "幽暗森林",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
       "visibleEnemies": [
         { "id": "forest_wolf_1", "templateId": "wild_wolf", "x": 4, "y": 8, "chaseRange": 5, "loseRange": 8 },
         { "id": "forest_wolf_2", "templateId": "wild_wolf", "x": 16, "y": 4, "chaseRange": 5, "loseRange": 8 },

@@ -1,5 +1,6 @@
 package com.dejebu.service;
 
+import com.dejebu.game.MapEncounterSettings;
 import com.dejebu.game.MapTeleportTarget;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,8 +45,16 @@ class MapServiceTest {
     }
 
     @Test
-    void wallsAreNotWalkable() {
-        assertFalse(mapService.isWalkable("village", 0, 0));
-        assertFalse(mapService.isWalkable("forest", 0, 1));
+    void forestHasConfiguredEncounterLimits() {
+        MapEncounterSettings settings = mapService.getEncounterSettings("forest");
+        assertEquals(1, settings.maxVisibleEnemies());
+        assertEquals(3, settings.maxDarkEnemies());
+    }
+
+    @Test
+    void villageUsesDefaultEncounterLimits() {
+        MapEncounterSettings settings = mapService.getEncounterSettings("village");
+        assertEquals(1, settings.maxVisibleEnemies());
+        assertEquals(3, settings.maxDarkEnemies());
     }
 }

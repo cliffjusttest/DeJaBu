@@ -1,6 +1,7 @@
 package com.dejebu.service;
 
 import com.dejebu.entity.MonsterTemplateEntity;
+import com.dejebu.game.MapEncounterSettings;
 import com.dejebu.game.MonsterStatsFactory;
 import com.dejebu.game.WildMonsterInstance;
 import com.dejebu.repository.MonsterTemplateRepository;
@@ -19,33 +20,42 @@ import java.util.concurrent.ThreadLocalRandom;
 @Service
 public class EncounterService {
 
-    private static final String[] ENCOUNTER_TEMPLATE_IDS = {"wild_wolf", "wild_wolf", "shadow_wisp"};
-    private static final int[] ENCOUNTER_SLOTS = {0, 1, 2};
-
     private final MonsterTemplateRepository monsterTemplateRepository;
+    private final MapService mapService;
     private final ObjectMapper objectMapper;
     private final Map<String, PendingEncounter> pendingEncounters = new ConcurrentHashMap<>();
 
-    public EncounterService(MonsterTemplateRepository monsterTemplateRepository, ObjectMapper objectMapper) {
+    public EncounterService(
+            MonsterTemplateRepository monsterTemplateRepository,
+            MapService mapService,
+            ObjectMapper objectMapper
+    ) {
         this.monsterTemplateRepository = monsterTemplateRepository;
+        this.mapService = mapService;
         this.objectMapper = objectMapper;
     }
 
-    public ObjectNode createEncounter(String sessionId, int playerLevel, ThreadLocalRandom random) {
-        PendingEncounter encounter = new PendingEncounter(generateMonsters(playerLevel, random), null, false);
+    public ObjectNode createEncounter(String sessionId, String mapId, ThreadLocalRandom random) {
+        MapEncounterSettings settings = mapService.getEncounterSettings(mapId);
+        PendingEncounter encounter = new PendingEncounter(
+                generateDarkMonsters(mapId, settings.maxDarkEnemies(), random),
+                null,
+                false
+        );
         pendingEncounters.put(sessionId, encounter);
         return toEncounterJson(encounter);
     }
 
     public ObjectNode createVisibleEncounter(
             String sessionId,
-            int playerLevel,
             String templateId,
             String visibleEnemyId,
+            String mapId,
             ThreadLocalRandom random
     ) {
+        MapEncounterSettings settings = mapService.getEncounterSettings(mapId);
         PendingEncounter encounter = new PendingEncounter(
-                generateMonstersFromTemplate(templateId, playerLevel, random),
+                generateVisibleMonsters(templateId, mapId, settings.maxVisibleEnemies(), random),
                 visibleEnemyId,
                 false
         );
@@ -53,8 +63,13 @@ public class EncounterService {
         return toEncounterJson(encounter);
     }
 
-    public ObjectNode createDarkEncounter(String sessionId, int playerLevel, ThreadLocalRandom random) {
-        PendingEncounter encounter = new PendingEncounter(generateMonsters(playerLevel, random), null, true);
+    public ObjectNode createDarkEncounter(String sessionId, String mapId, ThreadLocalRandom random) {
+        MapEncounterSettings settings = mapService.getEncounterSettings(mapId);
+        PendingEncounter encounter = new PendingEncounter(
+                generateDarkMonsters(mapId, settings.maxDarkEnemies(), random),
+                null,
+                true
+        );
         pendingEncounters.put(sessionId, encounter);
         return toEncounterJson(encounter);
     }
@@ -75,20 +90,63 @@ public class EncounterService {
         pendingEncounters.remove(sessionId);
     }
 
-    private List<WildMonsterInstance> generateMonstersFromTemplate(
+    private List<WildMonsterInstance> generateVisibleMonsters(
             String templateId,
-            int playerLevel,
+            String mapId,
+            int maxCount,
             ThreadLocalRandom random
     ) {
+        MonsterTemplateEntity template = requireVisibleSpawnTemplate(templateId, mapId);
+        int count = rollEncounterCount(maxCount, random);
+        List<WildMonsterInstance> monsters = new ArrayList<>();
+        for (int i = 0; i < count; i++) {
+            monsters.add(createWildMonster(template, i, random));
+        }
+        return monsters;
+    }
+
+    private List<WildMonsterInstance> generateDarkMonsters(String mapId, int maxCount, ThreadLocalRandom random) {
+        List<MonsterTemplateEntity> templates = findDarkSpawnTemplates(mapId);
+        if (templates.isEmpty()) {
+            throw new IllegalStateException("地圖沒有可生成的暗雷怪物: " + mapId);
+        }
+        int count = rollEncounterCount(maxCount, random);
+        List<WildMonsterInstance> monsters = new ArrayList<>();
+        for (int i = 0; i < count; i++) {
+            MonsterTemplateEntity template = templates.get(random.nextInt(templates.size()));
+            monsters.add(createWildMonster(template, i, random));
+        }
+        return monsters;
+    }
+
+    MonsterTemplateEntity requireVisibleSpawnTemplate(String templateId, String mapId) {
         MonsterTemplateEntity template = monsterTemplateRepository.findById(templateId)
                 .orElseThrow(() -> new IllegalStateException("怪物模板不存在: " + templateId));
-        int level = rollMonsterLevel(playerLevel, random);
+        if (!template.canVisibleSpawnOnMap(mapId)) {
+            throw new IllegalStateException(
+                    "怪物模板不可在此地圖作為明雷生成: " + templateId + " @ " + mapId
+            );
+        }
+        return template;
+    }
+
+    List<MonsterTemplateEntity> findDarkSpawnTemplates(String mapId) {
+        return monsterTemplateRepository.findByDarkSpawnTrue().stream()
+                .filter(template -> template.canDarkSpawnOnMap(mapId))
+                .toList();
+    }
+
+    private WildMonsterInstance createWildMonster(
+            MonsterTemplateEntity template,
+            int slot,
+            ThreadLocalRandom random
+    ) {
+        int level = template.rollLevel(random);
         var stats = MonsterStatsFactory.statsForLevel(template, level);
         int maxHp = MonsterStatsFactory.maxHpForStats(stats);
-        List<WildMonsterInstance> monsters = new ArrayList<>();
-        monsters.add(new WildMonsterInstance(
-                101,
-                1,
+        return new WildMonsterInstance(
+                101 + slot,
+                slot,
                 template.getId(),
                 template.getName(),
                 template.getElement(),
@@ -96,37 +154,11 @@ public class EncounterService {
                 stats,
                 maxHp,
                 template.isCapturable()
-        ));
-        return monsters;
+        );
     }
 
-    private List<WildMonsterInstance> generateMonsters(int playerLevel, ThreadLocalRandom random) {
-        List<WildMonsterInstance> monsters = new ArrayList<>();
-        for (int i = 0; i < ENCOUNTER_TEMPLATE_IDS.length; i++) {
-            String templateId = ENCOUNTER_TEMPLATE_IDS[i];
-            MonsterTemplateEntity template = monsterTemplateRepository.findById(templateId)
-                    .orElseThrow(() -> new IllegalStateException("怪物模板不存在: " + templateId));
-            int level = rollMonsterLevel(playerLevel, random);
-            var stats = MonsterStatsFactory.statsForLevel(template, level);
-            int maxHp = MonsterStatsFactory.maxHpForStats(stats);
-            monsters.add(new WildMonsterInstance(
-                    101 + i,
-                    ENCOUNTER_SLOTS[i],
-                    template.getId(),
-                    template.getName(),
-                    template.getElement(),
-                    level,
-                    stats,
-                    maxHp,
-                    template.isCapturable()
-            ));
-        }
-        return monsters;
-    }
-
-    private int rollMonsterLevel(int playerLevel, ThreadLocalRandom random) {
-        int offset = random.nextInt(-2, 4);
-        return Math.max(1, playerLevel + offset);
+    private int rollEncounterCount(int maxCount, ThreadLocalRandom random) {
+        return random.nextInt(1, maxCount + 1);
     }
 
     private ObjectNode toEncounterJson(PendingEncounter encounter) {

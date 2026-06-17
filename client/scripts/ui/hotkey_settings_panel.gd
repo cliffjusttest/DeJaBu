@@ -7,7 +7,7 @@ const API_COMPANIONS := "http://localhost:8080/api/companions/list"
 const API_BACKPACK   := "http://localhost:8080/api/backpack/status"
 
 const PLAYER_BATTLE_SLOT    := 7
-const PARTY_TO_BATTLE_SLOT  := [2, 6, 8, 5, 9]
+const PARTY_TO_BATTLE_SLOT  := [2, 1, 3, 0, 4]
 
 @onready var actor_tabs_row: HBoxContainer = $Panel/Margin/VBox/ActorTabsRow
 @onready var skill_list: VBoxContainer     = $Panel/Margin/VBox/ContentRow/SkillSection/SkillScroll/SkillList

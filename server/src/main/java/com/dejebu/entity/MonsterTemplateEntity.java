@@ -1,12 +1,20 @@
 package com.dejebu.entity;
 
 import com.dejebu.game.Element;
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
+
+import java.util.HashSet;
+import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Entity
 @Table(name = "monster_templates")
@@ -52,6 +60,26 @@ public class MonsterTemplateEntity {
 
     @Column(name = "gold_drop_max", nullable = false)
     private int goldDropMax = 0;
+
+    @Column(name = "min_level", nullable = false)
+    private int minLevel = 1;
+
+    @Column(name = "max_level", nullable = false)
+    private int maxLevel = 99;
+
+    @Column(name = "visible_spawn", nullable = false)
+    private boolean visibleSpawn = false;
+
+    @Column(name = "dark_spawn", nullable = false)
+    private boolean darkSpawn = false;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(
+            name = "monster_template_spawn_maps",
+            joinColumns = @JoinColumn(name = "template_id")
+    )
+    @Column(name = "map_id", length = 32)
+    private Set<String> spawnMaps = new HashSet<>();
 
     public String getId() {
         return id;
@@ -103,5 +131,41 @@ public class MonsterTemplateEntity {
 
     public int getGoldDropMax() {
         return goldDropMax;
+    }
+
+    public int getMinLevel() {
+        return minLevel;
+    }
+
+    public int getMaxLevel() {
+        return maxLevel;
+    }
+
+    public boolean isVisibleSpawn() {
+        return visibleSpawn;
+    }
+
+    public boolean isDarkSpawn() {
+        return darkSpawn;
+    }
+
+    public Set<String> getSpawnMaps() {
+        return spawnMaps;
+    }
+
+    public boolean canSpawnOnMap(String mapId) {
+        return spawnMaps.contains(mapId);
+    }
+
+    public boolean canVisibleSpawnOnMap(String mapId) {
+        return visibleSpawn && canSpawnOnMap(mapId);
+    }
+
+    public boolean canDarkSpawnOnMap(String mapId) {
+        return darkSpawn && canSpawnOnMap(mapId);
+    }
+
+    public int rollLevel(ThreadLocalRandom random) {
+        return random.nextInt(minLevel, maxLevel + 1);
     }
 }
