@@ -20,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -36,19 +37,19 @@ class EncounterServiceTest {
     @BeforeEach
     void setUp() {
         encounterService = new EncounterService(monsterTemplateRepository, mapService, new ObjectMapper());
-        when(mapService.getEncounterSettings(anyString())).thenReturn(MapEncounterSettings.DEFAULT);
+        lenient().when(mapService.getEncounterSettings(anyString())).thenReturn(MapEncounterSettings.DEFAULT);
     }
 
     @Test
     void visibleEncounterUsesTemplateLevelRange() {
-        MonsterTemplateEntity wolf = template("wild_wolf", 4, 6, true, false, Set.of("forest"));
+        MonsterTemplateEntity wolf = template("wild_wolf", 4, 6, true, false, Set.of("yingchuan_suburb"));
         when(monsterTemplateRepository.findById("wild_wolf")).thenReturn(Optional.of(wolf));
 
         var monsters = encounterService.createVisibleEncounter(
                 "session-1",
                 "wild_wolf",
-                "forest_wolf_1",
-                "forest",
+                "yingchuan_wolf_1",
+                "yingchuan_suburb",
                 ThreadLocalRandom.current()
         ).get("wildMonsters");
 
@@ -59,13 +60,13 @@ class EncounterServiceTest {
 
     @Test
     void darkEncounterOnlyUsesTemplatesAllowedOnMap() {
-        MonsterTemplateEntity wolf = template("wild_wolf", 1, 5, false, true, Set.of("forest"));
-        MonsterTemplateEntity wisp = template("shadow_wisp", 3, 8, false, true, Set.of("village"));
+        MonsterTemplateEntity wolf = template("wild_wolf", 1, 5, false, true, Set.of("yingchuan_suburb"));
+        MonsterTemplateEntity wisp = template("shadow_wisp", 3, 8, false, true, Set.of("xuchang"));
         when(monsterTemplateRepository.findByDarkSpawnTrue()).thenReturn(List.of(wolf, wisp));
 
         var monsters = encounterService.createDarkEncounter(
                 "session-2",
-                "forest",
+                "yingchuan_suburb",
                 ThreadLocalRandom.current()
         ).get("wildMonsters");
 
@@ -77,12 +78,12 @@ class EncounterServiceTest {
 
     @Test
     void rejectVisibleTemplateNotConfiguredForMap() {
-        MonsterTemplateEntity wolf = template("wild_wolf", 1, 5, true, false, Set.of("village"));
+        MonsterTemplateEntity wolf = template("wild_wolf", 1, 5, true, false, Set.of("xuchang"));
         when(monsterTemplateRepository.findById("wild_wolf")).thenReturn(Optional.of(wolf));
 
         assertThrows(
                 IllegalStateException.class,
-                () -> encounterService.requireVisibleSpawnTemplate("wild_wolf", "forest")
+                () -> encounterService.requireVisibleSpawnTemplate("wild_wolf", "yingchuan_suburb")
         );
     }
 

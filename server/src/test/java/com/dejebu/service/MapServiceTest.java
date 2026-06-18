@@ -7,6 +7,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -23,38 +24,54 @@ class MapServiceTest {
     }
 
     @Test
-    void villagePortalIsWalkableAndLinksToForest() {
-        assertTrue(mapService.isWalkable("village", 12, 6));
-
-        Optional<MapTeleportTarget> teleport = mapService.resolveTeleport("village", 12, 6);
-        assertTrue(teleport.isPresent());
-        assertEquals("forest", teleport.get().mapId());
-        assertEquals(9, teleport.get().x());
-        assertEquals(3, teleport.get().y());
+    void defaultMapIsXuchang() {
+        assertEquals("xuchang", mapService.getDefaultMapId());
     }
 
     @Test
-    void forestPortalReturnsToVillage() {
-        assertTrue(mapService.isWalkable("forest", 9, 3));
-
-        Optional<MapTeleportTarget> teleport = mapService.resolveTeleport("forest", 9, 3);
-        assertTrue(teleport.isPresent());
-        assertEquals("village", teleport.get().mapId());
-        assertEquals(12, teleport.get().x());
-        assertEquals(6, teleport.get().y());
+    void worldMapCountMatchesDesign() {
+        Set<String> mapIds = mapService.getMapIds();
+        assertEquals(216, mapIds.size());
+        assertTrue(mapIds.contains("luoyang"));
+        assertTrue(mapIds.contains("jiankang"));
+        assertTrue(mapIds.contains("chengdu"));
+        assertFalse(mapIds.contains("village"));
+        assertFalse(mapIds.contains("forest"));
     }
 
     @Test
-    void forestHasConfiguredEncounterLimits() {
-        MapEncounterSettings settings = mapService.getEncounterSettings("forest");
-        assertEquals(1, settings.maxVisibleEnemies());
+    void xuchangLinksToSuburb() {
+        assertTrue(mapService.isWalkable("xuchang", 1, 1));
+
+        Optional<MapTeleportTarget> teleport = mapService.resolveTeleport("xuchang", 1, 1);
+        assertTrue(teleport.isPresent());
+        assertEquals("xuchang_suburb", teleport.get().mapId());
+        assertEquals(25, teleport.get().x());
+        assertEquals(18, teleport.get().y());
+    }
+
+    @Test
+    void xuchangSuburbReturnsToXuchang() {
+        assertTrue(mapService.isWalkable("xuchang_suburb", 25, 18));
+
+        Optional<MapTeleportTarget> teleport = mapService.resolveTeleport("xuchang_suburb", 25, 18);
+        assertTrue(teleport.isPresent());
+        assertEquals("xuchang", teleport.get().mapId());
+        assertEquals(1, teleport.get().x());
+        assertEquals(1, teleport.get().y());
+    }
+
+    @Test
+    void yingchuanSuburbHasTutorialEncounterLimits() {
+        MapEncounterSettings settings = mapService.getEncounterSettings("yingchuan_suburb");
+        assertEquals(2, settings.maxVisibleEnemies());
         assertEquals(3, settings.maxDarkEnemies());
     }
 
     @Test
-    void villageUsesDefaultEncounterLimits() {
-        MapEncounterSettings settings = mapService.getEncounterSettings("village");
+    void rebelCampHasHigherEncounterLimits() {
+        MapEncounterSettings settings = mapService.getEncounterSettings("rebel_camp_yingchuan");
         assertEquals(1, settings.maxVisibleEnemies());
-        assertEquals(3, settings.maxDarkEnemies());
+        assertEquals(4, settings.maxDarkEnemies());
     }
 }

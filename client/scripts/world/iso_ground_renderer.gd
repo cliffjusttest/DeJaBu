@@ -9,7 +9,8 @@ const TERRAIN_COLORS := {
 	"=": Color(0.66, 0.54, 0.34),
 	"#": Color(0.50, 0.50, 0.54),
 	"T": Color(0.34, 0.60, 0.28),
-	"W": Color(0.24, 0.48, 0.76),
+	"W": Color(0.22, 0.46, 0.78),
+	"M": Color(0.42, 0.40, 0.38),
 	"@": Color(0.58, 0.42, 0.82),
 }
 
@@ -89,6 +90,38 @@ static func create_wall_texture() -> ImageTexture:
 
 	return ImageTexture.create_from_image(image)
 
+static func create_mountain_texture() -> ImageTexture:
+	var image := Image.create(44, 48, false, Image.FORMAT_RGBA8)
+	image.fill(Color(0, 0, 0, 0))
+
+	for y in range(48):
+		for x in range(44):
+			var peak_dx := absf(x - 22.0) / 20.0
+			var peak_dy := absf(y - 16.0) / 14.0
+			if peak_dx + peak_dy <= 1.0:
+				var shade := 0.88 + sin(x * 0.31 + y * 0.17) * 0.08
+				image.set_pixel(x, y, Color(0.48 * shade, 0.44 * shade, 0.40 * shade, 1.0))
+				continue
+
+			if x >= 6 and x < 38 and y >= 18 and y < 46:
+				var side := 0.72 + (y - 18.0) / 40.0
+				var rock := 0.36 + ((x + y) % 5) * 0.025
+				image.set_pixel(x, y, Color(rock * side, rock * side * 0.95, rock * side * 0.88, 1.0))
+
+	return ImageTexture.create_from_image(image)
+
+static func create_water_texture() -> ImageTexture:
+	var image := Image.create(36, 20, false, Image.FORMAT_RGBA8)
+	image.fill(Color(0, 0, 0, 0))
+
+	for y in range(20):
+		for x in range(36):
+			var wave := sin(x * 0.35 + y * 0.22) * 0.06 + sin(x * 0.12 - y * 0.08) * 0.04
+			var alpha := 0.55 + wave
+			image.set_pixel(x, y, Color(0.18 + wave, 0.42 + wave * 0.5, 0.82 + wave * 0.3, alpha))
+
+	return ImageTexture.create_from_image(image)
+
 static func create_portal_texture() -> ImageTexture:
 	var image := Image.create(32, 40, false, Image.FORMAT_RGBA8)
 	image.fill(Color(0, 0, 0, 0))
@@ -144,7 +177,11 @@ static func _sample_ground_pixel(ch: String, local_pos: Vector2, cell: Vector2i)
 	noise += sin(local_pos.x * 0.021 - local_pos.y * 0.017) * 0.015
 
 	if ch == "W":
-		noise += sin(local_pos.x * 0.22 + local_pos.y * 0.17) * 0.03
+		noise += sin(local_pos.x * 0.22 + local_pos.y * 0.17) * 0.04
+		light = clampf(light + 0.02, 0.84, 1.0)
+	elif ch == "M":
+		noise += sin(local_pos.x * 0.11 + local_pos.y * 0.09) * 0.04
+		light = clampf(light - 0.06, 0.78, 0.96)
 	elif ch in ["P", "="]:
 		light = clampf(light + 0.04, 0.85, 1.0)
 		noise *= 0.35

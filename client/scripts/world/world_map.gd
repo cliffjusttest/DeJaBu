@@ -53,7 +53,7 @@ func grid_to_world(grid_x: int, grid_y: int) -> Vector2:
 func world_to_grid(world_pos: Vector2) -> Vector2i:
 	return IsoCoordsScript.local_to_map(to_local(world_pos) - _ground_offset)
 
-func find_spawn_point(preferred: Vector2i = Vector2i(5, 5)) -> Vector2i:
+func find_spawn_point(preferred: Vector2i = Vector2i(8, 8)) -> Vector2i:
 	if is_walkable(preferred.x, preferred.y):
 		return preferred
 	for y in range(_map_size.y):
@@ -105,6 +105,8 @@ func _build_props() -> void:
 
 	var tree_tex: ImageTexture = IsoGroundRendererScript.create_tree_texture()
 	var wall_tex: ImageTexture = IsoGroundRendererScript.create_wall_texture()
+	var mountain_tex: ImageTexture = IsoGroundRendererScript.create_mountain_texture()
+	var water_tex: ImageTexture = IsoGroundRendererScript.create_water_texture()
 
 	for y in range(_map_lines.size()):
 		var row := _map_lines[y]
@@ -118,6 +120,10 @@ func _build_props() -> void:
 					_add_prop(tree_tex, pos, Vector2(0, -18))
 				"#":
 					_add_prop(wall_tex, pos, Vector2(0, -10))
+				"M":
+					_add_prop(mountain_tex, pos, Vector2(0, -16))
+				"W":
+					_add_prop(water_tex, pos, Vector2(0, -6))
 				"@":
 					_add_prop(IsoGroundRendererScript.create_portal_texture(), pos, Vector2(0, -14))
 

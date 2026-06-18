@@ -556,7 +556,7 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
             if (npcId.isBlank()) return error("未指定 NPC");
             Long userId = sessionService.getUserId(session)
                     .orElseThrow(() -> new IllegalStateException("尚未登入"));
-            String mapId = payload.path("mapId").asText("village");
+            String mapId = payload.path("mapId").asText("xuchang");
             ObjectNode result = npcService.interact(userId, npcId, mapId);
             return new GameMessage(MessageType.NPC_INTERACT_OK, result);
         } catch (IllegalArgumentException | IllegalStateException ex) {

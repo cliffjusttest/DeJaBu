@@ -1,48 +1,5069 @@
 {
-  "defaultMap": "village",
+  "defaultMap": "xuchang",
   "maps": {
-    "village": {
-      "file": "village.txt",
-      "name": "新手村"
+    "anping": {
+      "file": "anping.txt",
+      "name": "安平"
     },
-    "forest": {
-      "file": "forest.txt",
-      "name": "幽暗森林",
+    "badong": {
+      "file": "badong.txt",
+      "name": "巴東",
       "maxVisibleEnemies": 1,
-      "maxDarkEnemies": 3,
-      "visibleEnemies": [
-        { "id": "forest_wolf_1", "templateId": "wild_wolf", "x": 4, "y": 8, "chaseRange": 5, "loseRange": 8 },
-        { "id": "forest_wolf_2", "templateId": "wild_wolf", "x": 16, "y": 4, "chaseRange": 5, "loseRange": 8 },
-        { "id": "forest_wisp_1", "templateId": "shadow_wisp", "x": 8, "y": 12, "chaseRange": 5, "loseRange": 8 }
-      ],
+      "maxDarkEnemies": 4,
       "dangerZones": [
         {
-          "id": "forest_upper_thicket",
-          "rect": { "x1": 10, "y1": 3, "x2": 14, "y2": 5 }
-        },
-        {
-          "id": "forest_left_thicket",
-          "rect": { "x1": 1, "y1": 10, "x2": 4, "y2": 10 }
-        },
-        {
-          "id": "forest_right_thicket",
-          "rect": { "x1": 14, "y1": 10, "x2": 17, "y2": 10 }
+          "id": "badong_wild",
+          "rect": {
+            "x1": 2,
+            "y1": 2,
+            "x2": 25,
+            "y2": 17
+          }
         }
       ]
+    },
+    "baima_ferry": {
+      "file": "baima_ferry.txt",
+      "name": "白馬津",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3
+    },
+    "battlefield_chibi": {
+      "file": "battlefield_chibi.txt",
+      "name": "赤壁（江東岸）",
+      "maxVisibleEnemies": 2,
+      "maxDarkEnemies": 4,
+      "dangerZones": [
+        {
+          "id": "battlefield_chibi_wild",
+          "rect": {
+            "x1": 2,
+            "y1": 2,
+            "x2": 29,
+            "y2": 21
+          }
+        }
+      ]
+    },
+    "battlefield_guandu": {
+      "file": "battlefield_guandu.txt",
+      "name": "官渡",
+      "maxVisibleEnemies": 2,
+      "maxDarkEnemies": 4,
+      "dangerZones": [
+        {
+          "id": "battlefield_guandu_wild",
+          "rect": {
+            "x1": 2,
+            "y1": 2,
+            "x2": 29,
+            "y2": 21
+          }
+        }
+      ]
+    },
+    "battlefield_hanzhong": {
+      "file": "battlefield_hanzhong.txt",
+      "name": "漢中戰場",
+      "maxVisibleEnemies": 2,
+      "maxDarkEnemies": 4,
+      "dangerZones": [
+        {
+          "id": "battlefield_hanzhong_wild",
+          "rect": {
+            "x1": 2,
+            "y1": 2,
+            "x2": 29,
+            "y2": 21
+          }
+        }
+      ]
+    },
+    "battlefield_hefei": {
+      "file": "battlefield_hefei.txt",
+      "name": "合肥新城",
+      "maxVisibleEnemies": 2,
+      "maxDarkEnemies": 4,
+      "dangerZones": [
+        {
+          "id": "battlefield_hefei_wild",
+          "rect": {
+            "x1": 2,
+            "y1": 2,
+            "x2": 25,
+            "y2": 21
+          }
+        }
+      ]
+    },
+    "battlefield_jieting": {
+      "file": "battlefield_jieting.txt",
+      "name": "街亭",
+      "maxVisibleEnemies": 2,
+      "maxDarkEnemies": 4,
+      "dangerZones": [
+        {
+          "id": "battlefield_jieting_wild",
+          "rect": {
+            "x1": 2,
+            "y1": 2,
+            "x2": 21,
+            "y2": 17
+          }
+        }
+      ]
+    },
+    "battlefield_xiangfan": {
+      "file": "battlefield_xiangfan.txt",
+      "name": "襄樊",
+      "maxVisibleEnemies": 2,
+      "maxDarkEnemies": 4,
+      "dangerZones": [
+        {
+          "id": "battlefield_xiangfan_wild",
+          "rect": {
+            "x1": 2,
+            "y1": 2,
+            "x2": 29,
+            "y2": 21
+          }
+        }
+      ]
+    },
+    "battlefield_yiling": {
+      "file": "battlefield_yiling.txt",
+      "name": "夷陵戰場",
+      "maxVisibleEnemies": 2,
+      "maxDarkEnemies": 4,
+      "dangerZones": [
+        {
+          "id": "battlefield_yiling_wild",
+          "rect": {
+            "x1": 2,
+            "y1": 2,
+            "x2": 29,
+            "y2": 21
+          }
+        }
+      ]
+    },
+    "beihai": {
+      "file": "beihai.txt",
+      "name": "北海"
+    },
+    "bing_wild": {
+      "file": "bing_wild.txt",
+      "name": "并州野原",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 4,
+      "dangerZones": [
+        {
+          "id": "bing_wild_wild",
+          "rect": {
+            "x1": 2,
+            "y1": 2,
+            "x2": 29,
+            "y2": 17
+          }
+        }
+      ]
+    },
+    "chaisang": {
+      "file": "chaisang.txt",
+      "name": "柴桑"
+    },
+    "changan": {
+      "file": "changan.txt",
+      "name": "長安"
+    },
+    "changan_suburb": {
+      "file": "changan_suburb.txt",
+      "name": "長安外郭"
+    },
+    "changli": {
+      "file": "changli.txt",
+      "name": "昌黎"
+    },
+    "changsha": {
+      "file": "changsha.txt",
+      "name": "長沙"
+    },
+    "changshan": {
+      "file": "changshan.txt",
+      "name": "常山真定"
+    },
+    "chen": {
+      "file": "chen.txt",
+      "name": "陳國平輿"
+    },
+    "chengdu": {
+      "file": "chengdu.txt",
+      "name": "成都"
+    },
+    "chengdu_suburb": {
+      "file": "chengdu_suburb.txt",
+      "name": "成都外郭"
+    },
+    "chenliu": {
+      "file": "chenliu.txt",
+      "name": "陳留"
+    },
+    "chenliu_suburb": {
+      "file": "chenliu_suburb.txt",
+      "name": "陳留郊野"
+    },
+    "chibi": {
+      "file": "chibi.txt",
+      "name": "赤壁",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 4
+    },
+    "dai": {
+      "file": "dai.txt",
+      "name": "代"
+    },
+    "danyang": {
+      "file": "danyang.txt",
+      "name": "丹陽"
+    },
+    "donghai": {
+      "file": "donghai.txt",
+      "name": "東海"
+    },
+    "dongjun": {
+      "file": "dongjun.txt",
+      "name": "東郡白馬"
+    },
+    "dongping": {
+      "file": "dongping.txt",
+      "name": "東平"
+    },
+    "dunhuang": {
+      "file": "dunhuang.txt",
+      "name": "敦煌"
+    },
+    "guangling": {
+      "file": "guangling.txt",
+      "name": "廣陵"
+    },
+    "guangzong": {
+      "file": "guangzong.txt",
+      "name": "廣宗",
+      "maxVisibleEnemies": 2,
+      "maxDarkEnemies": 4,
+      "dangerZones": [
+        {
+          "id": "guangzong_wild",
+          "rect": {
+            "x1": 2,
+            "y1": 2,
+            "x2": 21,
+            "y2": 15
+          }
+        }
+      ]
+    },
+    "gui": {
+      "file": "gui.txt",
+      "name": "桂陽"
+    },
+    "hangu_pass": {
+      "file": "hangu_pass.txt",
+      "name": "函谷關",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 4,
+      "dangerZones": [
+        {
+          "id": "hangu_pass_wild",
+          "rect": {
+            "x1": 2,
+            "y1": 2,
+            "x2": 21,
+            "y2": 11
+          }
+        }
+      ]
+    },
+    "hanzhong": {
+      "file": "hanzhong.txt",
+      "name": "漢中"
+    },
+    "hefei": {
+      "file": "hefei.txt",
+      "name": "合肥"
+    },
+    "hejian": {
+      "file": "hejian.txt",
+      "name": "河間"
+    },
+    "henei": {
+      "file": "henei.txt",
+      "name": "河內溫縣"
+    },
+    "hepu": {
+      "file": "hepu.txt",
+      "name": "合浦"
+    },
+    "hongnong": {
+      "file": "hongnong.txt",
+      "name": "弘農"
+    },
+    "ji": {
+      "file": "ji.txt",
+      "name": "薊"
+    },
+    "ji_wild": {
+      "file": "ji_wild.txt",
+      "name": "冀州野原",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "ji_wild_wild",
+          "rect": {
+            "x1": 2,
+            "y1": 2,
+            "x2": 29,
+            "y2": 17
+          }
+        }
+      ]
+    },
+    "jiangling": {
+      "file": "jiangling.txt",
+      "name": "江陵"
+    },
+    "jiangxia": {
+      "file": "jiangxia.txt",
+      "name": "江夏"
+    },
+    "jiankang": {
+      "file": "jiankang.txt",
+      "name": "建業"
+    },
+    "jiankang_suburb": {
+      "file": "jiankang_suburb.txt",
+      "name": "建業外郭"
+    },
+    "jianmen_pass": {
+      "file": "jianmen_pass.txt",
+      "name": "劍閣關",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 4,
+      "dangerZones": [
+        {
+          "id": "jianmen_pass_wild",
+          "rect": {
+            "x1": 2,
+            "y1": 2,
+            "x2": 21,
+            "y2": 11
+          }
+        }
+      ]
+    },
+    "jianning": {
+      "file": "jianning.txt",
+      "name": "建寧"
+    },
+    "jiao_wild": {
+      "file": "jiao_wild.txt",
+      "name": "交州野原",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 4,
+      "dangerZones": [
+        {
+          "id": "jiao_wild_wild",
+          "rect": {
+            "x1": 2,
+            "y1": 2,
+            "x2": 29,
+            "y2": 17
+          }
+        }
+      ]
+    },
+    "jiaozhi": {
+      "file": "jiaozhi.txt",
+      "name": "交趾"
+    },
+    "jibei": {
+      "file": "jibei.txt",
+      "name": "濟北"
+    },
+    "jinan": {
+      "file": "jinan.txt",
+      "name": "濟南"
+    },
+    "jing_wild": {
+      "file": "jing_wild.txt",
+      "name": "荊州野原",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "jing_wild_wild",
+          "rect": {
+            "x1": 2,
+            "y1": 2,
+            "x2": 29,
+            "y2": 17
+          }
+        }
+      ]
+    },
+    "jingxing_pass": {
+      "file": "jingxing_pass.txt",
+      "name": "井陉關",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 4,
+      "dangerZones": [
+        {
+          "id": "jingxing_pass_wild",
+          "rect": {
+            "x1": 2,
+            "y1": 2,
+            "x2": 21,
+            "y2": 11
+          }
+        }
+      ]
+    },
+    "jinyang": {
+      "file": "jinyang.txt",
+      "name": "晉陽"
+    },
+    "jiuquan": {
+      "file": "jiuquan.txt",
+      "name": "酒泉"
+    },
+    "julu": {
+      "file": "julu.txt",
+      "name": "鉅鹿"
+    },
+    "kuaiji": {
+      "file": "kuaiji.txt",
+      "name": "會稽"
+    },
+    "langye": {
+      "file": "langye.txt",
+      "name": "琅邪"
+    },
+    "liang": {
+      "file": "liang.txt",
+      "name": "梁國睢陽"
+    },
+    "liang_wild": {
+      "file": "liang_wild.txt",
+      "name": "涼州野原",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 4,
+      "dangerZones": [
+        {
+          "id": "liang_wild_wild",
+          "rect": {
+            "x1": 2,
+            "y1": 2,
+            "x2": 29,
+            "y2": 17
+          }
+        }
+      ]
+    },
+    "liaodong": {
+      "file": "liaodong.txt",
+      "name": "遼東"
+    },
+    "ling": {
+      "file": "ling.txt",
+      "name": "零陵"
+    },
+    "longzhong": {
+      "file": "longzhong.txt",
+      "name": "隆中"
+    },
+    "lu": {
+      "file": "lu.txt",
+      "name": "魯國"
+    },
+    "lujiang": {
+      "file": "lujiang.txt",
+      "name": "廬江"
+    },
+    "luoyang": {
+      "file": "luoyang.txt",
+      "name": "洛陽"
+    },
+    "luoyang_suburb": {
+      "file": "luoyang_suburb.txt",
+      "name": "洛陽外郭"
+    },
+    "mengjin_ferry": {
+      "file": "mengjin_ferry.txt",
+      "name": "孟津渡",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3
+    },
+    "mianzhu": {
+      "file": "mianzhu.txt",
+      "name": "綿竹"
+    },
+    "nanjun": {
+      "file": "nanjun.txt",
+      "name": "南郡"
+    },
+    "nanyang_suburb": {
+      "file": "nanyang_suburb.txt",
+      "name": "南陽郊野"
+    },
+    "panyu": {
+      "file": "panyu.txt",
+      "name": "番禺"
+    },
+    "pei": {
+      "file": "pei.txt",
+      "name": "沛國"
+    },
+    "pengcheng": {
+      "file": "pengcheng.txt",
+      "name": "彭城"
+    },
+    "qing_wild": {
+      "file": "qing_wild.txt",
+      "name": "青州野原",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "qing_wild_wild",
+          "rect": {
+            "x1": 2,
+            "y1": 2,
+            "x2": 29,
+            "y2": 17
+          }
+        }
+      ]
+    },
+    "rebel_camp_julu": {
+      "file": "rebel_camp_julu.txt",
+      "name": "鉅鹿太平道壇",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 4,
+      "dangerZones": [
+        {
+          "id": "rebel_camp_julu_wild",
+          "rect": {
+            "x1": 2,
+            "y1": 2,
+            "x2": 25,
+            "y2": 17
+          }
+        }
+      ],
+      "visibleEnemies": [
+        {
+          "id": "rebel_camp_julu_guard_1",
+          "templateId": "shadow_wisp",
+          "x": 14,
+          "y": 10,
+          "chaseRange": 6,
+          "loseRange": 10
+        }
+      ]
+    },
+    "rebel_camp_nanyang": {
+      "file": "rebel_camp_nanyang.txt",
+      "name": "南陽黃巾營",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 4,
+      "dangerZones": [
+        {
+          "id": "rebel_camp_nanyang_wild",
+          "rect": {
+            "x1": 2,
+            "y1": 2,
+            "x2": 21,
+            "y2": 15
+          }
+        }
+      ],
+      "visibleEnemies": [
+        {
+          "id": "rebel_camp_nanyang_guard_1",
+          "templateId": "shadow_wisp",
+          "x": 12,
+          "y": 9,
+          "chaseRange": 6,
+          "loseRange": 10
+        }
+      ]
+    },
+    "rebel_camp_yingchuan": {
+      "file": "rebel_camp_yingchuan.txt",
+      "name": "潁川黃巾營",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 4,
+      "dangerZones": [
+        {
+          "id": "rebel_camp_yingchuan_wild",
+          "rect": {
+            "x1": 2,
+            "y1": 2,
+            "x2": 21,
+            "y2": 15
+          }
+        }
+      ],
+      "visibleEnemies": [
+        {
+          "id": "rebel_camp_yingchuan_guard_1",
+          "templateId": "shadow_wisp",
+          "x": 12,
+          "y": 9,
+          "chaseRange": 6,
+          "loseRange": 10
+        }
+      ]
+    },
+    "ren": {
+      "file": "ren.txt",
+      "name": "任城",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 4,
+      "dangerZones": [
+        {
+          "id": "ren_wild",
+          "rect": {
+            "x1": 2,
+            "y1": 2,
+            "x2": 21,
+            "y2": 15
+          }
+        }
+      ]
+    },
+    "road_anping_changli": {
+      "file": "road_anping_changli.txt",
+      "name": "安平→昌黎道",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_anping_changli_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 29,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_badong_yongan": {
+      "file": "road_badong_yongan.txt",
+      "name": "巴東→永安",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 4,
+      "dangerZones": [
+        {
+          "id": "road_badong_yongan_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 29,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_beihai_donghai": {
+      "file": "road_beihai_donghai.txt",
+      "name": "北海→東海",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_beihai_donghai_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 29,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_chaisang_jiangxia": {
+      "file": "road_chaisang_jiangxia.txt",
+      "name": "柴→江夏",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_chaisang_jiangxia_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 33,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_chaisang_jiankang": {
+      "file": "road_chaisang_jiankang.txt",
+      "name": "柴→建業",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_chaisang_jiankang_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 29,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_changan_hanzhong": {
+      "file": "road_changan_hanzhong.txt",
+      "name": "秦嶺道（長→漢中）",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 4,
+      "dangerZones": [
+        {
+          "id": "road_changan_hanzhong_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 45,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_changan_tianshui": {
+      "file": "road_changan_tianshui.txt",
+      "name": "隴右道（長→天水）",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 4,
+      "dangerZones": [
+        {
+          "id": "road_changan_tianshui_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 45,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_changan_wu": {
+      "file": "road_changan_wu.txt",
+      "name": "長安→武關段",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 4,
+      "dangerZones": [
+        {
+          "id": "road_changan_wu_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 37,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_changli_liaodong": {
+      "file": "road_changli_liaodong.txt",
+      "name": "昌黎→遼東",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 4,
+      "dangerZones": [
+        {
+          "id": "road_changli_liaodong_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 33,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_changsha_gui": {
+      "file": "road_changsha_gui.txt",
+      "name": "長→桂陽",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_changsha_gui_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 33,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_changsha_ling": {
+      "file": "road_changsha_ling.txt",
+      "name": "長→零陵",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_changsha_ling_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 29,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_changsha_panyu": {
+      "file": "road_changsha_panyu.txt",
+      "name": "長→番禺",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 4,
+      "dangerZones": [
+        {
+          "id": "road_changsha_panyu_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 53,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_changshan_zhending": {
+      "file": "road_changshan_zhending.txt",
+      "name": "常山→真定道",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_changshan_zhending_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 3,
+            "x2": 21,
+            "y2": 7
+          }
+        }
+      ]
+    },
+    "road_chen_lu": {
+      "file": "road_chen_lu.txt",
+      "name": "陳魯道"
+    },
+    "road_chengdu_jianmen": {
+      "file": "road_chengdu_jianmen.txt",
+      "name": "成都→劍閣",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 4,
+      "dangerZones": [
+        {
+          "id": "road_chengdu_jianmen_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 33,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_chengdu_jianning": {
+      "file": "road_chengdu_jianning.txt",
+      "name": "成都→建寧",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 4,
+      "dangerZones": [
+        {
+          "id": "road_chengdu_jianning_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 45,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_chengdu_mianzhu": {
+      "file": "road_chengdu_mianzhu.txt",
+      "name": "成都→綿竹",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_chengdu_mianzhu_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 3,
+            "x2": 21,
+            "y2": 7
+          }
+        }
+      ]
+    },
+    "road_chenliu_dongjun": {
+      "file": "road_chenliu_dongjun.txt",
+      "name": "陳東道",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_chenliu_dongjun_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 25,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_chenliu_pengcheng": {
+      "file": "road_chenliu_pengcheng.txt",
+      "name": "陳彭道",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_chenliu_pengcheng_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 37,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_chenliu_taishan": {
+      "file": "road_chenliu_taishan.txt",
+      "name": "陳泰道"
+    },
+    "road_chenliu_yingchuan": {
+      "file": "road_chenliu_yingchuan.txt",
+      "name": "陳潁道",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_chenliu_yingchuan_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 29,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_chibi_chaisang": {
+      "file": "road_chibi_chaisang.txt",
+      "name": "赤壁→柴桑",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 4
+    },
+    "road_chibi_jiangling": {
+      "file": "road_chibi_jiangling.txt",
+      "name": "赤壁→江陵",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 4
+    },
+    "road_danyang_lujiang": {
+      "file": "road_danyang_lujiang.txt",
+      "name": "丹→廬江",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_danyang_lujiang_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 25,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_dongjun_dongping": {
+      "file": "road_dongjun_dongping.txt",
+      "name": "東平道",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_dongjun_dongping_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 25,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_dongjun_jibei": {
+      "file": "road_dongjun_jibei.txt",
+      "name": "東濟北道",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_dongjun_jibei_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 3,
+            "x2": 21,
+            "y2": 7
+          }
+        }
+      ]
+    },
+    "road_dongjun_jinan": {
+      "file": "road_dongjun_jinan.txt",
+      "name": "東→濟南",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_dongjun_jinan_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 29,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_dongping_ren": {
+      "file": "road_dongping_ren.txt",
+      "name": "東平→任城",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 4,
+      "dangerZones": [
+        {
+          "id": "road_dongping_ren_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 3,
+            "x2": 17,
+            "y2": 7
+          }
+        }
+      ]
+    },
+    "road_dongping_xu_wild": {
+      "file": "road_dongping_xu_wild.txt",
+      "name": "東平→徐州",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_dongping_xu_wild_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 25,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_guandu_ye": {
+      "file": "road_guandu_ye.txt",
+      "name": "官渡→鄴",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 4,
+      "dangerZones": [
+        {
+          "id": "road_guandu_ye_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 33,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_guangling_donghai": {
+      "file": "road_guangling_donghai.txt",
+      "name": "廣東海道",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_guangling_donghai_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 29,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_guangling_jiankang": {
+      "file": "road_guangling_jiankang.txt",
+      "name": "廣陵→建業渡",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3
+    },
+    "road_hangu_changan": {
+      "file": "road_hangu_changan.txt",
+      "name": "函谷→長安段",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_hangu_changan_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 33,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_hanzhong_chengdu": {
+      "file": "road_hanzhong_chengdu.txt",
+      "name": "漢中→成都",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 4,
+      "dangerZones": [
+        {
+          "id": "road_hanzhong_chengdu_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 41,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_hefei_shouchun": {
+      "file": "road_hefei_shouchun.txt",
+      "name": "合→壽春",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_hefei_shouchun_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 29,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_henei_ye": {
+      "file": "road_henei_ye.txt",
+      "name": "河內→鄴道",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_henei_ye_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 33,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_hongnong_hangu": {
+      "file": "road_hongnong_hangu.txt",
+      "name": "弘農→函谷段",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_hongnong_hangu_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 25,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_ji_dai": {
+      "file": "road_ji_dai.txt",
+      "name": "薊→代",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_ji_dai_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 29,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_ji_liaodong": {
+      "file": "road_ji_liaodong.txt",
+      "name": "薊→遼東",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 4,
+      "dangerZones": [
+        {
+          "id": "road_ji_liaodong_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 45,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_ji_yuyang": {
+      "file": "road_ji_yuyang.txt",
+      "name": "薊→漁陽",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_ji_yuyang_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 25,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_ji_zhuo": {
+      "file": "road_ji_zhuo.txt",
+      "name": "薊→涿"
+    },
+    "road_jiangling_changsha": {
+      "file": "road_jiangling_changsha.txt",
+      "name": "江陵→長沙",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_jiangling_changsha_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 37,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_jiangling_nanjun": {
+      "file": "road_jiangling_nanjun.txt",
+      "name": "江陵→南郡道"
+    },
+    "road_jiangling_wuling": {
+      "file": "road_jiangling_wuling.txt",
+      "name": "江陵→武陵",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_jiangling_wuling_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 33,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_jiangling_yiling": {
+      "file": "road_jiangling_yiling.txt",
+      "name": "江陵→夷陵",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_jiangling_yiling_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 29,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_jiangxia_chibi": {
+      "file": "road_jiangxia_chibi.txt",
+      "name": "江夏→赤壁",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_jiangxia_chibi_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 25,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_jiankang_danyang": {
+      "file": "road_jiankang_danyang.txt",
+      "name": "建→丹陽"
+    },
+    "road_jiankang_wu": {
+      "file": "road_jiankang_wu.txt",
+      "name": "建→吳"
+    },
+    "road_jianmen_zitong": {
+      "file": "road_jianmen_zitong.txt",
+      "name": "劍閣→梓潼",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 4,
+      "dangerZones": [
+        {
+          "id": "road_jianmen_zitong_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 25,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_jianning_yunnan": {
+      "file": "road_jianning_yunnan.txt",
+      "name": "建寧→雲南",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 4,
+      "dangerZones": [
+        {
+          "id": "road_jianning_yunnan_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 33,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_jibei_jinan": {
+      "file": "road_jibei_jinan.txt",
+      "name": "濟北→濟南",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_jibei_jinan_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 3,
+            "x2": 21,
+            "y2": 7
+          }
+        }
+      ]
+    },
+    "road_jinan_beihai": {
+      "file": "road_jinan_beihai.txt",
+      "name": "濟北海口",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_jinan_beihai_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 25,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_jinan_qing_wild": {
+      "file": "road_jinan_qing_wild.txt",
+      "name": "濟南野道",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_jinan_qing_wild_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 25,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_jingxing_jinyang": {
+      "file": "road_jingxing_jinyang.txt",
+      "name": "井陉→晉陽",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 4,
+      "dangerZones": [
+        {
+          "id": "road_jingxing_jinyang_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 33,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_jinyang_taiyuan": {
+      "file": "road_jinyang_taiyuan.txt",
+      "name": "晉太道",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_jinyang_taiyuan_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 25,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_jiuquan_dunhuang": {
+      "file": "road_jiuquan_dunhuang.txt",
+      "name": "酒→敦煌",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 4,
+      "dangerZones": [
+        {
+          "id": "road_jiuquan_dunhuang_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 45,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_julu_guangzong": {
+      "file": "road_julu_guangzong.txt",
+      "name": "鉅鹿→廣宗",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 4,
+      "dangerZones": [
+        {
+          "id": "road_julu_guangzong_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 3,
+            "x2": 21,
+            "y2": 7
+          }
+        }
+      ]
+    },
+    "road_julu_xiayang": {
+      "file": "road_julu_xiayang.txt",
+      "name": "鉅鹿→下曲陽",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 4,
+      "dangerZones": [
+        {
+          "id": "road_julu_xiayang_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 3,
+            "x2": 25,
+            "y2": 7
+          }
+        }
+      ]
+    },
+    "road_lu_yanzhou_wild": {
+      "file": "road_lu_yanzhou_wild.txt",
+      "name": "魯國→兗州野",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_lu_yanzhou_wild_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 3,
+            "x2": 21,
+            "y2": 7
+          }
+        }
+      ]
+    },
+    "road_lujiang_ruxu": {
+      "file": "road_lujiang_ruxu.txt",
+      "name": "廬→濡須",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_lujiang_ruxu_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 25,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_luoyang_henei": {
+      "file": "road_luoyang_henei.txt",
+      "name": "洛河官道",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_luoyang_henei_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 37,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_luoyang_hongnong": {
+      "file": "road_luoyang_hongnong.txt",
+      "name": "崤函道（洛→弘）",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_luoyang_hongnong_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 41,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_luoyang_xuchang": {
+      "file": "road_luoyang_xuchang.txt",
+      "name": "洛許官道",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_luoyang_xuchang_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 29,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_luoyang_yingchuan": {
+      "file": "road_luoyang_yingchuan.txt",
+      "name": "嵩洛道",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_luoyang_yingchuan_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 33,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_mengjin_baima": {
+      "file": "road_mengjin_baima.txt",
+      "name": "孟津→白馬渡",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3
+    },
+    "road_panyu_hepu": {
+      "file": "road_panyu_hepu.txt",
+      "name": "番→合浦",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_panyu_hepu_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 29,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_panyu_jiaozhi": {
+      "file": "road_panyu_jiaozhi.txt",
+      "name": "番→交趾",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 4,
+      "dangerZones": [
+        {
+          "id": "road_panyu_jiaozhi_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 45,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_pei_pengcheng": {
+      "file": "road_pei_pengcheng.txt",
+      "name": "沛彭道",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_pei_pengcheng_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 29,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_pengcheng_langye": {
+      "file": "road_pengcheng_langye.txt",
+      "name": "彭琅道",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_pengcheng_langye_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 29,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_pengcheng_xiapi": {
+      "file": "road_pengcheng_xiapi.txt",
+      "name": "彭下道",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_pengcheng_xiapi_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 25,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_runan_pei": {
+      "file": "road_runan_pei.txt",
+      "name": "汝沛道",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_runan_pei_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 25,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_runan_wancheng": {
+      "file": "road_runan_wancheng.txt",
+      "name": "汝宛道",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_runan_wancheng_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 33,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_ruxu_hefei": {
+      "file": "road_ruxu_hefei.txt",
+      "name": "濡→合肥",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_ruxu_hefei_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 29,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_shangdang_jinyang": {
+      "file": "road_shangdang_jinyang.txt",
+      "name": "上黨→晉陽",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_shangdang_jinyang_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 29,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_shouchun_runan": {
+      "file": "road_shouchun_runan.txt",
+      "name": "壽→汝南",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_shouchun_runan_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 33,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_taiyuan_yanmen": {
+      "file": "road_taiyuan_yanmen.txt",
+      "name": "太雁道",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 4,
+      "dangerZones": [
+        {
+          "id": "road_taiyuan_yanmen_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 29,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_tianshui_wuwei": {
+      "file": "road_tianshui_wuwei.txt",
+      "name": "天水→武威",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 4,
+      "dangerZones": [
+        {
+          "id": "road_tianshui_wuwei_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 37,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_wancheng_xinye": {
+      "file": "road_wancheng_xinye.txt",
+      "name": "宛新道",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_wancheng_xinye_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 3,
+            "x2": 21,
+            "y2": 7
+          }
+        }
+      ]
+    },
+    "road_wu_kuaiji": {
+      "file": "road_wu_kuaiji.txt",
+      "name": "吳→會稽"
+    },
+    "road_wu_wancheng": {
+      "file": "road_wu_wancheng.txt",
+      "name": "武關→宛城",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 4,
+      "dangerZones": [
+        {
+          "id": "road_wu_wancheng_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 37,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_wuwei_zhangye": {
+      "file": "road_wuwei_zhangye.txt",
+      "name": "武→張掖",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 4,
+      "dangerZones": [
+        {
+          "id": "road_wuwei_zhangye_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 41,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_xiangyang_jiangling": {
+      "file": "road_xiangyang_jiangling.txt",
+      "name": "襄江道",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_xiangyang_jiangling_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 33,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_xiangyang_jiangxia": {
+      "file": "road_xiangyang_jiangxia.txt",
+      "name": "襄→江夏",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_xiangyang_jiangxia_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 29,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_xiapi_donghai": {
+      "file": "road_xiapi_donghai.txt",
+      "name": "下東海道",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_xiapi_donghai_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 25,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_xinye_xiangyang": {
+      "file": "road_xinye_xiangyang.txt",
+      "name": "新襄道",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_xinye_xiangyang_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 29,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_xuchang_yingchuan": {
+      "file": "road_xuchang_yingchuan.txt",
+      "name": "許潁道"
+    },
+    "road_yanmen_you_wild": {
+      "file": "road_yanmen_you_wild.txt",
+      "name": "雁門→幽州",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 4,
+      "dangerZones": [
+        {
+          "id": "road_yanmen_you_wild_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 37,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_ye_anping": {
+      "file": "road_ye_anping.txt",
+      "name": "鄴→安平",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_ye_anping_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 3,
+            "x2": 25,
+            "y2": 7
+          }
+        }
+      ]
+    },
+    "road_ye_changshan": {
+      "file": "road_ye_changshan.txt",
+      "name": "鄴→常山",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_ye_changshan_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 29,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_ye_hejian": {
+      "file": "road_ye_hejian.txt",
+      "name": "鄴→河間",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_ye_hejian_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 3,
+            "x2": 25,
+            "y2": 7
+          }
+        }
+      ]
+    },
+    "road_ye_jingxing": {
+      "file": "road_ye_jingxing.txt",
+      "name": "鄴→井陉",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 4,
+      "dangerZones": [
+        {
+          "id": "road_ye_jingxing_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 29,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_ye_julu": {
+      "file": "road_ye_julu.txt",
+      "name": "鄴→鉅鹿道",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 4,
+      "dangerZones": [
+        {
+          "id": "road_ye_julu_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 29,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_yiling_badong": {
+      "file": "road_yiling_badong.txt",
+      "name": "夷陵→巴東",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 4,
+      "dangerZones": [
+        {
+          "id": "road_yiling_badong_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 25,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_yingchuan_chen": {
+      "file": "road_yingchuan_chen.txt",
+      "name": "潁陳道"
+    },
+    "road_yingchuan_liang": {
+      "file": "road_yingchuan_liang.txt",
+      "name": "潁梁道"
+    },
+    "road_yingchuan_runan": {
+      "file": "road_yingchuan_runan.txt",
+      "name": "潁汝道",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_yingchuan_runan_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 29,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_zhangye_jiuquan": {
+      "file": "road_zhangye_jiuquan.txt",
+      "name": "張→酒泉",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 4,
+      "dangerZones": [
+        {
+          "id": "road_zhangye_jiuquan_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 37,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "road_zhending_ji": {
+      "file": "road_zhending_ji.txt",
+      "name": "真定→薊",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "road_zhending_ji_verge",
+          "rect": {
+            "x1": 2,
+            "y1": 4,
+            "x2": 37,
+            "y2": 8
+          }
+        }
+      ]
+    },
+    "runan": {
+      "file": "runan.txt",
+      "name": "汝南"
+    },
+    "runan_suburb": {
+      "file": "runan_suburb.txt",
+      "name": "汝南郊野"
+    },
+    "ruxu": {
+      "file": "ruxu.txt",
+      "name": "濡須口",
+      "maxVisibleEnemies": 2,
+      "maxDarkEnemies": 4,
+      "dangerZones": [
+        {
+          "id": "ruxu_wild",
+          "rect": {
+            "x1": 2,
+            "y1": 2,
+            "x2": 25,
+            "y2": 17
+          }
+        }
+      ]
+    },
+    "shangdang": {
+      "file": "shangdang.txt",
+      "name": "上黨"
+    },
+    "shouchun": {
+      "file": "shouchun.txt",
+      "name": "壽春"
+    },
+    "taishan": {
+      "file": "taishan.txt",
+      "name": "泰山"
+    },
+    "taiyuan": {
+      "file": "taiyuan.txt",
+      "name": "太原"
+    },
+    "tianshui": {
+      "file": "tianshui.txt",
+      "name": "天水"
+    },
+    "wancheng": {
+      "file": "wancheng.txt",
+      "name": "宛城"
+    },
+    "wu": {
+      "file": "wu.txt",
+      "name": "吳郡"
+    },
+    "wu_pass": {
+      "file": "wu_pass.txt",
+      "name": "武關",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 4,
+      "dangerZones": [
+        {
+          "id": "wu_pass_wild",
+          "rect": {
+            "x1": 2,
+            "y1": 2,
+            "x2": 21,
+            "y2": 11
+          }
+        }
+      ]
+    },
+    "wuling": {
+      "file": "wuling.txt",
+      "name": "武陵"
+    },
+    "wuwei": {
+      "file": "wuwei.txt",
+      "name": "武威"
+    },
+    "xiangyang": {
+      "file": "xiangyang.txt",
+      "name": "襄陽"
+    },
+    "xiapi": {
+      "file": "xiapi.txt",
+      "name": "下邳"
+    },
+    "xiayang": {
+      "file": "xiayang.txt",
+      "name": "下曲陽",
+      "maxVisibleEnemies": 2,
+      "maxDarkEnemies": 4,
+      "dangerZones": [
+        {
+          "id": "xiayang_wild",
+          "rect": {
+            "x1": 2,
+            "y1": 2,
+            "x2": 21,
+            "y2": 15
+          }
+        }
+      ]
+    },
+    "xinye": {
+      "file": "xinye.txt",
+      "name": "新野"
+    },
+    "xu_wild": {
+      "file": "xu_wild.txt",
+      "name": "徐州野原",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "xu_wild_wild",
+          "rect": {
+            "x1": 2,
+            "y1": 2,
+            "x2": 29,
+            "y2": 17
+          }
+        }
+      ]
+    },
+    "xuchang": {
+      "file": "xuchang.txt",
+      "name": "許縣"
+    },
+    "xuchang_suburb": {
+      "file": "xuchang_suburb.txt",
+      "name": "許昌外郭"
+    },
+    "yang_wild": {
+      "file": "yang_wild.txt",
+      "name": "揚州野原",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "yang_wild_wild",
+          "rect": {
+            "x1": 2,
+            "y1": 2,
+            "x2": 29,
+            "y2": 17
+          }
+        }
+      ]
+    },
+    "yanmen_pass": {
+      "file": "yanmen_pass.txt",
+      "name": "雁門關",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 4,
+      "dangerZones": [
+        {
+          "id": "yanmen_pass_wild",
+          "rect": {
+            "x1": 2,
+            "y1": 2,
+            "x2": 21,
+            "y2": 11
+          }
+        }
+      ]
+    },
+    "yanzhou_wild": {
+      "file": "yanzhou_wild.txt",
+      "name": "兗州野原",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "yanzhou_wild_wild",
+          "rect": {
+            "x1": 2,
+            "y1": 2,
+            "x2": 29,
+            "y2": 17
+          }
+        }
+      ]
+    },
+    "ye": {
+      "file": "ye.txt",
+      "name": "鄴"
+    },
+    "ye_suburb": {
+      "file": "ye_suburb.txt",
+      "name": "鄴郊"
+    },
+    "yi_wild": {
+      "file": "yi_wild.txt",
+      "name": "益州野原",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "yi_wild_wild",
+          "rect": {
+            "x1": 2,
+            "y1": 2,
+            "x2": 29,
+            "y2": 17
+          }
+        }
+      ]
+    },
+    "yiling": {
+      "file": "yiling.txt",
+      "name": "夷陵"
+    },
+    "yingchuan": {
+      "file": "yingchuan.txt",
+      "name": "潁川"
+    },
+    "yingchuan_suburb": {
+      "file": "yingchuan_suburb.txt",
+      "name": "潁川郊野",
+      "maxVisibleEnemies": 2,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "yingchuan_suburb_wild",
+          "rect": {
+            "x1": 2,
+            "y1": 2,
+            "x2": 25,
+            "y2": 17
+          }
+        }
+      ],
+      "visibleEnemies": [
+        {
+          "id": "yingchuan_wolf_1",
+          "templateId": "wild_wolf",
+          "x": 14,
+          "y": 10,
+          "chaseRange": 5,
+          "loseRange": 8
+        },
+        {
+          "id": "yingchuan_wolf_2",
+          "templateId": "wild_wolf",
+          "x": 16,
+          "y": 8,
+          "chaseRange": 5,
+          "loseRange": 8
+        }
+      ]
+    },
+    "yongan": {
+      "file": "yongan.txt",
+      "name": "永安"
+    },
+    "you_wild": {
+      "file": "you_wild.txt",
+      "name": "幽州野原",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 4,
+      "dangerZones": [
+        {
+          "id": "you_wild_wild",
+          "rect": {
+            "x1": 2,
+            "y1": 2,
+            "x2": 29,
+            "y2": 17
+          }
+        }
+      ]
+    },
+    "yu_wild": {
+      "file": "yu_wild.txt",
+      "name": "豫州野原",
+      "maxVisibleEnemies": 1,
+      "maxDarkEnemies": 3,
+      "dangerZones": [
+        {
+          "id": "yu_wild_wild",
+          "rect": {
+            "x1": 2,
+            "y1": 2,
+            "x2": 29,
+            "y2": 17
+          }
+        }
+      ]
+    },
+    "yunnan": {
+      "file": "yunnan.txt",
+      "name": "雲南"
+    },
+    "yuyang": {
+      "file": "yuyang.txt",
+      "name": "漁陽"
+    },
+    "zhangye": {
+      "file": "zhangye.txt",
+      "name": "張掖"
+    },
+    "zhending": {
+      "file": "zhending.txt",
+      "name": "真定"
+    },
+    "zhuo": {
+      "file": "zhuo.txt",
+      "name": "涿"
+    },
+    "zitong": {
+      "file": "zitong.txt",
+      "name": "梓潼"
     }
   },
   "teleports": {
-    "village:12,6": { "map": "forest", "x": 9, "y": 3 },
-    "forest:9,3": { "map": "village", "x": 12, "y": 6 }
+    "luoyang:1,34": {
+      "map": "luoyang_suburb",
+      "x": 29,
+      "y": 1
+    },
+    "luoyang_suburb:3,1": {
+      "map": "road_luoyang_henei",
+      "x": 1,
+      "y": 10
+    },
+    "luoyang_suburb:30,1": {
+      "map": "road_luoyang_yingchuan",
+      "x": 1,
+      "y": 1
+    },
+    "luoyang_suburb:1,1": {
+      "map": "road_luoyang_hongnong",
+      "x": 42,
+      "y": 1
+    },
+    "luoyang_suburb:1,22": {
+      "map": "road_luoyang_xuchang",
+      "x": 1,
+      "y": 1
+    },
+    "luoyang_suburb:16,1": {
+      "map": "mengjin_ferry",
+      "x": 1,
+      "y": 12
+    },
+    "road_luoyang_henei:1,10": {
+      "map": "luoyang_suburb",
+      "x": 3,
+      "y": 1
+    },
+    "road_luoyang_henei:1,1": {
+      "map": "henei",
+      "x": 1,
+      "y": 18
+    },
+    "henei:1,18": {
+      "map": "road_luoyang_henei",
+      "x": 1,
+      "y": 1
+    },
+    "henei:1,1": {
+      "map": "road_henei_ye",
+      "x": 1,
+      "y": 10
+    },
+    "road_luoyang_hongnong:42,1": {
+      "map": "luoyang_suburb",
+      "x": 1,
+      "y": 1
+    },
+    "road_luoyang_hongnong:1,1": {
+      "map": "hongnong",
+      "x": 26,
+      "y": 1
+    },
+    "hongnong:26,1": {
+      "map": "road_luoyang_hongnong",
+      "x": 1,
+      "y": 1
+    },
+    "hongnong:1,1": {
+      "map": "road_hongnong_hangu",
+      "x": 26,
+      "y": 1
+    },
+    "road_hongnong_hangu:26,1": {
+      "map": "hongnong",
+      "x": 1,
+      "y": 1
+    },
+    "road_hongnong_hangu:1,1": {
+      "map": "hangu_pass",
+      "x": 22,
+      "y": 1
+    },
+    "hangu_pass:22,1": {
+      "map": "road_hongnong_hangu",
+      "x": 1,
+      "y": 1
+    },
+    "hangu_pass:1,1": {
+      "map": "road_hangu_changan",
+      "x": 34,
+      "y": 1
+    },
+    "road_hangu_changan:34,1": {
+      "map": "hangu_pass",
+      "x": 1,
+      "y": 1
+    },
+    "road_hangu_changan:1,1": {
+      "map": "changan_suburb",
+      "x": 30,
+      "y": 1
+    },
+    "changan:46,1": {
+      "map": "changan_suburb",
+      "x": 2,
+      "y": 22
+    },
+    "changan_suburb:30,1": {
+      "map": "road_hangu_changan",
+      "x": 1,
+      "y": 1
+    },
+    "changan_suburb:1,22": {
+      "map": "road_changan_wu",
+      "x": 1,
+      "y": 1
+    },
+    "changan_suburb:1,3": {
+      "map": "road_changan_tianshui",
+      "x": 46,
+      "y": 10
+    },
+    "changan_suburb:3,22": {
+      "map": "road_changan_hanzhong",
+      "x": 46,
+      "y": 1
+    },
+    "road_changan_wu:1,1": {
+      "map": "changan_suburb",
+      "x": 1,
+      "y": 22
+    },
+    "road_changan_wu:1,10": {
+      "map": "wu_pass",
+      "x": 1,
+      "y": 1
+    },
+    "wu_pass:1,1": {
+      "map": "road_changan_wu",
+      "x": 1,
+      "y": 10
+    },
+    "wu_pass:1,12": {
+      "map": "road_wu_wancheng",
+      "x": 1,
+      "y": 1
+    },
+    "road_luoyang_xuchang:1,1": {
+      "map": "luoyang_suburb",
+      "x": 1,
+      "y": 22
+    },
+    "road_luoyang_xuchang:1,10": {
+      "map": "xuchang_suburb",
+      "x": 1,
+      "y": 1
+    },
+    "xuchang:1,1": {
+      "map": "xuchang_suburb",
+      "x": 25,
+      "y": 18
+    },
+    "xuchang_suburb:1,1": {
+      "map": "road_luoyang_xuchang",
+      "x": 1,
+      "y": 10
+    },
+    "xuchang_suburb:26,1": {
+      "map": "road_xuchang_yingchuan",
+      "x": 1,
+      "y": 1
+    },
+    "xuchang_suburb:3,18": {
+      "map": "battlefield_guandu",
+      "x": 1,
+      "y": 1
+    },
+    "road_luoyang_yingchuan:1,1": {
+      "map": "luoyang_suburb",
+      "x": 30,
+      "y": 1
+    },
+    "road_luoyang_yingchuan:34,1": {
+      "map": "yingchuan_suburb",
+      "x": 1,
+      "y": 3
+    },
+    "mengjin_ferry:1,12": {
+      "map": "luoyang_suburb",
+      "x": 16,
+      "y": 1
+    },
+    "mengjin_ferry:1,1": {
+      "map": "road_mengjin_baima",
+      "x": 3,
+      "y": 10
+    },
+    "road_changan_tianshui:46,10": {
+      "map": "changan_suburb",
+      "x": 1,
+      "y": 3
+    },
+    "road_changan_tianshui:1,10": {
+      "map": "tianshui",
+      "x": 26,
+      "y": 1
+    },
+    "yingchuan:1,1": {
+      "map": "yingchuan_suburb",
+      "x": 26,
+      "y": 18
+    },
+    "yingchuan_suburb:1,3": {
+      "map": "road_luoyang_yingchuan",
+      "x": 34,
+      "y": 1
+    },
+    "yingchuan_suburb:26,3": {
+      "map": "road_chenliu_yingchuan",
+      "x": 1,
+      "y": 1
+    },
+    "yingchuan_suburb:3,18": {
+      "map": "yingchuan",
+      "x": 29,
+      "y": 1
+    },
+    "yingchuan:3,1": {
+      "map": "rebel_camp_yingchuan",
+      "x": 1,
+      "y": 16
+    },
+    "rebel_camp_yingchuan:1,1": {
+      "map": "yingchuan",
+      "x": 1,
+      "y": 22
+    },
+    "road_yingchuan_runan:1,1": {
+      "map": "yingchuan_suburb",
+      "x": 25,
+      "y": 18
+    },
+    "road_yingchuan_runan:1,10": {
+      "map": "runan_suburb",
+      "x": 1,
+      "y": 1
+    },
+    "runan:1,1": {
+      "map": "runan_suburb",
+      "x": 14,
+      "y": 18
+    },
+    "runan_suburb:1,1": {
+      "map": "road_yingchuan_runan",
+      "x": 1,
+      "y": 10
+    },
+    "runan_suburb:3,18": {
+      "map": "road_runan_wancheng",
+      "x": 1,
+      "y": 1
+    },
+    "runan_suburb:26,1": {
+      "map": "road_shouchun_runan",
+      "x": 2,
+      "y": 1
+    },
+    "road_xuchang_yingchuan:1,1": {
+      "map": "xuchang_suburb",
+      "x": 26,
+      "y": 1
+    },
+    "road_xuchang_yingchuan:22,1": {
+      "map": "yingchuan_suburb",
+      "x": 1,
+      "y": 18
+    },
+    "road_yingchuan_chen:1,1": {
+      "map": "yingchuan",
+      "x": 30,
+      "y": 3
+    },
+    "road_yingchuan_chen:22,1": {
+      "map": "chen",
+      "x": 1,
+      "y": 1
+    },
+    "chen:1,1": {
+      "map": "road_yingchuan_chen",
+      "x": 22,
+      "y": 1
+    },
+    "chen:22,1": {
+      "map": "road_chen_lu",
+      "x": 1,
+      "y": 1
+    },
+    "road_chen_lu:1,1": {
+      "map": "chen",
+      "x": 22,
+      "y": 1
+    },
+    "road_chen_lu:18,1": {
+      "map": "lu",
+      "x": 1,
+      "y": 1
+    },
+    "lu:1,1": {
+      "map": "road_chen_lu",
+      "x": 18,
+      "y": 1
+    },
+    "lu:2,1": {
+      "map": "road_lu_yanzhou_wild",
+      "x": 1,
+      "y": 8
+    },
+    "road_runan_pei:1,1": {
+      "map": "runan",
+      "x": 1,
+      "y": 18
+    },
+    "road_runan_pei:1,10": {
+      "map": "pei",
+      "x": 1,
+      "y": 1
+    },
+    "pei:1,1": {
+      "map": "road_runan_pei",
+      "x": 1,
+      "y": 10
+    },
+    "pei:22,1": {
+      "map": "road_pei_pengcheng",
+      "x": 1,
+      "y": 1
+    },
+    "road_yingchuan_liang:1,1": {
+      "map": "yingchuan",
+      "x": 30,
+      "y": 22
+    },
+    "road_yingchuan_liang:22,1": {
+      "map": "liang",
+      "x": 1,
+      "y": 1
+    },
+    "liang:1,1": {
+      "map": "road_yingchuan_liang",
+      "x": 22,
+      "y": 1
+    },
+    "liang:1,16": {
+      "map": "yu_wild",
+      "x": 1,
+      "y": 1
+    },
+    "road_lu_yanzhou_wild:1,8": {
+      "map": "lu",
+      "x": 2,
+      "y": 1
+    },
+    "road_lu_yanzhou_wild:1,1": {
+      "map": "yanzhou_wild",
+      "x": 1,
+      "y": 18
+    },
+    "chenliu:1,22": {
+      "map": "chenliu_suburb",
+      "x": 3,
+      "y": 1
+    },
+    "chenliu_suburb:3,1": {
+      "map": "chenliu",
+      "x": 1,
+      "y": 22
+    },
+    "chenliu_suburb:1,1": {
+      "map": "road_chenliu_yingchuan",
+      "x": 30,
+      "y": 1
+    },
+    "chenliu_suburb:26,1": {
+      "map": "road_chenliu_dongjun",
+      "x": 1,
+      "y": 1
+    },
+    "chenliu_suburb:3,18": {
+      "map": "road_chenliu_pengcheng",
+      "x": 37,
+      "y": 1
+    },
+    "chenliu_suburb:25,1": {
+      "map": "road_chenliu_taishan",
+      "x": 1,
+      "y": 8
+    },
+    "road_chenliu_yingchuan:30,1": {
+      "map": "chenliu_suburb",
+      "x": 1,
+      "y": 1
+    },
+    "road_chenliu_yingchuan:1,1": {
+      "map": "yingchuan_suburb",
+      "x": 26,
+      "y": 3
+    },
+    "road_chenliu_dongjun:1,1": {
+      "map": "chenliu_suburb",
+      "x": 26,
+      "y": 1
+    },
+    "road_chenliu_dongjun:26,1": {
+      "map": "dongjun",
+      "x": 1,
+      "y": 1
+    },
+    "dongjun:1,1": {
+      "map": "road_chenliu_dongjun",
+      "x": 26,
+      "y": 1
+    },
+    "dongjun:2,1": {
+      "map": "baima_ferry",
+      "x": 3,
+      "y": 12
+    },
+    "dongjun:26,3": {
+      "map": "road_dongjun_jinan",
+      "x": 1,
+      "y": 10
+    },
+    "dongjun:1,18": {
+      "map": "road_dongjun_dongping",
+      "x": 1,
+      "y": 1
+    },
+    "baima_ferry:3,12": {
+      "map": "dongjun",
+      "x": 2,
+      "y": 1
+    },
+    "baima_ferry:1,1": {
+      "map": "road_mengjin_baima",
+      "x": 21,
+      "y": 10
+    },
+    "road_mengjin_baima:3,10": {
+      "map": "mengjin_ferry",
+      "x": 1,
+      "y": 1
+    },
+    "road_mengjin_baima:1,1": {
+      "map": "baima_ferry",
+      "x": 17,
+      "y": 12
+    },
+    "road_dongjun_jibei:1,1": {
+      "map": "dongjun",
+      "x": 26,
+      "y": 18
+    },
+    "road_dongjun_jibei:22,1": {
+      "map": "jibei",
+      "x": 1,
+      "y": 1
+    },
+    "jibei:1,1": {
+      "map": "road_dongjun_jibei",
+      "x": 22,
+      "y": 1
+    },
+    "jibei:22,1": {
+      "map": "road_jibei_jinan",
+      "x": 2,
+      "y": 1
+    },
+    "road_dongjun_dongping:1,1": {
+      "map": "dongjun",
+      "x": 1,
+      "y": 18
+    },
+    "road_dongjun_dongping:1,10": {
+      "map": "dongping",
+      "x": 1,
+      "y": 1
+    },
+    "dongping:1,1": {
+      "map": "road_dongjun_dongping",
+      "x": 1,
+      "y": 10
+    },
+    "dongping:22,1": {
+      "map": "road_dongping_xu_wild",
+      "x": 2,
+      "y": 1
+    },
+    "dongping:2,1": {
+      "map": "road_dongping_ren",
+      "x": 18,
+      "y": 1
+    },
+    "road_dongping_ren:18,1": {
+      "map": "dongping",
+      "x": 2,
+      "y": 1
+    },
+    "road_dongping_ren:1,1": {
+      "map": "ren",
+      "x": 22,
+      "y": 1
+    },
+    "road_dongjun_jinan:1,10": {
+      "map": "dongjun",
+      "x": 26,
+      "y": 3
+    },
+    "road_dongjun_jinan:30,10": {
+      "map": "jinan",
+      "x": 1,
+      "y": 1
+    },
+    "road_chenliu_taishan:1,8": {
+      "map": "chenliu_suburb",
+      "x": 25,
+      "y": 1
+    },
+    "road_chenliu_taishan:1,1": {
+      "map": "taishan",
+      "x": 1,
+      "y": 16
+    },
+    "taishan:1,16": {
+      "map": "road_chenliu_taishan",
+      "x": 1,
+      "y": 1
+    },
+    "road_chenliu_pengcheng:37,1": {
+      "map": "chenliu_suburb",
+      "x": 3,
+      "y": 18
+    },
+    "road_chenliu_pengcheng:37,10": {
+      "map": "pengcheng",
+      "x": 3,
+      "y": 1
+    },
+    "battlefield_guandu:1,1": {
+      "map": "xuchang_suburb",
+      "x": 3,
+      "y": 18
+    },
+    "battlefield_guandu:30,1": {
+      "map": "road_guandu_ye",
+      "x": 1,
+      "y": 10
+    },
+    "road_guandu_ye:1,10": {
+      "map": "battlefield_guandu",
+      "x": 30,
+      "y": 1
+    },
+    "road_guandu_ye:34,10": {
+      "map": "ye_suburb",
+      "x": 1,
+      "y": 3
+    },
+    "yanzhou_wild:1,18": {
+      "map": "road_lu_yanzhou_wild",
+      "x": 1,
+      "y": 1
+    },
+    "yanzhou_wild:1,1": {
+      "map": "chenliu_suburb",
+      "x": 25,
+      "y": 18
+    },
+    "ye:1,22": {
+      "map": "ye_suburb",
+      "x": 3,
+      "y": 1
+    },
+    "ye_suburb:3,1": {
+      "map": "ye",
+      "x": 1,
+      "y": 22
+    },
+    "ye_suburb:1,18": {
+      "map": "road_henei_ye",
+      "x": 1,
+      "y": 1
+    },
+    "ye_suburb:1,3": {
+      "map": "road_guandu_ye",
+      "x": 34,
+      "y": 10
+    },
+    "ye_suburb:25,1": {
+      "map": "road_ye_julu",
+      "x": 1,
+      "y": 10
+    },
+    "ye_suburb:26,3": {
+      "map": "road_ye_changshan",
+      "x": 1,
+      "y": 1
+    },
+    "ye_suburb:1,1": {
+      "map": "road_ye_jingxing",
+      "x": 30,
+      "y": 10
+    },
+    "road_henei_ye:1,10": {
+      "map": "henei",
+      "x": 1,
+      "y": 1
+    },
+    "road_henei_ye:1,1": {
+      "map": "ye_suburb",
+      "x": 1,
+      "y": 18
+    },
+    "road_ye_julu:1,10": {
+      "map": "ye_suburb",
+      "x": 25,
+      "y": 1
+    },
+    "road_ye_julu:1,1": {
+      "map": "julu",
+      "x": 1,
+      "y": 18
+    },
+    "julu:1,18": {
+      "map": "road_ye_julu",
+      "x": 1,
+      "y": 1
+    },
+    "julu:1,1": {
+      "map": "rebel_camp_julu",
+      "x": 1,
+      "y": 18
+    },
+    "julu:26,1": {
+      "map": "road_julu_guangzong",
+      "x": 1,
+      "y": 1
+    },
+    "julu:2,1": {
+      "map": "road_julu_xiayang",
+      "x": 26,
+      "y": 1
+    },
+    "rebel_camp_julu:1,18": {
+      "map": "julu",
+      "x": 1,
+      "y": 1
+    },
+    "road_julu_guangzong:1,1": {
+      "map": "julu",
+      "x": 26,
+      "y": 1
+    },
+    "road_julu_guangzong:22,1": {
+      "map": "guangzong",
+      "x": 1,
+      "y": 1
+    },
+    "guangzong:1,1": {
+      "map": "road_julu_guangzong",
+      "x": 22,
+      "y": 1
+    },
+    "road_julu_xiayang:26,1": {
+      "map": "julu",
+      "x": 2,
+      "y": 1
+    },
+    "road_julu_xiayang:1,1": {
+      "map": "xiayang",
+      "x": 22,
+      "y": 1
+    },
+    "xiayang:22,1": {
+      "map": "road_julu_xiayang",
+      "x": 1,
+      "y": 1
+    },
+    "road_ye_changshan:1,1": {
+      "map": "ye_suburb",
+      "x": 26,
+      "y": 3
+    },
+    "road_ye_changshan:30,1": {
+      "map": "changshan",
+      "x": 1,
+      "y": 1
+    },
+    "changshan:1,1": {
+      "map": "road_ye_changshan",
+      "x": 30,
+      "y": 1
+    },
+    "changshan:2,1": {
+      "map": "road_changshan_zhending",
+      "x": 1,
+      "y": 8
+    },
+    "road_changshan_zhending:1,8": {
+      "map": "changshan",
+      "x": 2,
+      "y": 1
+    },
+    "road_changshan_zhending:1,1": {
+      "map": "zhending",
+      "x": 1,
+      "y": 16
+    },
+    "zhending:1,16": {
+      "map": "road_changshan_zhending",
+      "x": 1,
+      "y": 1
+    },
+    "zhending:1,1": {
+      "map": "road_zhending_ji",
+      "x": 1,
+      "y": 10
+    },
+    "road_ye_hejian:1,1": {
+      "map": "ye_suburb",
+      "x": 26,
+      "y": 14
+    },
+    "road_ye_hejian:26,1": {
+      "map": "hejian",
+      "x": 1,
+      "y": 1
+    },
+    "hejian:1,1": {
+      "map": "road_ye_hejian",
+      "x": 26,
+      "y": 1
+    },
+    "hejian:2,1": {
+      "map": "ji_wild",
+      "x": 1,
+      "y": 18
+    },
+    "road_ye_anping:1,1": {
+      "map": "ye_suburb",
+      "x": 26,
+      "y": 18
+    },
+    "road_ye_anping:26,1": {
+      "map": "anping",
+      "x": 1,
+      "y": 1
+    },
+    "anping:1,1": {
+      "map": "road_ye_anping",
+      "x": 26,
+      "y": 1
+    },
+    "anping:2,1": {
+      "map": "road_anping_changli",
+      "x": 1,
+      "y": 10
+    },
+    "road_anping_changli:1,10": {
+      "map": "anping",
+      "x": 2,
+      "y": 1
+    },
+    "road_anping_changli:1,1": {
+      "map": "changli",
+      "x": 1,
+      "y": 16
+    },
+    "changli:1,16": {
+      "map": "road_anping_changli",
+      "x": 1,
+      "y": 1
+    },
+    "changli:22,1": {
+      "map": "road_changli_liaodong",
+      "x": 1,
+      "y": 1
+    },
+    "road_ye_jingxing:30,1": {
+      "map": "ye_suburb",
+      "x": 2,
+      "y": 18
+    },
+    "road_ye_jingxing:1,1": {
+      "map": "jingxing_pass",
+      "x": 22,
+      "y": 1
+    },
+    "jingxing_pass:22,1": {
+      "map": "road_ye_jingxing",
+      "x": 1,
+      "y": 1
+    },
+    "jingxing_pass:1,1": {
+      "map": "road_jingxing_jinyang",
+      "x": 34,
+      "y": 1
+    },
+    "road_jingxing_jinyang:34,1": {
+      "map": "jingxing_pass",
+      "x": 1,
+      "y": 1
+    },
+    "road_jingxing_jinyang:1,1": {
+      "map": "jinyang",
+      "x": 26,
+      "y": 1
+    },
+    "jinyang:26,1": {
+      "map": "road_jingxing_jinyang",
+      "x": 1,
+      "y": 1
+    },
+    "jinyang:1,1": {
+      "map": "road_jinyang_taiyuan",
+      "x": 26,
+      "y": 1
+    },
+    "jinyang:1,18": {
+      "map": "road_shangdang_jinyang",
+      "x": 1,
+      "y": 1
+    },
+    "road_jinyang_taiyuan:26,1": {
+      "map": "jinyang",
+      "x": 1,
+      "y": 1
+    },
+    "road_jinyang_taiyuan:1,1": {
+      "map": "taiyuan",
+      "x": 22,
+      "y": 1
+    },
+    "taiyuan:22,1": {
+      "map": "road_jinyang_taiyuan",
+      "x": 1,
+      "y": 1
+    },
+    "taiyuan:1,1": {
+      "map": "road_taiyuan_yanmen",
+      "x": 1,
+      "y": 10
+    },
+    "road_taiyuan_yanmen:1,10": {
+      "map": "taiyuan",
+      "x": 1,
+      "y": 1
+    },
+    "road_taiyuan_yanmen:1,1": {
+      "map": "yanmen_pass",
+      "x": 1,
+      "y": 12
+    },
+    "yanmen_pass:1,12": {
+      "map": "road_taiyuan_yanmen",
+      "x": 1,
+      "y": 1
+    },
+    "yanmen_pass:1,1": {
+      "map": "road_yanmen_you_wild",
+      "x": 3,
+      "y": 10
+    },
+    "road_shangdang_jinyang:1,1": {
+      "map": "jinyang",
+      "x": 1,
+      "y": 18
+    },
+    "road_shangdang_jinyang:1,10": {
+      "map": "shangdang",
+      "x": 1,
+      "y": 1
+    },
+    "shangdang:1,1": {
+      "map": "road_shangdang_jinyang",
+      "x": 1,
+      "y": 10
+    },
+    "shangdang:1,16": {
+      "map": "bing_wild",
+      "x": 1,
+      "y": 1
+    },
+    "road_yanmen_you_wild:3,10": {
+      "map": "yanmen_pass",
+      "x": 1,
+      "y": 1
+    },
+    "road_yanmen_you_wild:1,1": {
+      "map": "dai",
+      "x": 1,
+      "y": 16
+    },
+    "road_zhending_ji:1,10": {
+      "map": "zhending",
+      "x": 1,
+      "y": 1
+    },
+    "road_zhending_ji:1,1": {
+      "map": "ji",
+      "x": 1,
+      "y": 18
+    },
+    "ji:1,18": {
+      "map": "road_zhending_ji",
+      "x": 1,
+      "y": 1
+    },
+    "ji:1,3": {
+      "map": "road_ji_zhuo",
+      "x": 22,
+      "y": 1
+    },
+    "ji:26,1": {
+      "map": "road_ji_yuyang",
+      "x": 1,
+      "y": 1
+    },
+    "ji:1,1": {
+      "map": "road_ji_liaodong",
+      "x": 1,
+      "y": 10
+    },
+    "ji:3,18": {
+      "map": "road_ji_dai",
+      "x": 30,
+      "y": 2
+    },
+    "road_ji_zhuo:22,1": {
+      "map": "ji",
+      "x": 1,
+      "y": 3
+    },
+    "road_ji_zhuo:1,1": {
+      "map": "zhuo",
+      "x": 22,
+      "y": 1
+    },
+    "zhuo:22,1": {
+      "map": "road_ji_zhuo",
+      "x": 1,
+      "y": 1
+    },
+    "road_ji_yuyang:1,1": {
+      "map": "ji",
+      "x": 26,
+      "y": 1
+    },
+    "road_ji_yuyang:26,1": {
+      "map": "yuyang",
+      "x": 1,
+      "y": 1
+    },
+    "yuyang:1,1": {
+      "map": "road_ji_yuyang",
+      "x": 26,
+      "y": 1
+    },
+    "yuyang:2,1": {
+      "map": "you_wild",
+      "x": 1,
+      "y": 18
+    },
+    "road_ji_dai:30,1": {
+      "map": "ji",
+      "x": 2,
+      "y": 18
+    },
+    "road_ji_dai:1,1": {
+      "map": "dai",
+      "x": 22,
+      "y": 1
+    },
+    "dai:22,1": {
+      "map": "road_ji_dai",
+      "x": 1,
+      "y": 1
+    },
+    "dai:1,1": {
+      "map": "road_yanmen_you_wild",
+      "x": 37,
+      "y": 10
+    },
+    "road_ji_liaodong:1,10": {
+      "map": "ji",
+      "x": 1,
+      "y": 1
+    },
+    "road_ji_liaodong:1,1": {
+      "map": "liaodong",
+      "x": 1,
+      "y": 18
+    },
+    "liaodong:1,18": {
+      "map": "road_ji_liaodong",
+      "x": 1,
+      "y": 1
+    },
+    "liaodong:1,1": {
+      "map": "road_changli_liaodong",
+      "x": 34,
+      "y": 1
+    },
+    "road_changli_liaodong:1,1": {
+      "map": "changli",
+      "x": 22,
+      "y": 1
+    },
+    "road_changli_liaodong:34,1": {
+      "map": "liaodong",
+      "x": 1,
+      "y": 1
+    },
+    "jinan:1,1": {
+      "map": "road_dongjun_jinan",
+      "x": 30,
+      "y": 10
+    },
+    "jinan:2,1": {
+      "map": "road_jibei_jinan",
+      "x": 21,
+      "y": 8
+    },
+    "jinan:26,1": {
+      "map": "road_jinan_beihai",
+      "x": 1,
+      "y": 1
+    },
+    "road_jibei_jinan:3,8": {
+      "map": "jibei",
+      "x": 2,
+      "y": 1
+    },
+    "road_jibei_jinan:1,1": {
+      "map": "jinan",
+      "x": 25,
+      "y": 18
+    },
+    "road_jinan_beihai:1,1": {
+      "map": "jinan",
+      "x": 26,
+      "y": 1
+    },
+    "road_jinan_beihai:26,3": {
+      "map": "beihai",
+      "x": 1,
+      "y": 1
+    },
+    "beihai:1,1": {
+      "map": "road_jinan_beihai",
+      "x": 26,
+      "y": 3
+    },
+    "beihai:1,16": {
+      "map": "road_beihai_donghai",
+      "x": 1,
+      "y": 1
+    },
+    "jinan:3,18": {
+      "map": "road_jinan_qing_wild",
+      "x": 1,
+      "y": 1
+    },
+    "road_jinan_qing_wild:1,1": {
+      "map": "jinan",
+      "x": 3,
+      "y": 18
+    },
+    "road_jinan_qing_wild:1,10": {
+      "map": "qing_wild",
+      "x": 1,
+      "y": 1
+    },
+    "qing_wild:1,1": {
+      "map": "road_jinan_qing_wild",
+      "x": 1,
+      "y": 10
+    },
+    "qing_wild:2,1": {
+      "map": "road_jinan_beihai",
+      "x": 26,
+      "y": 10
+    },
+    "road_beihai_donghai:1,1": {
+      "map": "beihai",
+      "x": 1,
+      "y": 16
+    },
+    "road_beihai_donghai:1,10": {
+      "map": "donghai",
+      "x": 2,
+      "y": 1
+    },
+    "road_pei_pengcheng:1,1": {
+      "map": "pei",
+      "x": 22,
+      "y": 1
+    },
+    "road_pei_pengcheng:30,1": {
+      "map": "pengcheng",
+      "x": 1,
+      "y": 1
+    },
+    "pengcheng:3,1": {
+      "map": "road_chenliu_pengcheng",
+      "x": 37,
+      "y": 10
+    },
+    "pengcheng:1,1": {
+      "map": "road_pei_pengcheng",
+      "x": 30,
+      "y": 1
+    },
+    "pengcheng:1,18": {
+      "map": "road_pengcheng_xiapi",
+      "x": 1,
+      "y": 1
+    },
+    "pengcheng:26,1": {
+      "map": "road_pengcheng_langye",
+      "x": 1,
+      "y": 1
+    },
+    "road_pengcheng_xiapi:1,1": {
+      "map": "pengcheng",
+      "x": 1,
+      "y": 18
+    },
+    "road_pengcheng_xiapi:1,10": {
+      "map": "xiapi",
+      "x": 1,
+      "y": 1
+    },
+    "xiapi:1,1": {
+      "map": "road_pengcheng_xiapi",
+      "x": 1,
+      "y": 10
+    },
+    "xiapi:26,1": {
+      "map": "road_xiapi_donghai",
+      "x": 1,
+      "y": 1
+    },
+    "road_xiapi_donghai:1,1": {
+      "map": "xiapi",
+      "x": 26,
+      "y": 1
+    },
+    "road_xiapi_donghai:26,1": {
+      "map": "donghai",
+      "x": 1,
+      "y": 1
+    },
+    "donghai:1,1": {
+      "map": "road_xiapi_donghai",
+      "x": 26,
+      "y": 1
+    },
+    "donghai:2,1": {
+      "map": "road_beihai_donghai",
+      "x": 1,
+      "y": 10
+    },
+    "donghai:1,16": {
+      "map": "road_guangling_donghai",
+      "x": 1,
+      "y": 1
+    },
+    "road_guangling_donghai:1,1": {
+      "map": "donghai",
+      "x": 1,
+      "y": 16
+    },
+    "road_guangling_donghai:1,10": {
+      "map": "guangling",
+      "x": 1,
+      "y": 1
+    },
+    "guangling:1,1": {
+      "map": "road_guangling_donghai",
+      "x": 1,
+      "y": 10
+    },
+    "guangling:1,18": {
+      "map": "road_guangling_jiankang",
+      "x": 25,
+      "y": 1
+    },
+    "road_pengcheng_langye:1,1": {
+      "map": "pengcheng",
+      "x": 26,
+      "y": 1
+    },
+    "road_pengcheng_langye:30,1": {
+      "map": "langye",
+      "x": 1,
+      "y": 1
+    },
+    "langye:1,1": {
+      "map": "road_pengcheng_langye",
+      "x": 30,
+      "y": 1
+    },
+    "langye:1,16": {
+      "map": "xu_wild",
+      "x": 1,
+      "y": 1
+    },
+    "road_dongping_xu_wild:1,1": {
+      "map": "dongping",
+      "x": 1,
+      "y": 16
+    },
+    "road_dongping_xu_wild:1,10": {
+      "map": "pengcheng",
+      "x": 25,
+      "y": 1
+    },
+    "road_guangling_jiankang:25,1": {
+      "map": "guangling",
+      "x": 1,
+      "y": 18
+    },
+    "road_guangling_jiankang:25,10": {
+      "map": "jiankang_suburb",
+      "x": 1,
+      "y": 1
+    },
+    "road_runan_wancheng:1,1": {
+      "map": "runan_suburb",
+      "x": 3,
+      "y": 18
+    },
+    "road_runan_wancheng:1,10": {
+      "map": "nanyang_suburb",
+      "x": 3,
+      "y": 1
+    },
+    "road_wu_wancheng:1,1": {
+      "map": "wu_pass",
+      "x": 1,
+      "y": 12
+    },
+    "road_wu_wancheng:1,10": {
+      "map": "nanyang_suburb",
+      "x": 25,
+      "y": 1
+    },
+    "nanyang_suburb:3,1": {
+      "map": "road_runan_wancheng",
+      "x": 1,
+      "y": 10
+    },
+    "nanyang_suburb:1,1": {
+      "map": "road_wu_wancheng",
+      "x": 38,
+      "y": 10
+    },
+    "nanyang_suburb:1,18": {
+      "map": "wancheng",
+      "x": 1,
+      "y": 1
+    },
+    "nanyang_suburb:26,1": {
+      "map": "road_wancheng_xinye",
+      "x": 1,
+      "y": 1
+    },
+    "wancheng:1,1": {
+      "map": "nanyang_suburb",
+      "x": 1,
+      "y": 18
+    },
+    "wancheng:1,22": {
+      "map": "rebel_camp_nanyang",
+      "x": 1,
+      "y": 1
+    },
+    "rebel_camp_nanyang:1,1": {
+      "map": "wancheng",
+      "x": 1,
+      "y": 22
+    },
+    "road_wancheng_xinye:1,1": {
+      "map": "nanyang_suburb",
+      "x": 26,
+      "y": 1
+    },
+    "road_wancheng_xinye:22,1": {
+      "map": "xinye",
+      "x": 1,
+      "y": 1
+    },
+    "xinye:1,1": {
+      "map": "road_wancheng_xinye",
+      "x": 22,
+      "y": 1
+    },
+    "xinye:2,1": {
+      "map": "longzhong",
+      "x": 1,
+      "y": 14
+    },
+    "longzhong:1,14": {
+      "map": "xinye",
+      "x": 2,
+      "y": 1
+    },
+    "xinye:22,1": {
+      "map": "road_xinye_xiangyang",
+      "x": 1,
+      "y": 1
+    },
+    "road_xinye_xiangyang:1,1": {
+      "map": "xinye",
+      "x": 22,
+      "y": 1
+    },
+    "road_xinye_xiangyang:30,1": {
+      "map": "xiangyang",
+      "x": 1,
+      "y": 1
+    },
+    "xiangyang:1,1": {
+      "map": "road_xinye_xiangyang",
+      "x": 30,
+      "y": 1
+    },
+    "xiangyang:1,22": {
+      "map": "battlefield_xiangfan",
+      "x": 1,
+      "y": 1
+    },
+    "xiangyang:30,1": {
+      "map": "road_xiangyang_jiangling",
+      "x": 1,
+      "y": 1
+    },
+    "xiangyang:2,1": {
+      "map": "road_xiangyang_jiangxia",
+      "x": 1,
+      "y": 10
+    },
+    "battlefield_xiangfan:1,1": {
+      "map": "xiangyang",
+      "x": 1,
+      "y": 22
+    },
+    "road_xiangyang_jiangling:1,1": {
+      "map": "xiangyang",
+      "x": 30,
+      "y": 1
+    },
+    "road_xiangyang_jiangling:34,1": {
+      "map": "jiangling",
+      "x": 1,
+      "y": 3
+    },
+    "jiangling:1,3": {
+      "map": "road_xiangyang_jiangling",
+      "x": 34,
+      "y": 1
+    },
+    "jiangling:1,1": {
+      "map": "road_chibi_jiangling",
+      "x": 21,
+      "y": 10
+    },
+    "jiangling:3,22": {
+      "map": "road_jiangling_yiling",
+      "x": 1,
+      "y": 1
+    },
+    "jiangling:30,1": {
+      "map": "road_jiangling_changsha",
+      "x": 1,
+      "y": 1
+    },
+    "jiangling:2,1": {
+      "map": "road_jiangling_wuling",
+      "x": 34,
+      "y": 10
+    },
+    "jiangling:30,22": {
+      "map": "road_jiangling_nanjun",
+      "x": 1,
+      "y": 1
+    },
+    "road_jiangling_nanjun:1,1": {
+      "map": "jiangling",
+      "x": 30,
+      "y": 22
+    },
+    "road_jiangling_nanjun:14,6": {
+      "map": "nanjun",
+      "x": 1,
+      "y": 1
+    },
+    "nanjun:1,1": {
+      "map": "road_jiangling_nanjun",
+      "x": 14,
+      "y": 6
+    },
+    "road_jiangling_yiling:1,1": {
+      "map": "jiangling",
+      "x": 3,
+      "y": 22
+    },
+    "road_jiangling_yiling:1,10": {
+      "map": "yiling",
+      "x": 1,
+      "y": 1
+    },
+    "yiling:1,1": {
+      "map": "road_jiangling_yiling",
+      "x": 1,
+      "y": 10
+    },
+    "yiling:26,1": {
+      "map": "battlefield_yiling",
+      "x": 1,
+      "y": 1
+    },
+    "yiling:2,1": {
+      "map": "road_yiling_badong",
+      "x": 26,
+      "y": 1
+    },
+    "battlefield_yiling:1,1": {
+      "map": "yiling",
+      "x": 26,
+      "y": 1
+    },
+    "road_yiling_badong:26,1": {
+      "map": "yiling",
+      "x": 2,
+      "y": 1
+    },
+    "road_yiling_badong:1,1": {
+      "map": "badong",
+      "x": 26,
+      "y": 1
+    },
+    "badong:26,1": {
+      "map": "road_yiling_badong",
+      "x": 1,
+      "y": 1
+    },
+    "badong:1,1": {
+      "map": "road_badong_yongan",
+      "x": 30,
+      "y": 1
+    },
+    "road_xiangyang_jiangxia:1,10": {
+      "map": "xiangyang",
+      "x": 2,
+      "y": 1
+    },
+    "road_xiangyang_jiangxia:1,1": {
+      "map": "jiangxia",
+      "x": 3,
+      "y": 18
+    },
+    "jiangxia:3,18": {
+      "map": "road_xiangyang_jiangxia",
+      "x": 1,
+      "y": 1
+    },
+    "jiangxia:26,3": {
+      "map": "road_jiangxia_chibi",
+      "x": 1,
+      "y": 1
+    },
+    "jiangxia:25,18": {
+      "map": "road_chaisang_jiangxia",
+      "x": 2,
+      "y": 1
+    },
+    "road_jiangxia_chibi:1,1": {
+      "map": "jiangxia",
+      "x": 26,
+      "y": 3
+    },
+    "road_jiangxia_chibi:26,1": {
+      "map": "chibi",
+      "x": 1,
+      "y": 1
+    },
+    "chibi:1,1": {
+      "map": "road_jiangxia_chibi",
+      "x": 26,
+      "y": 1
+    },
+    "chibi:2,1": {
+      "map": "road_chibi_jiangling",
+      "x": 3,
+      "y": 10
+    },
+    "chibi:1,14": {
+      "map": "road_chibi_chaisang",
+      "x": 1,
+      "y": 1
+    },
+    "chibi:22,1": {
+      "map": "battlefield_chibi",
+      "x": 1,
+      "y": 1
+    },
+    "road_chibi_jiangling:3,10": {
+      "map": "chibi",
+      "x": 2,
+      "y": 1
+    },
+    "road_chibi_jiangling:1,1": {
+      "map": "jiangling",
+      "x": 29,
+      "y": 22
+    },
+    "road_chibi_chaisang:1,1": {
+      "map": "chibi",
+      "x": 1,
+      "y": 14
+    },
+    "road_chibi_chaisang:1,10": {
+      "map": "chaisang",
+      "x": 1,
+      "y": 1
+    },
+    "road_jiangling_changsha:1,1": {
+      "map": "jiangling",
+      "x": 30,
+      "y": 1
+    },
+    "road_jiangling_changsha:38,1": {
+      "map": "changsha",
+      "x": 1,
+      "y": 1
+    },
+    "changsha:1,1": {
+      "map": "road_jiangling_changsha",
+      "x": 38,
+      "y": 1
+    },
+    "changsha:3,18": {
+      "map": "road_changsha_gui",
+      "x": 1,
+      "y": 1
+    },
+    "changsha:26,1": {
+      "map": "road_changsha_ling",
+      "x": 1,
+      "y": 1
+    },
+    "changsha:2,1": {
+      "map": "road_changsha_panyu",
+      "x": 53,
+      "y": 10
+    },
+    "road_changsha_gui:1,1": {
+      "map": "changsha",
+      "x": 3,
+      "y": 18
+    },
+    "road_changsha_gui:1,10": {
+      "map": "gui",
+      "x": 1,
+      "y": 1
+    },
+    "gui:1,1": {
+      "map": "road_changsha_gui",
+      "x": 1,
+      "y": 10
+    },
+    "road_changsha_ling:1,1": {
+      "map": "changsha",
+      "x": 26,
+      "y": 1
+    },
+    "road_changsha_ling:30,1": {
+      "map": "ling",
+      "x": 1,
+      "y": 1
+    },
+    "ling:1,1": {
+      "map": "road_changsha_ling",
+      "x": 30,
+      "y": 1
+    },
+    "road_jiangling_wuling:34,1": {
+      "map": "jiangling",
+      "x": 1,
+      "y": 22
+    },
+    "road_jiangling_wuling:1,1": {
+      "map": "wuling",
+      "x": 22,
+      "y": 1
+    },
+    "wuling:22,1": {
+      "map": "road_jiangling_wuling",
+      "x": 1,
+      "y": 1
+    },
+    "wuling:1,16": {
+      "map": "jing_wild",
+      "x": 1,
+      "y": 1
+    },
+    "jiankang:1,1": {
+      "map": "jiankang_suburb",
+      "x": 3,
+      "y": 22
+    },
+    "jiankang_suburb:3,22": {
+      "map": "jiankang",
+      "x": 1,
+      "y": 1
+    },
+    "jiankang_suburb:1,3": {
+      "map": "road_jiankang_wu",
+      "x": 22,
+      "y": 1
+    },
+    "jiankang_suburb:1,1": {
+      "map": "road_guangling_jiankang",
+      "x": 25,
+      "y": 10
+    },
+    "jiankang_suburb:30,1": {
+      "map": "road_chaisang_jiankang",
+      "x": 1,
+      "y": 10
+    },
+    "jiankang_suburb:29,22": {
+      "map": "road_jiankang_danyang",
+      "x": 1,
+      "y": 1
+    },
+    "road_jiankang_wu:22,1": {
+      "map": "jiankang_suburb",
+      "x": 1,
+      "y": 3
+    },
+    "road_jiankang_wu:1,1": {
+      "map": "wu",
+      "x": 26,
+      "y": 1
+    },
+    "wu:26,1": {
+      "map": "road_jiankang_wu",
+      "x": 1,
+      "y": 1
+    },
+    "wu:1,18": {
+      "map": "road_wu_kuaiji",
+      "x": 1,
+      "y": 1
+    },
+    "road_wu_kuaiji:1,1": {
+      "map": "wu",
+      "x": 1,
+      "y": 18
+    },
+    "road_wu_kuaiji:1,10": {
+      "map": "kuaiji",
+      "x": 1,
+      "y": 1
+    },
+    "kuaiji:1,1": {
+      "map": "road_wu_kuaiji",
+      "x": 1,
+      "y": 10
+    },
+    "kuaiji:2,1": {
+      "map": "yang_wild",
+      "x": 30,
+      "y": 1
+    },
+    "road_jiankang_danyang:1,1": {
+      "map": "jiankang_suburb",
+      "x": 29,
+      "y": 22
+    },
+    "road_jiankang_danyang:1,8": {
+      "map": "danyang",
+      "x": 1,
+      "y": 1
+    },
+    "danyang:1,1": {
+      "map": "road_jiankang_danyang",
+      "x": 1,
+      "y": 8
+    },
+    "danyang:2,1": {
+      "map": "road_danyang_lujiang",
+      "x": 26,
+      "y": 1
+    },
+    "road_danyang_lujiang:26,1": {
+      "map": "danyang",
+      "x": 2,
+      "y": 1
+    },
+    "road_danyang_lujiang:1,1": {
+      "map": "lujiang",
+      "x": 22,
+      "y": 1
+    },
+    "lujiang:22,1": {
+      "map": "road_danyang_lujiang",
+      "x": 1,
+      "y": 1
+    },
+    "lujiang:1,1": {
+      "map": "road_lujiang_ruxu",
+      "x": 1,
+      "y": 10
+    },
+    "road_lujiang_ruxu:1,10": {
+      "map": "lujiang",
+      "x": 1,
+      "y": 1
+    },
+    "road_lujiang_ruxu:1,1": {
+      "map": "ruxu",
+      "x": 1,
+      "y": 18
+    },
+    "ruxu:1,18": {
+      "map": "road_lujiang_ruxu",
+      "x": 1,
+      "y": 1
+    },
+    "ruxu:1,1": {
+      "map": "road_ruxu_hefei",
+      "x": 30,
+      "y": 1
+    },
+    "road_ruxu_hefei:30,1": {
+      "map": "ruxu",
+      "x": 1,
+      "y": 1
+    },
+    "road_ruxu_hefei:1,1": {
+      "map": "hefei",
+      "x": 26,
+      "y": 1
+    },
+    "hefei:26,1": {
+      "map": "road_ruxu_hefei",
+      "x": 1,
+      "y": 1
+    },
+    "hefei:1,1": {
+      "map": "battlefield_hefei",
+      "x": 1,
+      "y": 22
+    },
+    "hefei:2,1": {
+      "map": "road_hefei_shouchun",
+      "x": 30,
+      "y": 1
+    },
+    "battlefield_hefei:1,22": {
+      "map": "hefei",
+      "x": 1,
+      "y": 1
+    },
+    "road_hefei_shouchun:30,1": {
+      "map": "hefei",
+      "x": 2,
+      "y": 1
+    },
+    "road_hefei_shouchun:1,1": {
+      "map": "shouchun",
+      "x": 26,
+      "y": 1
+    },
+    "shouchun:26,1": {
+      "map": "road_hefei_shouchun",
+      "x": 1,
+      "y": 1
+    },
+    "shouchun:1,1": {
+      "map": "road_shouchun_runan",
+      "x": 1,
+      "y": 10
+    },
+    "road_shouchun_runan:1,10": {
+      "map": "shouchun",
+      "x": 1,
+      "y": 1
+    },
+    "road_shouchun_runan:1,1": {
+      "map": "runan_suburb",
+      "x": 25,
+      "y": 18
+    },
+    "chaisang:1,1": {
+      "map": "road_chibi_chaisang",
+      "x": 1,
+      "y": 10
+    },
+    "chaisang:2,1": {
+      "map": "road_chaisang_jiangxia",
+      "x": 34,
+      "y": 1
+    },
+    "chaisang:26,1": {
+      "map": "road_chaisang_jiankang",
+      "x": 1,
+      "y": 3
+    },
+    "road_chaisang_jiangxia:34,1": {
+      "map": "chaisang",
+      "x": 2,
+      "y": 1
+    },
+    "road_chaisang_jiangxia:1,1": {
+      "map": "jiangxia",
+      "x": 26,
+      "y": 18
+    },
+    "road_chaisang_jiankang:1,3": {
+      "map": "chaisang",
+      "x": 26,
+      "y": 1
+    },
+    "road_chaisang_jiankang:30,1": {
+      "map": "jiankang_suburb",
+      "x": 1,
+      "y": 22
+    },
+    "battlefield_chibi:1,1": {
+      "map": "chibi",
+      "x": 22,
+      "y": 1
+    },
+    "chengdu:1,1": {
+      "map": "chengdu_suburb",
+      "x": 3,
+      "y": 22
+    },
+    "chengdu_suburb:3,22": {
+      "map": "chengdu",
+      "x": 1,
+      "y": 1
+    },
+    "chengdu_suburb:1,1": {
+      "map": "road_hanzhong_chengdu",
+      "x": 1,
+      "y": 10
+    },
+    "chengdu_suburb:30,1": {
+      "map": "road_chengdu_jianmen",
+      "x": 1,
+      "y": 1
+    },
+    "chengdu_suburb:1,3": {
+      "map": "road_chengdu_mianzhu",
+      "x": 22,
+      "y": 1
+    },
+    "chengdu_suburb:29,22": {
+      "map": "road_chengdu_jianning",
+      "x": 1,
+      "y": 1
+    },
+    "road_changan_hanzhong:46,1": {
+      "map": "changan_suburb",
+      "x": 3,
+      "y": 22
+    },
+    "road_changan_hanzhong:1,10": {
+      "map": "hanzhong",
+      "x": 30,
+      "y": 1
+    },
+    "hanzhong:30,1": {
+      "map": "road_changan_hanzhong",
+      "x": 1,
+      "y": 10
+    },
+    "hanzhong:1,1": {
+      "map": "battlefield_hanzhong",
+      "x": 1,
+      "y": 22
+    },
+    "hanzhong:30,2": {
+      "map": "road_hanzhong_chengdu",
+      "x": 1,
+      "y": 1
+    },
+    "battlefield_hanzhong:1,22": {
+      "map": "hanzhong",
+      "x": 1,
+      "y": 1
+    },
+    "road_hanzhong_chengdu:1,1": {
+      "map": "hanzhong",
+      "x": 30,
+      "y": 2
+    },
+    "road_hanzhong_chengdu:42,1": {
+      "map": "chengdu_suburb",
+      "x": 1,
+      "y": 22
+    },
+    "road_chengdu_jianmen:1,1": {
+      "map": "chengdu_suburb",
+      "x": 30,
+      "y": 1
+    },
+    "road_chengdu_jianmen:34,1": {
+      "map": "jianmen_pass",
+      "x": 1,
+      "y": 1
+    },
+    "jianmen_pass:1,1": {
+      "map": "road_chengdu_jianmen",
+      "x": 34,
+      "y": 1
+    },
+    "jianmen_pass:22,1": {
+      "map": "road_jianmen_zitong",
+      "x": 1,
+      "y": 1
+    },
+    "road_jianmen_zitong:1,1": {
+      "map": "jianmen_pass",
+      "x": 22,
+      "y": 1
+    },
+    "road_jianmen_zitong:26,1": {
+      "map": "zitong",
+      "x": 1,
+      "y": 1
+    },
+    "zitong:1,1": {
+      "map": "road_jianmen_zitong",
+      "x": 26,
+      "y": 1
+    },
+    "zitong:1,16": {
+      "map": "yi_wild",
+      "x": 1,
+      "y": 1
+    },
+    "road_chengdu_mianzhu:22,1": {
+      "map": "chengdu_suburb",
+      "x": 1,
+      "y": 3
+    },
+    "road_chengdu_mianzhu:1,1": {
+      "map": "mianzhu",
+      "x": 22,
+      "y": 1
+    },
+    "mianzhu:22,1": {
+      "map": "road_chengdu_mianzhu",
+      "x": 1,
+      "y": 1
+    },
+    "road_chengdu_jianning:1,1": {
+      "map": "chengdu_suburb",
+      "x": 29,
+      "y": 22
+    },
+    "road_chengdu_jianning:1,10": {
+      "map": "jianning",
+      "x": 1,
+      "y": 1
+    },
+    "jianning:1,1": {
+      "map": "road_chengdu_jianning",
+      "x": 1,
+      "y": 10
+    },
+    "jianning:1,16": {
+      "map": "road_jianning_yunnan",
+      "x": 1,
+      "y": 1
+    },
+    "road_jianning_yunnan:1,1": {
+      "map": "jianning",
+      "x": 1,
+      "y": 16
+    },
+    "road_jianning_yunnan:1,10": {
+      "map": "yunnan",
+      "x": 1,
+      "y": 1
+    },
+    "yunnan:1,1": {
+      "map": "road_jianning_yunnan",
+      "x": 1,
+      "y": 10
+    },
+    "road_badong_yongan:30,1": {
+      "map": "badong",
+      "x": 1,
+      "y": 1
+    },
+    "road_badong_yongan:1,1": {
+      "map": "yongan",
+      "x": 26,
+      "y": 1
+    },
+    "yongan:26,1": {
+      "map": "road_badong_yongan",
+      "x": 1,
+      "y": 1
+    },
+    "road_changsha_panyu:1,1": {
+      "map": "changsha",
+      "x": 25,
+      "y": 18
+    },
+    "road_changsha_panyu:3,10": {
+      "map": "panyu",
+      "x": 1,
+      "y": 1
+    },
+    "panyu:1,1": {
+      "map": "road_changsha_panyu",
+      "x": 3,
+      "y": 10
+    },
+    "panyu:2,1": {
+      "map": "road_panyu_hepu",
+      "x": 30,
+      "y": 1
+    },
+    "panyu:1,18": {
+      "map": "road_panyu_jiaozhi",
+      "x": 1,
+      "y": 1
+    },
+    "road_panyu_jiaozhi:1,1": {
+      "map": "panyu",
+      "x": 1,
+      "y": 18
+    },
+    "road_panyu_jiaozhi:1,10": {
+      "map": "jiaozhi",
+      "x": 1,
+      "y": 1
+    },
+    "jiaozhi:1,1": {
+      "map": "road_panyu_jiaozhi",
+      "x": 1,
+      "y": 10
+    },
+    "road_panyu_hepu:30,1": {
+      "map": "panyu",
+      "x": 2,
+      "y": 1
+    },
+    "road_panyu_hepu:1,1": {
+      "map": "hepu",
+      "x": 22,
+      "y": 1
+    },
+    "hepu:22,1": {
+      "map": "road_panyu_hepu",
+      "x": 1,
+      "y": 1
+    },
+    "hepu:1,1": {
+      "map": "jiao_wild",
+      "x": 1,
+      "y": 18
+    },
+    "tianshui:26,1": {
+      "map": "road_changan_tianshui",
+      "x": 1,
+      "y": 10
+    },
+    "tianshui:1,1": {
+      "map": "road_tianshui_wuwei",
+      "x": 38,
+      "y": 1
+    },
+    "tianshui:1,18": {
+      "map": "battlefield_jieting",
+      "x": 1,
+      "y": 1
+    },
+    "battlefield_jieting:1,1": {
+      "map": "tianshui",
+      "x": 1,
+      "y": 18
+    },
+    "road_tianshui_wuwei:38,1": {
+      "map": "tianshui",
+      "x": 1,
+      "y": 1
+    },
+    "road_tianshui_wuwei:1,1": {
+      "map": "wuwei",
+      "x": 26,
+      "y": 1
+    },
+    "wuwei:26,1": {
+      "map": "road_tianshui_wuwei",
+      "x": 1,
+      "y": 1
+    },
+    "wuwei:1,1": {
+      "map": "road_wuwei_zhangye",
+      "x": 42,
+      "y": 1
+    },
+    "wuwei:1,18": {
+      "map": "liang_wild",
+      "x": 1,
+      "y": 1
+    },
+    "road_wuwei_zhangye:42,1": {
+      "map": "wuwei",
+      "x": 1,
+      "y": 1
+    },
+    "road_wuwei_zhangye:1,1": {
+      "map": "zhangye",
+      "x": 22,
+      "y": 1
+    },
+    "zhangye:22,1": {
+      "map": "road_wuwei_zhangye",
+      "x": 1,
+      "y": 1
+    },
+    "zhangye:1,1": {
+      "map": "road_zhangye_jiuquan",
+      "x": 38,
+      "y": 1
+    },
+    "road_zhangye_jiuquan:38,1": {
+      "map": "zhangye",
+      "x": 1,
+      "y": 1
+    },
+    "road_zhangye_jiuquan:1,1": {
+      "map": "jiuquan",
+      "x": 22,
+      "y": 1
+    },
+    "jiuquan:22,1": {
+      "map": "road_zhangye_jiuquan",
+      "x": 1,
+      "y": 1
+    },
+    "jiuquan:1,1": {
+      "map": "road_jiuquan_dunhuang",
+      "x": 46,
+      "y": 1
+    },
+    "road_jiuquan_dunhuang:46,1": {
+      "map": "jiuquan",
+      "x": 1,
+      "y": 1
+    },
+    "road_jiuquan_dunhuang:1,1": {
+      "map": "dunhuang",
+      "x": 26,
+      "y": 1
+    },
+    "dunhuang:26,1": {
+      "map": "road_jiuquan_dunhuang",
+      "x": 1,
+      "y": 1
+    },
+    "luoyang_suburb:29,1": {
+      "map": "luoyang",
+      "x": 1,
+      "y": 34
+    },
+    "changan_suburb:2,22": {
+      "map": "changan",
+      "x": 46,
+      "y": 1
+    },
+    "xuchang_suburb:25,18": {
+      "map": "xuchang",
+      "x": 1,
+      "y": 1
+    },
+    "yingchuan_suburb:26,18": {
+      "map": "yingchuan",
+      "x": 1,
+      "y": 1
+    },
+    "yingchuan:29,1": {
+      "map": "yingchuan_suburb",
+      "x": 3,
+      "y": 18
+    },
+    "rebel_camp_yingchuan:1,16": {
+      "map": "yingchuan",
+      "x": 3,
+      "y": 1
+    },
+    "yingchuan:1,22": {
+      "map": "rebel_camp_yingchuan",
+      "x": 1,
+      "y": 1
+    },
+    "yingchuan_suburb:25,18": {
+      "map": "road_yingchuan_runan",
+      "x": 1,
+      "y": 1
+    },
+    "runan_suburb:14,18": {
+      "map": "runan",
+      "x": 1,
+      "y": 1
+    },
+    "road_shouchun_runan:2,1": {
+      "map": "runan_suburb",
+      "x": 26,
+      "y": 1
+    },
+    "yingchuan_suburb:1,18": {
+      "map": "road_xuchang_yingchuan",
+      "x": 22,
+      "y": 1
+    },
+    "yingchuan:30,3": {
+      "map": "road_yingchuan_chen",
+      "x": 1,
+      "y": 1
+    },
+    "runan:1,18": {
+      "map": "road_runan_pei",
+      "x": 1,
+      "y": 1
+    },
+    "yingchuan:30,22": {
+      "map": "road_yingchuan_liang",
+      "x": 1,
+      "y": 1
+    },
+    "yu_wild:1,1": {
+      "map": "liang",
+      "x": 1,
+      "y": 16
+    },
+    "road_mengjin_baima:21,10": {
+      "map": "baima_ferry",
+      "x": 1,
+      "y": 1
+    },
+    "baima_ferry:17,12": {
+      "map": "road_mengjin_baima",
+      "x": 1,
+      "y": 1
+    },
+    "dongjun:26,18": {
+      "map": "road_dongjun_jibei",
+      "x": 1,
+      "y": 1
+    },
+    "road_jibei_jinan:2,1": {
+      "map": "jibei",
+      "x": 22,
+      "y": 1
+    },
+    "road_dongping_xu_wild:2,1": {
+      "map": "dongping",
+      "x": 22,
+      "y": 1
+    },
+    "ren:22,1": {
+      "map": "road_dongping_ren",
+      "x": 1,
+      "y": 1
+    },
+    "chenliu_suburb:25,18": {
+      "map": "yanzhou_wild",
+      "x": 1,
+      "y": 1
+    },
+    "road_ye_jingxing:30,10": {
+      "map": "ye_suburb",
+      "x": 1,
+      "y": 1
+    },
+    "ye_suburb:26,14": {
+      "map": "road_ye_hejian",
+      "x": 1,
+      "y": 1
+    },
+    "ji_wild:1,18": {
+      "map": "hejian",
+      "x": 2,
+      "y": 1
+    },
+    "ye_suburb:26,18": {
+      "map": "road_ye_anping",
+      "x": 1,
+      "y": 1
+    },
+    "ye_suburb:2,18": {
+      "map": "road_ye_jingxing",
+      "x": 30,
+      "y": 1
+    },
+    "bing_wild:1,1": {
+      "map": "shangdang",
+      "x": 1,
+      "y": 16
+    },
+    "dai:1,16": {
+      "map": "road_yanmen_you_wild",
+      "x": 1,
+      "y": 1
+    },
+    "road_ji_dai:30,2": {
+      "map": "ji",
+      "x": 3,
+      "y": 18
+    },
+    "you_wild:1,18": {
+      "map": "yuyang",
+      "x": 2,
+      "y": 1
+    },
+    "ji:2,18": {
+      "map": "road_ji_dai",
+      "x": 30,
+      "y": 1
+    },
+    "road_yanmen_you_wild:37,10": {
+      "map": "dai",
+      "x": 1,
+      "y": 1
+    },
+    "road_jibei_jinan:21,8": {
+      "map": "jinan",
+      "x": 2,
+      "y": 1
+    },
+    "jibei:2,1": {
+      "map": "road_jibei_jinan",
+      "x": 3,
+      "y": 8
+    },
+    "jinan:25,18": {
+      "map": "road_jibei_jinan",
+      "x": 1,
+      "y": 1
+    },
+    "road_jinan_beihai:26,10": {
+      "map": "qing_wild",
+      "x": 2,
+      "y": 1
+    },
+    "xu_wild:1,1": {
+      "map": "langye",
+      "x": 1,
+      "y": 16
+    },
+    "dongping:1,16": {
+      "map": "road_dongping_xu_wild",
+      "x": 1,
+      "y": 1
+    },
+    "pengcheng:25,1": {
+      "map": "road_dongping_xu_wild",
+      "x": 1,
+      "y": 10
+    },
+    "nanyang_suburb:25,1": {
+      "map": "road_wu_wancheng",
+      "x": 1,
+      "y": 10
+    },
+    "road_wu_wancheng:38,10": {
+      "map": "nanyang_suburb",
+      "x": 1,
+      "y": 1
+    },
+    "road_chibi_jiangling:21,10": {
+      "map": "jiangling",
+      "x": 1,
+      "y": 1
+    },
+    "road_jiangling_wuling:34,10": {
+      "map": "jiangling",
+      "x": 2,
+      "y": 1
+    },
+    "road_chaisang_jiangxia:2,1": {
+      "map": "jiangxia",
+      "x": 25,
+      "y": 18
+    },
+    "jiangling:29,22": {
+      "map": "road_chibi_jiangling",
+      "x": 1,
+      "y": 1
+    },
+    "road_changsha_panyu:53,10": {
+      "map": "changsha",
+      "x": 2,
+      "y": 1
+    },
+    "jiangling:1,22": {
+      "map": "road_jiangling_wuling",
+      "x": 34,
+      "y": 1
+    },
+    "jing_wild:1,1": {
+      "map": "wuling",
+      "x": 1,
+      "y": 16
+    },
+    "road_chaisang_jiankang:1,10": {
+      "map": "jiankang_suburb",
+      "x": 30,
+      "y": 1
+    },
+    "yang_wild:30,1": {
+      "map": "kuaiji",
+      "x": 2,
+      "y": 1
+    },
+    "runan_suburb:25,18": {
+      "map": "road_shouchun_runan",
+      "x": 1,
+      "y": 1
+    },
+    "jiangxia:26,18": {
+      "map": "road_chaisang_jiangxia",
+      "x": 1,
+      "y": 1
+    },
+    "jiankang_suburb:1,22": {
+      "map": "road_chaisang_jiankang",
+      "x": 30,
+      "y": 1
+    },
+    "road_hanzhong_chengdu:1,10": {
+      "map": "chengdu_suburb",
+      "x": 1,
+      "y": 1
+    },
+    "chengdu_suburb:1,22": {
+      "map": "road_hanzhong_chengdu",
+      "x": 42,
+      "y": 1
+    },
+    "yi_wild:1,1": {
+      "map": "zitong",
+      "x": 1,
+      "y": 16
+    },
+    "changsha:25,18": {
+      "map": "road_changsha_panyu",
+      "x": 1,
+      "y": 1
+    },
+    "jiao_wild:1,18": {
+      "map": "hepu",
+      "x": 1,
+      "y": 1
+    },
+    "liang_wild:1,1": {
+      "map": "wuwei",
+      "x": 1,
+      "y": 18
+    }
   },
   "npcs": {
-    "village": [
-      { "id": "village_elder", "name": "村長", "x": 5, "y": 8, "spriteKey": "elder" },
-      { "id": "village_healer", "name": "村醫", "x": 4, "y": 11, "spriteKey": "healer" }
+    "luoyang": [
+      {
+        "id": "hospital_luoyang",
+        "name": "太醫署",
+        "x": 6,
+        "y": 10,
+        "spriteKey": "healer"
+      }
     ],
-    "forest": [
-      { "id": "forest_merchant", "name": "行商", "x": 12, "y": 5, "spriteKey": "merchant" },
-      { "id": "forest_healer", "name": "森林醫師", "x": 5, "y": 10, "spriteKey": "healer" }
+    "xuchang": [
+      {
+        "id": "hospital_xuchang",
+        "name": "許縣醫廬",
+        "x": 8,
+        "y": 8,
+        "spriteKey": "healer"
+      },
+      {
+        "id": "xuchang_elder",
+        "name": "鄉老",
+        "x": 12,
+        "y": 10,
+        "spriteKey": "elder"
+      }
+    ],
+    "changan": [
+      {
+        "id": "hospital_changan",
+        "name": "長安醫館",
+        "x": 6,
+        "y": 10,
+        "spriteKey": "healer"
+      }
+    ],
+    "yingchuan": [
+      {
+        "id": "hospital_yingchuan",
+        "name": "潁川醫館",
+        "x": 8,
+        "y": 8,
+        "spriteKey": "healer"
+      }
+    ],
+    "chenliu": [
+      {
+        "id": "hospital_chenliu",
+        "name": "陳留醫館",
+        "x": 8,
+        "y": 8,
+        "spriteKey": "healer"
+      }
+    ],
+    "ye": [
+      {
+        "id": "hospital_ye",
+        "name": "鄴城醫館",
+        "x": 8,
+        "y": 8,
+        "spriteKey": "healer"
+      }
+    ],
+    "wancheng": [
+      {
+        "id": "hospital_wancheng",
+        "name": "宛城醫館",
+        "x": 8,
+        "y": 8,
+        "spriteKey": "healer"
+      }
+    ],
+    "xiangyang": [
+      {
+        "id": "hospital_xiangyang",
+        "name": "襄陽醫館",
+        "x": 8,
+        "y": 8,
+        "spriteKey": "healer"
+      }
+    ],
+    "jiangling": [
+      {
+        "id": "hospital_jiangling",
+        "name": "江陵醫館",
+        "x": 8,
+        "y": 8,
+        "spriteKey": "healer"
+      }
+    ],
+    "jiankang": [
+      {
+        "id": "hospital_jiankang",
+        "name": "建業醫館",
+        "x": 6,
+        "y": 10,
+        "spriteKey": "healer"
+      }
+    ],
+    "chengdu": [
+      {
+        "id": "hospital_chengdu",
+        "name": "成都醫館",
+        "x": 6,
+        "y": 10,
+        "spriteKey": "healer"
+      }
+    ],
+    "jinyang": [
+      {
+        "id": "hospital_jinyang",
+        "name": "晉陽醫館",
+        "x": 8,
+        "y": 8,
+        "spriteKey": "healer"
+      }
+    ],
+    "panyu": [
+      {
+        "id": "hospital_panyu",
+        "name": "番禺醫館",
+        "x": 8,
+        "y": 8,
+        "spriteKey": "healer"
+      }
+    ],
+    "yingchuan_suburb": [
+      {
+        "id": "yingchuan_scout",
+        "name": "斥候",
+        "x": 10,
+        "y": 6,
+        "spriteKey": "merchant"
+      }
     ]
   }
 }

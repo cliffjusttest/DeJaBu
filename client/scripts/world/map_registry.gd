@@ -7,7 +7,7 @@ const MAPS_DIR := "res://data/maps/"
 static var _maps: Dictionary = {}
 static var _teleports: Dictionary = {}
 static var _npcs: Dictionary = {}
-static var _default_map_id := "village"
+static var _default_map_id := "xuchang"
 static var _loaded := false
 
 static func ensure_loaded() -> void:
@@ -29,7 +29,7 @@ static func ensure_loaded() -> void:
 	file.close()
 
 	var data: Dictionary = json.data
-	_default_map_id = str(data.get("defaultMap", "village"))
+	_default_map_id = str(data.get("defaultMap", "xuchang"))
 	_maps = data.get("maps", {})
 	_teleports = data.get("teleports", {})
 	_npcs = data.get("npcs", {})
@@ -43,8 +43,8 @@ static func get_map_path(map_id: String) -> String:
 	ensure_loaded()
 	var map_info: Variant = _maps.get(map_id)
 	if typeof(map_info) != TYPE_DICTIONARY:
-		return MAPS_DIR + "village.txt"
-	return MAPS_DIR + str(map_info.get("file", "village.txt"))
+		return MAPS_DIR + "xuchang.txt"
+	return MAPS_DIR + str(map_info.get("file", "xuchang.txt"))
 
 static func get_map_name(map_id: String) -> String:
 	ensure_loaded()

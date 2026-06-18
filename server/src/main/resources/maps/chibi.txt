@@ -1,0 +1,16 @@
+########################
+#@@PPPPPPPPPPPPPPPPPPP@#
+#.TMMMTM....P..........#
+#.MMMTMM....P..........#
+#.MMTMMM....P..........#
+#.MTMMM.....P..........#
+#...........P..........#
+#...PPPPPPP===PPPPPP...#
+#WWWWWWWWWW===WWWWWWWWW#
+#WWWWWWWWWWWPWWWWWWWWWW#
+#...........P...T.TT.T.#
+#...........P....TT.TT.#
+#...........P...TT.TT..#
+#...........P...T.TT.T.#
+#@PPPPPPPPPPP..........#
+########################

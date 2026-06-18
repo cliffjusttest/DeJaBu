@@ -11,7 +11,7 @@ import java.util.List;
 @Service
 public class HospitalService {
 
-    private static final String DEFAULT_HOSPITAL_ID = "village_hospital";
+    private static final String DEFAULT_HOSPITAL_ID = "hospital_xuchang";
 
     private final HospitalRepository hospitalRepository;
 

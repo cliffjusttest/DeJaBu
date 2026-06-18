@@ -34,13 +34,13 @@ public class User {
     private String displayName;
 
     @Column(name = "player_x", nullable = false)
-    private int playerX = 5;
+    private int playerX = 8;
 
     @Column(name = "player_y", nullable = false)
-    private int playerY = 5;
+    private int playerY = 8;
 
     @Column(name = "player_map_id", nullable = false, length = 32)
-    private String playerMapId = "village";
+    private String playerMapId = "xuchang";
 
     @Column(name = "has_character", nullable = false)
     private boolean hasCharacter = false;

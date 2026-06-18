@@ -34,7 +34,7 @@ public class MapService {
     private final Map<String, List<VisibleEnemySpawn>> visibleEnemies = new HashMap<>();
     private final Map<String, List<DangerZone>> dangerZones = new HashMap<>();
     private final Map<String, MapEncounterSettings> encounterSettings = new HashMap<>();
-    private String defaultMapId = "village";
+    private String defaultMapId = "xuchang";
 
     public MapService(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
@@ -48,7 +48,7 @@ public class MapService {
             config = objectMapper.readTree(input);
         }
 
-        defaultMapId = config.path("defaultMap").asText("village");
+        defaultMapId = config.path("defaultMap").asText("xuchang");
 
         JsonNode mapsNode = config.path("maps");
         mapsNode.fieldNames().forEachRemaining(mapId -> {
