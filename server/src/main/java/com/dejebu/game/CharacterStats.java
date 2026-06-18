@@ -19,6 +19,10 @@ public record CharacterStats(
     public static final int BASE_VALUE = 0;
     public static final int FREE_POINTS = 10;
     public static final int MIN_VALUE = 0;
+    /** Each defense point reduces incoming damage by 0.1%. */
+    public static final double DEFENSE_REDUCTION_PER_POINT = 0.001;
+    /** Maximum percentage of damage that defense can mitigate. */
+    public static final double MAX_DAMAGE_REDUCTION = 0.75;
 
     public static CharacterStats zeroBase() {
         return new CharacterStats(BASE_VALUE, BASE_VALUE, BASE_VALUE, BASE_VALUE, BASE_VALUE, BASE_VALUE, BASE_VALUE);
@@ -73,11 +77,9 @@ public record CharacterStats(
     }
 
     public int mitigateDamage(int rawDamage, boolean defending) {
-        int reduction = defense;
-        if (defending) {
-            reduction += defense;
-        }
-        return Math.max(1, rawDamage - reduction);
+        int effectiveDefense = defending ? defense * 2 : defense;
+        double reductionRate = Math.min(MAX_DAMAGE_REDUCTION, effectiveDefense * DEFENSE_REDUCTION_PER_POINT);
+        return Math.max(1, (int) Math.round(rawDamage * (1.0 - reductionRate)));
     }
 
     public boolean rollCritical(ThreadLocalRandom random, int defenderLuck) {

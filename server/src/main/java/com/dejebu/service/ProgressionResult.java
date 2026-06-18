@@ -8,7 +8,9 @@ public record ProgressionResult(
         int previousLevel,
         int levelsGained,
         int skillPointsGained,
-        int skillPoints
+        int skillPoints,
+        int statPointsGained,
+        int statPoints
 ) {
     public boolean leveledUp() {
         return levelsGained > 0;

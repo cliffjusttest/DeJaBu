@@ -1176,11 +1176,13 @@ public class BattleService {
                 memberNode.put("expToNextLevel", playerResult.expToNextLevel());
                 memberNode.put("playerLevel", playerResult.playerLevel());
                 memberNode.put("skillPoints", playerResult.skillPoints());
+                memberNode.put("statPoints", playerResult.statPoints());
                 if (playerResult.leveledUp()) {
                     memberNode.put("leveledUp", true);
                     memberNode.put("previousLevel", playerResult.previousLevel());
                     memberNode.put("levelsGained", playerResult.levelsGained());
                     memberNode.put("skillPointsGained", playerResult.skillPointsGained());
+                    memberNode.put("statPointsGained", playerResult.statPointsGained());
                 }
                 playerResults.add(memberNode);
 
@@ -1219,11 +1221,13 @@ public class BattleService {
         result.put("expToNextLevel", playerResult.expToNextLevel());
         result.put("playerLevel", playerResult.playerLevel());
         result.put("skillPoints", playerResult.skillPoints());
+        result.put("statPoints", playerResult.statPoints());
         if (playerResult.leveledUp()) {
             result.put("leveledUp", true);
             result.put("previousLevel", playerResult.previousLevel());
             result.put("levelsGained", playerResult.levelsGained());
             result.put("skillPointsGained", playerResult.skillPointsGained());
+            result.put("statPointsGained", playerResult.statPointsGained());
         }
 
         ArrayNode companionArray = objectMapper.createArrayNode();

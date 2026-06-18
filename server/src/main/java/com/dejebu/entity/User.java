@@ -77,6 +77,9 @@ public class User {
     @Column(name = "skill_points", nullable = false)
     private int skillPoints = 1;
 
+    @Column(name = "stat_points", nullable = false)
+    private int statPoints = 0;
+
     @Column(nullable = false)
     private int level = 1;
 
@@ -248,6 +251,14 @@ public class User {
 
     public void setSkillPoints(int skillPoints) {
         this.skillPoints = skillPoints;
+    }
+
+    public int getStatPoints() {
+        return statPoints;
+    }
+
+    public void setStatPoints(int statPoints) {
+        this.statPoints = statPoints;
     }
 
     public int getLevel() {

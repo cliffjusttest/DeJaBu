@@ -183,6 +183,7 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
         response.put("playerExp", user.getExp());
         response.put("expToNextLevel", ProgressionService.expToNextLevel(user.getLevel()));
         response.put("skillPoints", user.getSkillPoints());
+        response.put("statPoints", user.getStatPoints());
         response.put("playerGold", user.getGold());
         response.put("playerElement", user.getElement().getCode());
         response.put("playerElementName", user.getElement().getDisplayName());
@@ -905,11 +906,13 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
                     result.put("expToNextLevel", entry.path("expToNextLevel").asInt());
                     result.put("playerLevel", entry.path("playerLevel").asInt());
                     result.put("skillPoints", entry.path("skillPoints").asInt());
+                    result.put("statPoints", entry.path("statPoints").asInt());
                     if (entry.path("leveledUp").asBoolean()) {
                         result.put("leveledUp", true);
                         result.put("previousLevel", entry.path("previousLevel").asInt());
                         result.put("levelsGained", entry.path("levelsGained").asInt());
                         result.put("skillPointsGained", entry.path("skillPointsGained").asInt());
+                        result.put("statPointsGained", entry.path("statPointsGained").asInt());
                     }
                 }
             }

@@ -46,10 +46,28 @@ class CharacterStatsTest {
     }
 
     @Test
-    void defenseReducesIncomingDamageByOnePerPoint() {
-        CharacterStats stats = new CharacterStats(0, 0, 0, 5, 0, 0, 0);
-        assertEquals(7, stats.mitigateDamage(12, false));
-        assertEquals(2, stats.mitigateDamage(12, true));
+    void defenseReducesIncomingDamageByPercentage() {
+        CharacterStats noDefense = new CharacterStats(0, 0, 0, 0, 0, 0, 0);
+        assertEquals(100, noDefense.mitigateDamage(100, false));
+
+        CharacterStats stats = new CharacterStats(0, 0, 0, 100, 0, 0, 0);
+        assertEquals(90, stats.mitigateDamage(100, false));
+        assertEquals(80, stats.mitigateDamage(100, true));
+    }
+
+    @Test
+    void defenseReductionCapsAtSeventyFivePercent() {
+        CharacterStats stats = new CharacterStats(0, 0, 0, 750, 0, 0, 0);
+        assertEquals(25, stats.mitigateDamage(100, false));
+
+        CharacterStats defending = new CharacterStats(0, 0, 0, 400, 0, 0, 0);
+        assertEquals(25, defending.mitigateDamage(100, true));
+    }
+
+    @Test
+    void mitigatedDamageNeverFallsBelowOne() {
+        CharacterStats stats = new CharacterStats(0, 0, 0, 750, 0, 0, 0);
+        assertEquals(1, stats.mitigateDamage(1, false));
     }
 
     @Test

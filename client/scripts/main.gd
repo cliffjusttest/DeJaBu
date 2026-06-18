@@ -327,6 +327,7 @@ func _handle_login_ok(payload: Dictionary) -> void:
 	GameState.player_exp = int(payload.get("playerExp", GameState.player_exp))
 	GameState.exp_to_next_level = int(payload.get("expToNextLevel", GameState.exp_to_next_level))
 	GameState.skill_points = int(payload.get("skillPoints", GameState.skill_points))
+	GameState.stat_points = int(payload.get("statPoints", GameState.stat_points))
 	GameState.player_current_hp = int(payload.get("playerCurrentHp", GameState.player_current_hp))
 	if payload.has("playerMaxHp"):
 		GameState.player_max_hp = int(payload.get("playerMaxHp"))
@@ -518,6 +519,7 @@ func _apply_progression(payload: Dictionary) -> void:
 	GameState.exp_to_next_level = int(payload.get("expToNextLevel", GameState.exp_to_next_level))
 	GameState.player_level = int(payload.get("playerLevel", GameState.player_level))
 	GameState.skill_points = int(payload.get("skillPoints", GameState.skill_points))
+	GameState.stat_points = int(payload.get("statPoints", GameState.stat_points))
 
 	var exp_gained := int(payload.get("expGained", 0))
 	_log("戰鬥勝利！獲得 %d EXP" % exp_gained)
@@ -526,11 +528,13 @@ func _apply_progression(payload: Dictionary) -> void:
 		var previous_level := int(payload.get("previousLevel", GameState.player_level))
 		var levels_gained := int(payload.get("levelsGained", 1))
 		var skill_points_gained := int(payload.get("skillPointsGained", 0))
+		var stat_points_gained := int(payload.get("statPointsGained", 0))
 		_log(
-			"等級提升！Lv.%d → Lv.%d（+%d 技能點）" % [
+			"等級提升！Lv.%d → Lv.%d（+%d 技能點、+%d 屬性點）" % [
 				previous_level,
 				previous_level + levels_gained,
-				skill_points_gained
+				skill_points_gained,
+				stat_points_gained
 			]
 		)
 

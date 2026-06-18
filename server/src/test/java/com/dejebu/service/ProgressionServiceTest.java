@@ -1,6 +1,8 @@
 package com.dejebu.service;
 
 import com.dejebu.entity.User;
+import com.dejebu.entity.UserCompanion;
+import com.dejebu.game.CharacterStats;
 import com.dejebu.game.WildMonsterInstance;
 import com.dejebu.repository.UserCompanionRepository;
 import com.dejebu.repository.UserRepository;
@@ -30,11 +32,18 @@ class ProgressionServiceTest {
     @Mock
     private UserCompanionRepository userCompanionRepository;
 
+    @Mock
+    private EquipmentService equipmentService;
+
     private ProgressionService progressionService;
 
     @BeforeEach
     void setUp() {
-        progressionService = new ProgressionService(userRepository, userCompanionRepository);
+        progressionService = new ProgressionService(
+                userRepository,
+                userCompanionRepository,
+                equipmentService
+        );
     }
 
     @Test
@@ -69,7 +78,7 @@ class ProgressionServiceTest {
 
     @Test
     void applyVictoryExpAccumulatesWithoutLevelUp() {
-        User user = user(1, 0, 1);
+        User user = user(1, 0, 1, 0);
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -79,11 +88,12 @@ class ProgressionServiceTest {
         assertEquals(1, result.playerLevel());
         assertFalse(result.leveledUp());
         assertEquals(1, result.skillPoints());
+        assertEquals(0, result.statPoints());
     }
 
     @Test
-    void applyVictoryExpLevelsUpAndGrantsSkillPoints() {
-        User user = user(1, 8, 1);
+    void applyVictoryExpLevelsUpAndGrantsSkillAndStatPoints() {
+        User user = user(1, 8, 1, 0);
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -95,12 +105,14 @@ class ProgressionServiceTest {
         assertEquals(1, result.levelsGained());
         assertEquals(1, result.skillPointsGained());
         assertEquals(2, result.skillPoints());
+        assertEquals(5, result.statPointsGained());
+        assertEquals(5, result.statPoints());
         assertEquals(45, result.expToNextLevel());
     }
 
     @Test
     void applyVictoryExpCanGainMultipleLevels() {
-        User user = user(1, 0, 1);
+        User user = user(1, 0, 1, 0);
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -110,11 +122,13 @@ class ProgressionServiceTest {
         assertEquals(4, result.playerLevel());
         assertEquals(3, result.levelsGained());
         assertEquals(3, result.skillPointsGained());
+        assertEquals(15, result.statPointsGained());
+        assertEquals(15, result.statPoints());
     }
 
     @Test
     void applyVictoryExpPersistsUser() {
-        User user = user(1, 0, 1);
+        User user = user(1, 0, 1, 0);
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -127,7 +141,7 @@ class ProgressionServiceTest {
 
     @Test
     void applyExpLossReducesCurrentExpWithoutLevelDown() {
-        User user = user(5, 80, 1);
+        User user = user(5, 80, 1, 0);
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -145,11 +159,30 @@ class ProgressionServiceTest {
         assertEquals(9, ProgressionService.calculateExpLoss(90));
     }
 
-    private static User user(int level, int exp, int skillPoints) {
+    @Test
+    void rankStatsForGrowthSubtractsEquipmentBonus() {
+        UserCompanion companion = new UserCompanion();
+        companion.setStatMight(10);
+        companion.setStatIntelligence(8);
+        companion.setStatVitality(12);
+        companion.setStatDefense(6);
+        companion.setStatSpirit(5);
+        companion.setStatLuck(4);
+        companion.setStatAgility(7);
+
+        CharacterStats equipmentBonus = new CharacterStats(2, 0, 1, 0, 0, 0, 0);
+        CharacterStats rankStats = ProgressionService.rankStatsForGrowth(companion, equipmentBonus);
+
+        assertEquals(8, rankStats.might());
+        assertEquals(11, rankStats.vitality());
+    }
+
+    private static User user(int level, int exp, int skillPoints, int statPoints) {
         User user = new User();
         user.setLevel(level);
         user.setExp(exp);
         user.setSkillPoints(skillPoints);
+        user.setStatPoints(statPoints);
         return user;
     }
 

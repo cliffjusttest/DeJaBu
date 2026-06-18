@@ -3,6 +3,7 @@ extends Control
 signal closed
 
 const API_LIST := "http://localhost:8080/api/companions/list"
+const API_ALLOCATE_STAT := "http://localhost:8080/api/character/allocate-stat"
 
 const PARTY_POSITION_NAMES := ["前方", "左側", "右側", "左外側", "右外側"]
 
@@ -12,6 +13,7 @@ const PARTY_POSITION_NAMES := ["前方", "左側", "右側", "左外側", "右�
 @onready var http: HTTPRequest = $HTTPRequest
 
 var _busy := false
+var _pending_stat_code := ""
 
 func _ready() -> void:
 	close_button.pressed.connect(_on_close_pressed)
@@ -32,6 +34,16 @@ func _fetch_companions() -> void:
 	var headers := ["Content-Type: application/json"]
 	http.request(API_LIST, headers, HTTPClient.METHOD_POST, body)
 
+func _allocate_stat(stat_code: String) -> void:
+	if _busy or GameState.auth_token.is_empty() or GameState.stat_points <= 0:
+		return
+	_busy = true
+	_pending_stat_code = stat_code
+	_set_message("分配中...")
+	var body := JSON.stringify({"token": GameState.auth_token, "stat": stat_code})
+	var headers := ["Content-Type: application/json"]
+	http.request(API_ALLOCATE_STAT, headers, HTTPClient.METHOD_POST, body)
+
 func _on_request_completed(
 	result: int,
 	response_code: int,
@@ -39,19 +51,35 @@ func _on_request_completed(
 	body: PackedByteArray
 ) -> void:
 	_busy = false
-	if result != HTTPRequest.RESULT_SUCCESS or response_code != 200:
-		_set_message("夥伴資料載入失敗")
+	if result != HTTPRequest.RESULT_SUCCESS:
+		_set_message("連線失敗")
+		_pending_stat_code = ""
 		return
 
 	var text := body.get_string_from_utf8()
 	var json := JSON.new()
 	if json.parse(text) != OK:
 		_set_message("資料格式錯誤")
+		_pending_stat_code = ""
 		return
 
 	var data: Variant = json.data
 	if typeof(data) != TYPE_DICTIONARY:
 		_set_message("資料格式錯誤")
+		_pending_stat_code = ""
+		return
+
+	if response_code != 200:
+		_set_message(_extract_error_message(data, response_code))
+		_pending_stat_code = ""
+		_render()
+		return
+
+	if not _pending_stat_code.is_empty():
+		_apply_allocation_response(data)
+		_pending_stat_code = ""
+		_set_message(str(data.get("message", "屬性已分配")))
+		_render()
 		return
 
 	GameState.companions = data.get("companions", [])
@@ -59,6 +87,19 @@ func _on_request_completed(
 		GameState.skill_points = int(data.get("skillPoints"))
 	_set_message("")
 	_render()
+
+func _apply_allocation_response(data: Dictionary) -> void:
+	GameState.stat_points = int(data.get("statPoints", GameState.stat_points))
+	if data.has("stats"):
+		GameState.player_stats = CharacterStatsData.from_payload(data.get("stats"))
+	if data.has("playerMaxHp"):
+		GameState.player_max_hp = int(data.get("playerMaxHp"))
+	if data.has("playerMaxMp"):
+		GameState.player_max_mp = int(data.get("playerMaxMp"))
+	if data.has("playerCurrentHp"):
+		GameState.player_current_hp = int(data.get("playerCurrentHp"))
+	if data.has("playerCurrentMp"):
+		GameState.player_current_mp = int(data.get("playerCurrentMp"))
 
 func _render() -> void:
 	for child in content.get_children():
@@ -92,15 +133,39 @@ func _render_player() -> void:
 	content.add_child(mp_label)
 
 	var exp_label := Label.new()
-	exp_label.text = "EXP  %d / %d    技能點  %d    金幣  %d" % [
-		GameState.player_exp, GameState.exp_to_next_level, GameState.skill_points, GameState.player_gold
+	exp_label.text = "EXP  %d / %d    技能點  %d    屬性點  %d    金幣  %d" % [
+		GameState.player_exp, GameState.exp_to_next_level, GameState.skill_points, GameState.stat_points, GameState.player_gold
 	]
 	content.add_child(exp_label)
 
-	var stats := GameState.player_stats
-	var stats_label := Label.new()
-	stats_label.text = CharacterStatsData.summary_text(stats)
-	content.add_child(stats_label)
+	if GameState.stat_points > 0:
+		var hint := Label.new()
+		hint.text = "點擊 + 分配屬性點"
+		content.add_child(hint)
+
+	for code in CharacterStatsData.ALL:
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 8)
+
+		var name_label := Label.new()
+		name_label.text = CharacterStatsData.display_name(code)
+		name_label.custom_minimum_size = Vector2(48, 0)
+		row.add_child(name_label)
+
+		var value_label := Label.new()
+		value_label.text = str(int(GameState.player_stats.get(code, 0)))
+		value_label.custom_minimum_size = Vector2(32, 0)
+		value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		row.add_child(value_label)
+
+		if GameState.stat_points > 0:
+			var plus_button := Button.new()
+			plus_button.text = "+"
+			plus_button.custom_minimum_size = Vector2(32, 32)
+			plus_button.pressed.connect(_allocate_stat.bind(code))
+			row.add_child(plus_button)
+
+		content.add_child(row)
 
 func _render_companions() -> void:
 	var header := Label.new()
@@ -181,3 +246,10 @@ func _on_close_pressed() -> void:
 
 func _set_message(text: String) -> void:
 	message_label.text = text
+
+func _extract_error_message(data: Dictionary, response_code: int) -> String:
+	if data.has("message"):
+		return str(data.get("message"))
+	if data.has("error"):
+		return str(data.get("error"))
+	return "操作失敗 (HTTP %d)" % response_code

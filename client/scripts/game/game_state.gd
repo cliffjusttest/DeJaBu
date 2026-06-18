@@ -14,6 +14,7 @@ var player_element := ""
 var player_appearance := ""
 var player_stats: Dictionary = CharacterStatsData.zero_base()
 var skill_points := 1
+var stat_points := 0
 var player_level := 1
 var player_exp := 0
 var exp_to_next_level := 10
@@ -96,6 +97,7 @@ func clear_auth() -> void:
 	player_appearance = ""
 	player_stats = CharacterStatsData.zero_base()
 	skill_points = 1
+	stat_points = 0
 	player_level = 1
 	player_exp = 0
 	exp_to_next_level = 10
