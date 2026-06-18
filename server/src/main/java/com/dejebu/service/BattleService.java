@@ -10,6 +10,7 @@ import com.dejebu.game.CharacterStats;
 import com.dejebu.game.Element;
 import com.dejebu.game.ElementRelation;
 import com.dejebu.game.ElementRelation.ElementMatchup;
+import com.dejebu.game.ElementTrait;
 import com.dejebu.game.EnemyBattleAi;
 import com.dejebu.game.ItemType;
 import com.dejebu.game.SkillCombatCalculator;
@@ -326,6 +327,7 @@ public class BattleService {
             if (state.comboFollowers.containsKey(unit.getId())) continue;
 
             ObjectNode actionResult = objectMapper.createObjectNode();
+            boolean acted = false;
             if (isAllyUnit(state, unit)) {
                 PlannedAction plan = state.pendingActions.get(unit.getId());
                 if (plan == null) continue;
@@ -336,6 +338,7 @@ public class BattleService {
                 } else {
                     executeAllyAction(state, unit, plan, random, actionResult);
                 }
+                acted = true;
             } else {
                 List<BattleUnit> aliveAllies = state.allies.stream().filter(BattleUnit::isAlive).toList();
                 List<BattleUnit> enemyFollowers = getComboFollowers(state, unit);
@@ -343,6 +346,7 @@ public class BattleService {
                     PlannedAction enemyPlan = state.enemyComboPlans.get(unit.getId());
                     if (enemyPlan != null) {
                         executeComboAttack(state, unit, enemyFollowers, enemyPlan, random, actionResult, false);
+                        acted = true;
                     }
                 } else {
                     List<BattleUnit> teammates = state.enemies;
@@ -356,7 +360,11 @@ public class BattleService {
                             resolveBasicAttack(state, unit, defender, random, actionResult, 1.0, false, false);
                         }
                     }
+                    acted = true;
                 }
+            }
+            if (acted) {
+                applyWaterTraitAfterAction(unit, random, actionResult);
             }
             mergeResult(result, actionResult);
             if (result.path("escaped").asBoolean()) break;
@@ -453,13 +461,17 @@ public class BattleService {
             double damageMultiplier
     ) {
         int baseDamage = attackerStats.attackDamage();
-        boolean critical = attackerStats.rollCritical(random, defenderStats.luck());
+        boolean critical = ElementTrait.rollCritical(
+                attackerStats, defenderStats.luck(), attackerElement, random
+        );
         if (critical) {
             baseDamage *= 2;
         }
         int damage = applyElementDamage(baseDamage, attackerElement, defenderElement);
         damage = (int) (damage * damageMultiplier);
         damage = defenderStats.mitigateDamage(damage, defending);
+        damage = ElementTrait.applyEarthReduction(damage, defenderElement, random);
+        damage = ElementTrait.applyFireBonus(damage, attackerElement, random);
         return new DamageHitResult(damage, critical);
     }
 
@@ -467,6 +479,7 @@ public class BattleService {
             CharacterStats actorStats,
             CharacterStats defenderStats,
             BattleSkillRuntime skill,
+            Element attackerElement,
             Element attackElement,
             Element defenderElement,
             boolean defending,
@@ -474,13 +487,17 @@ public class BattleService {
             double damageMultiplier
     ) {
         int baseDamage = SkillCombatCalculator.calculateDamage(actorStats, skill, random);
-        boolean critical = actorStats.rollCritical(random, defenderStats.luck());
+        boolean critical = ElementTrait.rollCritical(
+                actorStats, defenderStats.luck(), attackerElement, random
+        );
         if (critical) {
             baseDamage *= 2;
         }
         int damage = applyElementDamage(baseDamage, attackElement, defenderElement);
         damage = (int) (damage * damageMultiplier);
         damage = defenderStats.mitigateDamage(damage, defending);
+        damage = ElementTrait.applyEarthReduction(damage, defenderElement, random);
+        damage = ElementTrait.applyFireBonus(damage, attackerElement, random);
         return new DamageHitResult(damage, critical);
     }
 
@@ -847,6 +864,7 @@ public class BattleService {
                     actorStats,
                     statsFor(state, unit),
                     skill,
+                    actor.getElement(),
                     attackElement,
                     unit.getElement(),
                     defending,
@@ -1139,6 +1157,7 @@ public class BattleService {
                         actorStats,
                         statsFor(state, unit),
                         skill,
+                        actor.getElement(),
                         attackElement,
                         unit.getElement(),
                         defending,
@@ -1425,11 +1444,39 @@ public class BattleService {
         List<BattleUnit> all = new ArrayList<>();
         all.addAll(state.allies);
         all.addAll(state.enemies);
-        return all.stream()
+        List<BattleUnit> order = all.stream()
                 .filter(BattleUnit::isAlive)
                 .sorted(Comparator.comparingInt(BattleService::unitAgility).reversed()
                         .thenComparingInt(BattleUnit::getId))
-                .toList();
+                .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
+
+        ThreadLocalRandom random = ThreadLocalRandom.current();
+        for (int i = 1; i < order.size(); i++) {
+            BattleUnit unit = order.get(i);
+            if (unit.getElement() != Element.WIND) {
+                continue;
+            }
+            BattleUnit previous = order.get(i - 1);
+            if (isAllyUnit(state, unit) == isAllyUnit(state, previous)) {
+                continue;
+            }
+            int agilityDiff = Math.abs(unitAgility(unit) - unitAgility(previous));
+            if (agilityDiff >= ElementTrait.WIND_AGILITY_DIFF_THRESHOLD) {
+                continue;
+            }
+            if (ElementTrait.rollTrigger(random)) {
+                order.set(i, previous);
+                order.set(i - 1, unit);
+            }
+        }
+        return order;
+    }
+
+    private void applyWaterTraitAfterAction(BattleUnit unit, ThreadLocalRandom random, ObjectNode actionResult) {
+        ElementTrait.applyWaterRecovery(unit, random).ifPresent(recovered -> {
+            appendMessage(actionResult, unit.getName() + " 的水元素特性觸發，回復 "
+                    + recovered[0] + " HP、" + recovered[1] + " MP");
+        });
     }
 
     private static int unitAgility(BattleUnit unit) {

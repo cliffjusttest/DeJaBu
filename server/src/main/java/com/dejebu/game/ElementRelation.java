@@ -5,8 +5,8 @@ package com.dejebu.game;
  */
 public final class ElementRelation {
 
-    public static final double ADVANTAGE_MULTIPLIER = 1.5;
-    public static final double DISADVANTAGE_MULTIPLIER = 0.75;
+    public static final double ADVANTAGE_MULTIPLIER = 1.1;
+    public static final double DISADVANTAGE_MULTIPLIER = 0.9;
 
     private ElementRelation() {
     }

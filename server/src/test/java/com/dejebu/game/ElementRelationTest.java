@@ -27,4 +27,14 @@ class ElementRelationTest {
         assertEquals(1.0, ElementRelation.damageMultiplier(Element.FIRE, Element.NONE));
         assertEquals(ElementMatchup.NEUTRAL, ElementRelation.matchup(Element.NONE, Element.WATER));
     }
+
+    @Test
+    void advantageMultiplierIsOnePointOne() {
+        assertEquals(1.1, ElementRelation.damageMultiplier(Element.FIRE, Element.WIND));
+    }
+
+    @Test
+    void disadvantageMultiplierIsZeroPointNine() {
+        assertEquals(0.9, ElementRelation.damageMultiplier(Element.WIND, Element.FIRE));
+    }
 }
