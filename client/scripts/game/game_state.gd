@@ -31,6 +31,10 @@ var companions: Array = []
 var active_quests: Array = []
 var dialogue_npc_id := ""
 var dialogue_node_key := ""
+var party_dialogue_observer := false
+var player_story_era := "E1"
+var effective_story_era := "E1"
+var effective_story_era_name := "中平"
 
 var in_player_party := false
 var is_party_leader := false
@@ -49,6 +53,12 @@ func apply_party_state(party: Dictionary) -> void:
 	party_max_size = int(party.get("maxSize", 5))
 	party_max_companions = int(party.get("maxCompanionsPerPlayer", 1))
 	party_members = party.get("members", [])
+	if party.has("effectiveStoryEra"):
+		effective_story_era = str(party.get("effectiveStoryEra", player_story_era))
+	if party.has("effectiveStoryEraName"):
+		effective_story_era_name = str(party.get("effectiveStoryEraName", "中平"))
+	if party.has("playerStoryEra"):
+		player_story_era = str(party.get("playerStoryEra", player_story_era))
 	if party.has("pendingInviteFrom"):
 		pending_party_invite_from = int(party.get("pendingInviteFrom", 0))
 		pending_party_invite_name = str(party.get("pendingInviteFromName", ""))
@@ -63,6 +73,14 @@ func clear_party_state() -> void:
 	party_members = []
 	pending_party_invite_from = 0
 	pending_party_invite_name = ""
+
+func apply_story_era(payload: Dictionary) -> void:
+	if payload.has("playerStoryEra"):
+		player_story_era = str(payload.get("playerStoryEra", "E1"))
+	if payload.has("effectiveStoryEra"):
+		effective_story_era = str(payload.get("effectiveStoryEra", player_story_era))
+	if payload.has("effectiveStoryEraName"):
+		effective_story_era_name = str(payload.get("effectiveStoryEraName", "中平"))
 
 func can_control_movement() -> bool:
 	if not in_player_party:
@@ -83,6 +101,9 @@ func apply_auth(data: Dictionary) -> void:
 		player_stats = CharacterStatsData.from_payload(data.get("stats"))
 	else:
 		player_stats = CharacterStatsData.zero_base()
+	if data.has("storyEra"):
+		player_story_era = str(data.get("storyEra", "E1"))
+		effective_story_era = player_story_era
 	is_authenticated = false
 
 func mark_session_authenticated() -> void:
@@ -106,10 +127,14 @@ func clear_auth() -> void:
 	player_current_mp = 20
 	player_max_mp = 20
 	player_gold = 100
+	player_story_era = "E1"
+	effective_story_era = "E1"
+	effective_story_era_name = "中平"
 	companions = []
 	active_quests = []
 	dialogue_npc_id = ""
 	dialogue_node_key = ""
+	party_dialogue_observer = false
 	clear_party_state()
 	is_authenticated = false
 
@@ -120,4 +145,5 @@ func reset_battle() -> void:
 func reset_dialogue() -> void:
 	dialogue_npc_id = ""
 	dialogue_node_key = ""
+	party_dialogue_observer = false
 	mode = Mode.EXPLORE

@@ -9,19 +9,26 @@ signal dialogue_closed
 @onready var choices_box: VBoxContainer = $Panel/Margin/VBox/ChoicesBox
 @onready var close_button: Button = $Panel/Margin/VBox/CloseButton
 
+var _observer_mode := false
+
 func _ready() -> void:
 	close_button.pressed.connect(_on_close)
 	hide()
 
-func show_dialogue(npc_name: String, text: String, choices: Array) -> void:
+func show_dialogue(npc_name: String, text: String, choices: Array, observer_mode: bool = false) -> void:
+	_observer_mode = observer_mode
 	npc_name_label.text = npc_name
-	dialogue_text.text = text
+	if observer_mode:
+		dialogue_text.text = text + "\n\n（跟隨隊長對話中）"
+	else:
+		dialogue_text.text = text
 
 	for child in choices_box.get_children():
 		child.queue_free()
 
-	if choices.is_empty():
+	if observer_mode or choices.is_empty():
 		close_button.show()
+		close_button.text = "關閉" if observer_mode else "離開"
 	else:
 		close_button.hide()
 		for choice in choices:
@@ -35,6 +42,7 @@ func show_dialogue(npc_name: String, text: String, choices: Array) -> void:
 	show()
 
 func hide_dialogue() -> void:
+	_observer_mode = false
 	hide()
 	for child in choices_box.get_children():
 		child.queue_free()

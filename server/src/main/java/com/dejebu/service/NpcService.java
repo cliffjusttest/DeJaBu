@@ -16,7 +16,9 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -28,6 +30,8 @@ public class NpcService {
     private final QuestService questService;
     private final CompanionService companionService;
     private final UserRepository userRepository;
+    private final StoryContextService storyContextService;
+    private final PlayerPartyService playerPartyService;
     private final ObjectMapper objectMapper;
 
     public NpcService(NpcRepository npcRepository,
@@ -36,6 +40,8 @@ public class NpcService {
                       QuestService questService,
                       CompanionService companionService,
                       UserRepository userRepository,
+                      StoryContextService storyContextService,
+                      PlayerPartyService playerPartyService,
                       ObjectMapper objectMapper) {
         this.npcRepository = npcRepository;
         this.dialogueNodeRepository = dialogueNodeRepository;
@@ -43,8 +49,12 @@ public class NpcService {
         this.questService = questService;
         this.companionService = companionService;
         this.userRepository = userRepository;
+        this.storyContextService = storyContextService;
+        this.playerPartyService = playerPartyService;
         this.objectMapper = objectMapper;
     }
+
+    public record DialogueOutcome(ObjectNode response, Map<Long, QuestService.ClaimResult> claimResultsByUser) {}
 
     public boolean npcExistsInMap(String npcId, String mapId) {
         return npcRepository.existsByIdAndMapId(npcId, mapId);
@@ -71,7 +81,7 @@ public class NpcService {
     }
 
     @Transactional
-    public ObjectNode interact(Long userId, String npcId, String mapId) {
+    public DialogueOutcome interact(Long actorUserId, String npcId, String mapId) {
         NpcEntity npc = npcRepository.findById(npcId)
                 .orElseThrow(() -> new IllegalArgumentException("找不到 NPC: " + npcId));
 
@@ -79,67 +89,126 @@ public class NpcService {
             throw new IllegalArgumentException("NPC 不在當前地圖");
         }
 
-        String nodeKey = resolveStartingNode(userId, npc);
-        return buildDialogueResponse(npc, nodeKey, List.of());
+        Long storyUserId = storyContextService.resolveStoryUserId(actorUserId);
+        String nodeKey = resolveStartingNode(storyUserId, npc);
+        ObjectNode response = buildDialogueResponse(npc, nodeKey, List.of(), actorUserId);
+        return new DialogueOutcome(response, Map.of());
     }
 
     @Transactional
-    public ObjectNode choose(Long userId, String npcId, String nodeKey, int choiceIndex) {
+    public DialogueOutcome choose(Long actorUserId, String npcId, String nodeKey, int choiceIndex) {
         NpcEntity npc = npcRepository.findById(npcId)
                 .orElseThrow(() -> new IllegalArgumentException("找不到 NPC: " + npcId));
 
         DialogueNodeEntity node = dialogueNodeRepository.findByNpcIdAndNodeKey(npcId, nodeKey)
                 .orElseThrow(() -> new IllegalArgumentException("找不到對話節點: " + nodeKey));
 
-        JsonNode choices;
-        try {
-            choices = objectMapper.readTree(node.getChoicesJson());
-        } catch (Exception e) {
-            throw new IllegalStateException("對話資料錯誤");
-        }
+        JsonNode choices = parseChoices(node.getChoicesJson());
+        JsonNode choice = resolveVisibleChoice(choices, actorUserId, choiceIndex);
 
-        if (!choices.isArray() || choiceIndex < 0 || choiceIndex >= choices.size()) {
-            throw new IllegalArgumentException("無效的選項");
-        }
-
-        JsonNode choice = choices.get(choiceIndex);
-        List<QuestService.ClaimResult> rewards = List.of();
+        Map<Long, QuestService.ClaimResult> claimResultsByUser = new LinkedHashMap<>();
 
         if (choice.has("questAccept") && !choice.get("questAccept").isNull()) {
             long questId = choice.get("questAccept").asLong();
-            questService.acceptQuest(userId, questId);
+            questService.acceptQuest(actorUserId, questId);
         }
 
         if (choice.has("questComplete") && !choice.get("questComplete").isNull()) {
             long questId = choice.get("questComplete").asLong();
-            Optional<QuestService.ClaimResult> reward = questService.claimReward(userId, questId);
-            rewards = reward.map(List::of).orElse(List.of());
+            List<Long> partyMembers = playerPartyService.getMemberIdsIfInParty(actorUserId);
+            claimResultsByUser = questService.claimRewardForReadyPartyMembers(actorUserId, questId, partyMembers);
         }
 
         if (choice.has("action") && "open_shop".equals(choice.get("action").asText())) {
-            return buildShopOpenResponse(npc);
+            return new DialogueOutcome(buildShopOpenResponse(npc), Map.of());
         }
 
         if (choice.has("action") && "hospital_revive".equals(choice.get("action").asText())) {
             if (!npc.isHospital()) {
                 throw new IllegalArgumentException("此 NPC 無法提供治療");
             }
-            return buildHospitalReviveResponse(npc, userId);
+            return new DialogueOutcome(buildHospitalReviveResponse(npc, actorUserId), Map.of());
         }
 
         JsonNode nextKeyNode = choice.get("nextKey");
         if (nextKeyNode == null || nextKeyNode.isNull()) {
-            return buildFinishedResponse(npc, rewards);
+            List<QuestService.ClaimResult> actorRewards = claimResultsByUser.containsKey(actorUserId)
+                    ? List.of(claimResultsByUser.get(actorUserId))
+                    : List.of();
+            return new DialogueOutcome(buildFinishedResponse(npc, actorRewards, actorUserId), claimResultsByUser);
         }
 
         String nextKey = nextKeyNode.asText();
-        return buildDialogueResponse(npc, nextKey, rewards);
+        List<QuestService.ClaimResult> actorRewards = claimResultsByUser.containsKey(actorUserId)
+                ? List.of(claimResultsByUser.get(actorUserId))
+                : List.of();
+        return new DialogueOutcome(buildDialogueResponse(npc, nextKey, actorRewards, actorUserId), claimResultsByUser);
     }
 
-    private String resolveStartingNode(Long userId, NpcEntity npc) {
+    public ObjectNode personalizeForViewer(ObjectNode response, Long viewerUserId, Map<Long, QuestService.ClaimResult> claimResultsByUser) {
+        ObjectNode personalized = response.deepCopy();
+        personalized.put("observer", !storyContextService.isStoryActor(viewerUserId));
+
+        if (personalized.path("observer").asBoolean(false)) {
+            personalized.remove("openShop");
+            personalized.remove("hospitalRevive");
+        }
+
+        if (!personalized.path("finished").asBoolean(false) || claimResultsByUser.isEmpty()) {
+            return personalized;
+        }
+
+        QuestService.ClaimResult viewerReward = claimResultsByUser.get(viewerUserId);
+        if (viewerReward == null) {
+            personalized.remove("questRewards");
+            return personalized;
+        }
+
+        ArrayNode rewardsArray = objectMapper.createArrayNode();
+        ObjectNode rNode = objectMapper.createObjectNode();
+        rNode.put("questName", viewerReward.questName());
+        rNode.put("expGained", viewerReward.expGained());
+        rNode.put("skillPointsGained", viewerReward.skillPointsGained());
+        rewardsArray.add(rNode);
+        personalized.set("questRewards", rewardsArray);
+        return personalized;
+    }
+
+    private JsonNode parseChoices(String choicesJson) {
+        try {
+            JsonNode choices = objectMapper.readTree(choicesJson);
+            if (!choices.isArray()) {
+                throw new IllegalStateException("對話資料錯誤");
+            }
+            return choices;
+        } catch (IllegalStateException ex) {
+            throw ex;
+        } catch (Exception e) {
+            throw new IllegalStateException("對話資料錯誤");
+        }
+    }
+
+    private JsonNode resolveVisibleChoice(JsonNode choices, Long actorUserId, int visibleChoiceIndex) {
+        int visible = 0;
+        for (JsonNode choice : choices) {
+            if (!isChoiceAvailable(choice, actorUserId)) {
+                continue;
+            }
+            if (visible == visibleChoiceIndex) {
+                return choice;
+            }
+            visible++;
+        }
+        throw new IllegalArgumentException("無效的選項");
+    }
+
+    private String resolveStartingNode(Long storyUserId, NpcEntity npc) {
         List<QuestEntity> giverQuests = questRepository.findByGiverNpcId(npc.getId());
         for (QuestEntity quest : giverQuests) {
-            Optional<PlayerQuestEntity> pqOpt = questService.getPlayerQuest(userId, quest.getId());
+            if (!questService.isQuestAvailableForStoryUser(storyUserId, quest)) {
+                continue;
+            }
+            Optional<PlayerQuestEntity> pqOpt = questService.getPlayerQuest(storyUserId, quest.getId());
             if (pqOpt.isPresent()) {
                 PlayerQuestEntity pq = pqOpt.get();
                 if (PlayerQuestEntity.STATUS_COMPLETED.equals(pq.getStatus())) continue;
@@ -152,7 +221,7 @@ public class NpcService {
         return npc.getRootNodeKey();
     }
 
-    private ObjectNode buildDialogueResponse(NpcEntity npc, String nodeKey, List<QuestService.ClaimResult> rewards) {
+    private ObjectNode buildDialogueResponse(NpcEntity npc, String nodeKey, List<QuestService.ClaimResult> rewards, Long actorUserId) {
         DialogueNodeEntity node = dialogueNodeRepository.findByNpcIdAndNodeKey(npc.getId(), nodeKey)
                 .orElseThrow(() -> new IllegalStateException("找不到對話節點: " + nodeKey));
 
@@ -162,32 +231,45 @@ public class NpcService {
         response.put("npcName", npc.getName());
         response.put("nodeKey", nodeKey);
         response.put("text", node.getText());
+        response.put("observer", !storyContextService.isStoryActor(actorUserId));
 
         ArrayNode choicesArray = objectMapper.createArrayNode();
-        try {
-            JsonNode raw = objectMapper.readTree(node.getChoicesJson());
-            if (raw.isArray()) {
-                int idx = 0;
-                for (JsonNode c : raw) {
-                    ObjectNode choiceNode = objectMapper.createObjectNode();
-                    choiceNode.put("index", idx++);
-                    choiceNode.put("text", c.path("text").asText());
-                    choicesArray.add(choiceNode);
-                }
+        JsonNode raw = parseChoices(node.getChoicesJson());
+        int idx = 0;
+        for (JsonNode c : raw) {
+            if (!isChoiceAvailable(c, actorUserId)) {
+                continue;
             }
-        } catch (Exception ignored) {}
+            ObjectNode choiceNode = objectMapper.createObjectNode();
+            choiceNode.put("index", idx++);
+            choiceNode.put("text", c.path("text").asText());
+            choicesArray.add(choiceNode);
+        }
 
         response.set("choices", choicesArray);
         appendRewards(response, rewards);
         return response;
     }
 
-    private ObjectNode buildFinishedResponse(NpcEntity npc, List<QuestService.ClaimResult> rewards) {
+    private boolean isChoiceAvailable(JsonNode choice, Long actorUserId) {
+        if (choice.has("questAccept") && !choice.get("questAccept").isNull()) {
+            long questId = choice.get("questAccept").asLong();
+            return questService.canAcceptQuest(actorUserId, questId);
+        }
+        if (choice.has("questComplete") && !choice.get("questComplete").isNull()) {
+            long questId = choice.get("questComplete").asLong();
+            return questService.canClaimQuest(actorUserId, questId);
+        }
+        return true;
+    }
+
+    private ObjectNode buildFinishedResponse(NpcEntity npc, List<QuestService.ClaimResult> rewards, Long actorUserId) {
         ObjectNode response = objectMapper.createObjectNode();
         response.put("finished", true);
         response.put("npcId", npc.getId());
         response.put("npcName", npc.getName());
         response.put("message", "再見！");
+        response.put("observer", !storyContextService.isStoryActor(actorUserId));
         appendRewards(response, rewards);
         return response;
     }

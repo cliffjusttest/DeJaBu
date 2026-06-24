@@ -28,6 +28,7 @@ public enum MessageType {
     PARTY_KICK,
     PARTY_UPDATE,
     PARTY_SYNC,
+    PARTY_DIALOGUE_SYNC,
     VISIBLE_ENEMY_UPDATE,
     ERROR
 }

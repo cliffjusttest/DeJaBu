@@ -1,6 +1,7 @@
 # DeJaBu 遊戲機制完整文件
 
-> 本文件涵蓋所有已實作的遊戲系統，包括數值公式、系統流程與玩家互動細節。
+> 本文件涵蓋所有已實作的遊戲系統，包括數值公式、系統流程與玩家互動細節。  
+> **個人主線時間線**（玩家進度不同步、組隊跟隊長）的完整規範見 [§7.5](#75-主線章節與個人時間線) — 後續擴充章節請優先遵循該節。
 
 ---
 
@@ -13,6 +14,7 @@
 5. [夥伴（Companion）系統](#5-夥伴companion系統)
 6. [裝備與物品系統](#6-裝備與物品系統)
 7. [地圖與世界系統](#7-地圖與世界系統)
+7.5. [主線章節與個人時間線](#75-主線章節與個人時間線)
 8. [怪物系統](#8-怪物系統)
 9. [元素系統](#9-元素系統)
 10. [任務系統](#10-任務系統)
@@ -507,6 +509,20 @@ hpFactor = 1 − (怪物當前 HP / 怪物最大 HP)
 - 明雷追擊、暗雷遇敵、戰鬥後冷卻均以**隊長**為準，全隊共用同一場戰鬥
 - 隊長遭遇時，全隊一起進入戰鬥（僅隊長發起 `BATTLE_START`）
 
+### 組隊與主線時間線（Story Era）
+
+組隊時，**隊長的個人主線章節**（`story_era`）與任務進度決定全隊的「有效時間線」。詳見 [§7.5 主線章節與個人時間線](#75-主線章節與個人時間線)。
+
+| 行為 | 組隊規則 |
+|------|----------|
+| NPC 對話起始節點 | 依**隊長**的任務狀態與 `story_era` 解析 |
+| 誰能按 F 對話 | **僅隊長**；隊員嘗試會收到錯誤提示 |
+| 對話內容同步 | 隊長收到 `NPC_INTERACT_OK`；隊員收到 `PARTY_DIALOGUE_SYNC`（旁聽模式，無選項） |
+| 接受任務（`questAccept`） | **僅隊長**接受；隊員不會自動接取 |
+| 領取報酬（`questComplete`） | 隊長選擇領取時，**所有已接且達標**的隊員一併結算，各自獲得 EXP／技能點 |
+| 戰鬥擊殺進度 | 全隊每位**已接該任務**的成員各自 +1；未接者可以參戰但**不累積進度** |
+| 狀態列時代顯示 | 隊員顯示隊長的有效時代，並標註「隊長時間線」 |
+
 ---
 
 ## 5. 夥伴（Companion）系統
@@ -642,11 +658,13 @@ hpFactor = 1 − (怪物當前 HP / 怪物最大 HP)
 |------|------|--------|------|
 | `xuchang` | 無 | 無 | 鄉老、許縣醫廬 |
 | `yingchuan_suburb` | 2 野狼 | 全圖暗雷 | 斥候、初試身手目標 |
-| `rebel_camp_yingchuan` | 1 幽影 | 有 | 黑霧調查目標 |
+| `rebel_camp_yingchuan` | 1 幽影 | 有 | 潁川賊營（E1 主線第二環） |
 
 **名地手工佈局**（`map_handcraft.py`）：洛陽、長安、成都、建業、赤壁、官渡戰場、赤壁戰場、函谷關、隆中、許縣。
 
 其餘地圖為程序生成模板，詳見 [WORLD_MAP.md](../WORLD_MAP.md) §4–§5。
+
+> **個人時間線 vs 共享地圖**：216 張地圖對所有玩家共用（地理永恆）；每位玩家的 `story_era` 與任務進度決定 NPC 對話、可接任務與主線體驗。組隊時以隊長時間線為準。完整規範見 [§7.5](#75-主線章節與個人時間線)。
 
 ### 移動系統
 
@@ -673,6 +691,196 @@ hpFactor = 1 − (怪物當前 HP / 怪物最大 HP)
 
 - 同地圖的其他玩家在世界上可見
 - 明雷位置對所有同地圖玩家同步
+
+---
+
+## 7.5 主線章節與個人時間線
+
+> 世界地圖涵蓋 184–280 全時間線（見 [WORLD_MAP.md](../WORLD_MAP.md) §7），但**不採用全服統一推進的日曆**。  
+> 每位玩家有自己的 `story_era`（個人時間）；組隊時暫時跟隨**隊長**的有效時間線。
+
+### 設計原則（三層模型）
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  共用層：216 張地圖、傳點、醫館、自由探索、組隊戰鬥       │
+│          → 地理永恆，所有玩家走同一套 map_id             │
+├─────────────────────────────────────────────────────────┤
+│  個人層：users.story_era (E1–E8) + player_quests        │
+│          → NPC 對話、可接任務、章節推進存於玩家身上       │
+├─────────────────────────────────────────────────────────┤
+│  組隊層：有效時間線 = 隊長的 story_era + 隊長任務狀態     │
+│          → 對話／主線 NPC 以隊長為準；隊員可旁聽、可參戰   │
+└─────────────────────────────────────────────────────────┘
+```
+
+| 原則 | 說明 |
+|------|------|
+| **地理永恆** | 洛陽、赤壁、黃巾營地等地圖永遠存在；不因「全服已進入三國時代」而關閉 |
+| **故事個人化** | 晚入坑玩家仍從 E1（中平／黃巾）完整體驗；快通關玩家可推進至 E2、E3… |
+| **組隊跟隊長** | 同一隊伍內，NPC 對話與主線節點解析以**隊長**為準，避免同圖不同戲 |
+| **不強制全服時鐘** | 不做「伺服器 3 個月後自動 E5、新手追不上」；後續 Live Ops 活動應為加成型，不阻塞個人主線 |
+
+### 時代代號（Story Era）
+
+對照 [WORLD_MAP.md](../WORLD_MAP.md) §7.1：
+
+| 代號 | 年號 | 年 | 世界狀態（摘要） |
+|------|------|-----|------------------|
+| E1 | 中平 | 184–189 | 黃巾；董卓入洛前 |
+| E2 | 初平–興平 | 190–195 | 董卓、群雄割據 |
+| E3 | 建安初 | 196–200 | 迎獻帝；官渡 |
+| E4 | 建安中 | 201–219 | 赤壁、漢中、襄樊 |
+| E5 | 建安末–黄初 | 220–229 | 魏蜀吳建國 |
+| E6 | 太和–青龙 | 226–237 | 諸葛北伐 |
+| E7 | 正始–咸熙 | 240–265 | 司馬專權；滅蜀 |
+| E8 | 太康 | 280 | 晉滅吳 |
+
+- **資料庫**：`users.story_era VARCHAR(4) NOT NULL DEFAULT 'E1'`
+- **程式**：`StoryEra.java` 列舉；`StoryContextService` 解析有效時代
+- **創角**：新角色固定 `E1`；創角成功訊息為中平元年／鄉勇入伍語境
+
+### 資料模型
+
+**玩家（`users`）**
+
+| 欄位 | 說明 |
+|------|------|
+| `story_era` | 個人主線章節，預設 `E1` |
+
+**任務（`quests`）— 章節相關欄位（`V32__story_era_and_e1_opening.sql`）**
+
+| 欄位 | 說明 |
+|------|------|
+| `required_era` | 可接取此任務的**最低**個人時代（玩家 `story_era` ordinal ≥ 此值） |
+| `prerequisite_quest_id` | 前置任務 ID；須 `COMPLETED` 才可接取 |
+| `unlocks_era` | （可選）領取報酬後若高於目前 `story_era` 則推進章節 |
+
+**玩家任務進度（`player_quests`）** — 不變；仍為每人獨立的 `IN_PROGRESS` / `COMPLETED` + `progress`。
+
+### 有效時間線解析（StoryContextService）
+
+```java
+// 組隊中 → 隊長 userId；單人 → 自己
+Long storyUserId = storyContextService.resolveStoryUserId(actorUserId);
+String era = storyContextService.resolveStoryEra(actorUserId);
+```
+
+| 方法 | 用途 |
+|------|------|
+| `resolveStoryUserId(userId)` | NPC 起始對話節點、任務可用性判斷用誰的進度 |
+| `resolveStoryEra(userId)` | 讀取有效 `story_era`（組隊 = 隊長） |
+| `isStoryActor(userId)` | 是否為當前時間線的「主角」（隊長或單人） |
+
+### NPC 與對話
+
+**起始節點**（`NpcService.resolveStartingNode`）：
+
+1. 取 **storyUserId**（組隊 = 隊長）的任務狀態
+2. 僅考慮 `required_era` ≤ 該玩家時代的任務
+3. 有進行中 → `quest_already`；可領取 → `quest_complete`；否則 → `root`
+
+**選項過濾**（`buildDialogueResponse`）：
+
+- 含 `questAccept` 的選項：僅在**操作者**（組隊 = 隊長）`canAcceptQuest` 時顯示
+- 含 `questComplete` 的選項：僅在操作者 `canClaimQuest` 時顯示
+
+**組隊對話同步**：
+
+| 步驟 | 行為 |
+|------|------|
+| 1 | 僅隊長可送 `NPC_INTERACT` / `DIALOGUE_CHOICE` |
+| 2 | 隊長收到 `NPC_INTERACT_OK` |
+| 3 | 其他隊員收到 `PARTY_DIALOGUE_SYNC`（相同 `text` / `nodeKey`，`observer: true`） |
+| 4 | 隊員客戶端：對話框唯讀，顯示「跟隨隊長對話中」；不可選選項 |
+| 5 | 隊長觸發 `openShop` / `hospitalRevive` 時，隊員同步封包**不含**這些動作欄位 |
+
+### 任務接受、進度、領獎
+
+**接受（`questAccept`）**
+
+- 僅寫入**操作者**（隊長）的 `player_quests`
+- 隊員若要解同一任務，須在**脫隊後**自行找 NPC 接取，或組隊前已接好
+
+**戰鬥擊殺（`QuestService.recordKills`）**
+
+- 組隊勝利時，對**每位隊員**各自呼叫
+- 條件：該員有 `IN_PROGRESS` 且 `target_id` 匹配的任務
+- **未接任務的隊員**：可參戰、可獲 EXP／掉落，但 `progress` 不增加
+- `BATTLE_RESULT` 內 `questProgress` 依各員個人化下發
+
+**領獎（`questComplete`）**
+
+- 隊長選擇領取時，`claimRewardForReadyPartyMembers` 對全隊檢查
+- **已接且達標**的隊員一併 `COMPLETED` 並發獎
+- 各員 `PARTY_DIALOGUE_SYNC` / 結束封包中的 `questRewards` 只含**自己的**獎勵
+
+**章節推進（`unlocks_era`）**
+
+- 在 `claimReward` 時若任務設有 `unlocks_era`，且其 ordinal 高於玩家目前 era，則更新 `users.story_era`
+- 建議僅用於**章節結算任務**（例如 E1 尾聲 → `E2`），避免小任務頻繁跳時代
+
+### E1 開局：鄉勇入伍（已實作）
+
+**出生**：許縣 `xuchang` (8, 8) — 184 年潁川屬縣，距黃巾主戰場近。
+
+**主線任務鏈**（`V32` 更新文案）：
+
+| ID | 名稱 | 前置 | required_era | 目標 | 給予 NPC |
+|----|------|------|--------------|------|----------|
+| 1 | 初試身手 | — | E1 | 擊殺 `wild_wolf` ×3（潁川郊野） | `xuchang_elder` 鄉老 |
+| 2 | 潁川賊營 | 任務 1 | E1 | 擊殺 `shadow_wisp` ×2（`rebel_camp_yingchuan`） | `yingchuan_scout` 斥候 |
+
+**流程**：許縣鄉老 → 潁川郊野 → 潁川黃巾營 → （後續章節待擴充）
+
+### 組隊情境對照表
+
+以下說明「隊長 vs 隊員個人進度不一致」時的預期行為——**後續功能應維持同一套規則**：
+
+| 情境 | 預期行為 |
+|------|----------|
+| 隊長 E1、隊員 E3 | 隊員跟隨時看到 **E1 隊長對話**；隊員個人 `story_era` 不變 |
+| 隊長已接任務 1、隊員未接 | 隊員跟隊打狼：**無任務進度**；隊長有進度 |
+| 兩人都已接任務 1 | 同場戰鬥擊殺後**兩人 progress 各自 +1** |
+| 兩人都達標、隊長領獎 | 隊長選「領取報酬」→ **兩人皆 COMPLETED** 並各得獎勵 |
+| 隊員達標、隊長未達標 | 對話節點依隊長狀態為 `quest_already`；隊員須脫隊自行領獎，或等隊長達標後由隊長觸發領取 |
+| 隊員想接同一任務 | 組隊前自行接取，或暫時離隊找 NPC |
+| 隊長換人 | 有效時間線改為**新隊長**的 era／任務狀態 |
+
+### 客戶端狀態
+
+`GameState` 欄位：
+
+| 欄位 | 說明 |
+|------|------|
+| `player_story_era` | 自己的章節代號 |
+| `effective_story_era` | 目前生效的時代（組隊 = 隊長） |
+| `effective_story_era_name` | 顯示用（如「中平」） |
+| `party_dialogue_observer` | 是否為隊長對話旁聽模式 |
+
+`LOGIN_OK` / 組隊 `party` 物件含：`playerStoryEra`、`effectiveStoryEra`、`effectiveStoryEraName`。
+
+### 後續擴充指引
+
+新增主線章節時，建議依序：
+
+1. **Migration**：插入 `quests`（設 `required_era`、`prerequisite_quest_id`、可選 `unlocks_era`）與 `dialogue_nodes`
+2. **NPC**：任務給予者 `giver_npc_id`；對話文案符合該 `required_era` 語境
+3. **驗證**：`QuestService.canAcceptQuest` 單元測試覆蓋 era 與前置
+4. **地圖**（可選）：在 `maps.json` 加 `eraTags` 標記史實活躍期，供日後遭遇／副本過濾
+5. **組隊**：確認新任務的擊殺目標在組隊戰中仍走 `recordKills` 全員迴圈
+6. **不做的**：勿用全服單一 era 關閉舊任務；勿對整張地圖做 phasing 分線（除非特定 `battlefield_*` 副本）
+
+**關鍵原始碼**
+
+| 元件 | 路徑 |
+|------|------|
+| 時代列舉 | `server/.../game/StoryEra.java` |
+| 有效時間線 | `server/.../service/StoryContextService.java` |
+| 任務 era／前置 | `server/.../service/QuestService.java` |
+| 對話 + 組隊同步 | `server/.../service/NpcService.java`、`GameWebSocketHandler.java` |
+| DB 遷移 | `V32__story_era_and_e1_opening.sql` |
+| 客戶端旁聽 | `client/scripts/ui/dialogue_panel.gd`、`main.gd` |
 
 ---
 
@@ -742,9 +950,24 @@ hpFactor = 1 − (怪物當前 HP / 怪物最大 HP)
 
 ## 10. 任務系統
 
+> 任務與個人主線章節（`story_era`）的關係見 [§7.5](#75-主線章節與個人時間線)。
+
 ### 任務類型
 
 目前實作：**KILL 任務**（擊殺指定怪物 X 隻）
+
+### 任務定義欄位（`quests` 表）
+
+| 欄位 | 說明 |
+|------|------|
+| `quest_type` | `KILL`（`TALK` 預留） |
+| `target_id` | 怪物模板 ID 或 NPC ID |
+| `required_count` | 需求數量 |
+| `reward_exp` / `reward_skill_points` | 報酬 |
+| `giver_npc_id` | 任務給予 NPC |
+| `required_era` | 最低個人時代（預設 `E1`） |
+| `prerequisite_quest_id` | 前置任務（可 NULL） |
+| `unlocks_era` | 領獎後推進章節（可 NULL） |
 
 ### 任務狀態
 
@@ -755,10 +978,18 @@ hpFactor = 1 − (怪物當前 HP / 怪物最大 HP)
 
 ### 任務流程
 
-1. 玩家接受任務 → 狀態設為 IN_PROGRESS
-2. 每次擊殺符合條件的怪物 → 進度 +1
-3. 進度 ≥ 需求數量 → 可領取獎勵
-4. 領取後標記為 COMPLETED
+1. 玩家（或組隊時的**隊長**）接受任務 → `player_quests` 新增列，`IN_PROGRESS`
+2. 每次擊殺符合 `target_id` 的怪物 → 該玩家的 `progress` +1（組隊時全員各自判定是否已接）
+3. `progress` ≥ `required_count` → 可領取
+4. 與給予 NPC 對話 → 自動進入 `quest_complete` 節點 → 領取後 `COMPLETED`
+5. 若任務設 `unlocks_era` → 更新 `users.story_era`
+
+### E1 現有主線任務
+
+| ID | 名稱 | 前置 | 目標 | 數量 | 給予者 |
+|----|------|------|------|------|--------|
+| 1 | 初試身手 | — | `wild_wolf` | 3 | 許縣鄉老 |
+| 2 | 潁川賊營 | 任務 1 | `shadow_wisp` | 2 | 潁川斥候 |
 
 ### 任務獎勵
 
@@ -816,6 +1047,13 @@ hpFactor = 1 − (怪物當前 HP / 怪物最大 HP)
 | VISIBLE_ENEMY_UPDATE | Server → Client | 同地圖明雷位置廣播 |
 | BATTLE_RESULT | Server → Client | 回合結算；戰鬥結束時含 `visibleEnemyId`、`fromDangerZone` |
 | PARTY_SYNC | Server → Client | 隊員跟隨隊長；含 `encounter`、冷卻欄位 |
+| PARTY_DIALOGUE_SYNC | Server → Client | 組隊時隊員同步隊長 NPC 對話（`observer: true`） |
+
+**`LOGIN_OK` 額外欄位**：`playerStoryEra`、`effectiveStoryEra`、`effectiveStoryEraName`（組隊時有效時代為隊長）。
+
+**`party` 物件額外欄位**：同上，供組隊面板與狀態列顯示。
+
+**`NPC_INTERACT_OK` / `PARTY_DIALOGUE_SYNC`**：進行中帶 `observer`（隊員為 `true`）；結束時帶 `questRewards`（各員僅含自己的獎勵）。
 
 **冷卻欄位**（`MOVE_OK`／`LOGIN_OK`／`PARTY_SYNC`）：`noVisibleEncounterMs`、`chaseCooldownMs`、`darkEncounterCooldownMs`、`maskedVisibleEnemies`。
 
@@ -839,9 +1077,9 @@ hpFactor = 1 − (怪物當前 HP / 怪物最大 HP)
 ## 13. 遊戲流程總覽
 
 ```
-[登入] → [角色創建：分配 10 點屬性]
+[登入] → [角色創建：分配 10 點屬性] → story_era = E1（中平／鄉勇入伍）
            ↓
-       [世界探索：移動、與 NPC 對話]
+       [世界探索：許縣出生，與鄉老對話接 E1 主線]
            ↓
       ┌────┴────┐
  [明雷追擊]  [危險區暗雷]
@@ -853,7 +1091,7 @@ hpFactor = 1 − (怪物當前 HP / 怪物最大 HP)
       ┌────┴────┐
   [勝利]     [失敗 / 逃跑]
       ↓
-  [獲得 EXP + 掉落物]
+  [獲得 EXP + 掉落物；已接任務者更新 questProgress]
       ↓
   [戰鬥後冷卻：明雷屏蔽 / 追擊 / 遇敵]
       ↓
@@ -865,9 +1103,9 @@ hpFactor = 1 − (怪物當前 HP / 怪物最大 HP)
       ↓
   [捕捉夥伴 → 管理夥伴]
       ↓
-  [接受任務 → 推進進度 → 領取獎勵]
+  [接受任務 → 推進進度 → 領取獎勵 → 可解鎖下一 story_era]
       ↓
-  [邀請玩家組隊 → 多人探索與戰鬥]
+  [邀請玩家組隊 → 隊長主導移動／對話／時間線；隊員旁聽對話、並行參戰]
 ```
 
 ---
@@ -885,6 +1123,7 @@ hpFactor = 1 − (怪物當前 HP / 怪物最大 HP)
 | 技能系統 | [SkillService.java](server/src/main/java/com/dejebu/service/SkillService.java) |
 | 掉落系統 | [LootService.java](server/src/main/java/com/dejebu/service/LootService.java) |
 | 任務系統 | [QuestService.java](server/src/main/java/com/dejebu/service/QuestService.java) |
+| 主線時間線 | [StoryContextService.java](server/src/main/java/com/dejebu/service/StoryContextService.java)、[StoryEra.java](server/src/main/java/com/dejebu/game/StoryEra.java) |
 | 商店系統 | [ShopService.java](server/src/main/java/com/dejebu/service/ShopService.java) |
 | 地圖服務 | [MapService.java](server/src/main/java/com/dejebu/service/MapService.java) |
 | 明雷追擊 | [VisibleEnemyService.java](server/src/main/java/com/dejebu/service/VisibleEnemyService.java) |

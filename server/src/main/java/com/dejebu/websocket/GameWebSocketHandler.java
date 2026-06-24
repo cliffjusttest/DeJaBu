@@ -7,6 +7,7 @@ import com.dejebu.game.Element;
 import com.dejebu.protocol.GameMessage;
 import com.dejebu.protocol.MessageType;
 import com.dejebu.game.MapTeleportTarget;
+import com.dejebu.game.StoryEra;
 import com.dejebu.service.AuthService;
 import com.dejebu.service.BattleService;
 import com.dejebu.service.EncounterService;
@@ -21,6 +22,7 @@ import com.dejebu.service.EquipmentService;
 import com.dejebu.service.PlayerPresence;
 import com.dejebu.service.QuestService;
 import com.dejebu.service.SessionService;
+import com.dejebu.service.StoryContextService;
 import com.dejebu.service.VisibleEnemyService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -60,6 +62,7 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
     private final VisibleEnemyService visibleEnemyService;
     private final EncounterCooldownService encounterCooldownService;
     private final DangerZoneService dangerZoneService;
+    private final StoryContextService storyContextService;
 
     public GameWebSocketHandler(ObjectMapper objectMapper,
                                 SessionService sessionService,
@@ -73,7 +76,8 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
                                 PlayerPartyService playerPartyService,
                                 VisibleEnemyService visibleEnemyService,
                                 EncounterCooldownService encounterCooldownService,
-                                DangerZoneService dangerZoneService) {
+                                DangerZoneService dangerZoneService,
+                                StoryContextService storyContextService) {
         this.objectMapper = objectMapper;
         this.sessionService = sessionService;
         this.authService = authService;
@@ -87,6 +91,7 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
         this.visibleEnemyService = visibleEnemyService;
         this.encounterCooldownService = encounterCooldownService;
         this.dangerZoneService = dangerZoneService;
+        this.storyContextService = storyContextService;
     }
 
     @Override
@@ -197,6 +202,7 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
             response.put("playerCurrentMp", user.resolveCurrentMp());
             response.put("playerMaxMp", user.resolveMaxMp());
         }
+        appendStoryEra(response, user);
         response.put("sessionId", session.getId());
         response.put("onlineCount", sessionService.getOnlineCount());
         response.set("otherPlayers", buildOtherPlayersArray(user.getPlayerMapId(), session.getId()));
@@ -504,9 +510,10 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
                 if (killedNode != null && killedNode.isArray()) {
                     List<String> templateIds = new ArrayList<>();
                     for (JsonNode id : killedNode) templateIds.add(id.asText());
+                    Map<Long, ArrayNode> progressByMember = new java.util.LinkedHashMap<>();
                     for (Long memberId : playerPartyService.getMemberIdsIfInParty(userId)) {
                         List<QuestService.KillProgress> progress = questService.recordKills(memberId, templateIds);
-                        if (!progress.isEmpty() && memberId.equals(userId)) {
+                        if (!progress.isEmpty()) {
                             ArrayNode progressArray = objectMapper.createArrayNode();
                             for (QuestService.KillProgress kp : progress) {
                                 ObjectNode kpNode = objectMapper.createObjectNode();
@@ -516,9 +523,14 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
                                 kpNode.put("readyToClaim", kp.readyToClaim());
                                 progressArray.add(kpNode);
                             }
-                            result.set("questProgress", progressArray);
+                            progressByMember.put(memberId, progressArray);
                         }
                     }
+                    ArrayNode actingProgress = progressByMember.get(userId);
+                    if (actingProgress != null) {
+                        result.set("questProgress", actingProgress);
+                    }
+                    result.set("_questProgressByMember", objectMapper.valueToTree(progressByMember));
                 }
             }
 
@@ -556,9 +568,13 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
             if (npcId.isBlank()) return error("未指定 NPC");
             Long userId = sessionService.getUserId(session)
                     .orElseThrow(() -> new IllegalStateException("尚未登入"));
+            if (playerPartyService.isInParty(userId) && !playerPartyService.isLeader(userId)) {
+                return error("組隊時只有隊長可以與 NPC 對話");
+            }
             String mapId = payload.path("mapId").asText("xuchang");
-            ObjectNode result = npcService.interact(userId, npcId, mapId);
-            return new GameMessage(MessageType.NPC_INTERACT_OK, result);
+            NpcService.DialogueOutcome outcome = npcService.interact(userId, npcId, mapId);
+            broadcastPartyDialogue(userId, session.getId(), outcome.response(), outcome.claimResultsByUser());
+            return new GameMessage(MessageType.NPC_INTERACT_OK, outcome.response());
         } catch (IllegalArgumentException | IllegalStateException ex) {
             return error(ex.getMessage());
         }
@@ -575,8 +591,12 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
             if (npcId.isBlank() || nodeKey.isBlank()) return error("對話參數不完整");
             Long userId = sessionService.getUserId(session)
                     .orElseThrow(() -> new IllegalStateException("尚未登入"));
-            ObjectNode result = npcService.choose(userId, npcId, nodeKey, choiceIndex);
-            return new GameMessage(MessageType.NPC_INTERACT_OK, result);
+            if (playerPartyService.isInParty(userId) && !playerPartyService.isLeader(userId)) {
+                return error("組隊時只有隊長可以選擇對話選項");
+            }
+            NpcService.DialogueOutcome outcome = npcService.choose(userId, npcId, nodeKey, choiceIndex);
+            broadcastPartyDialogue(userId, session.getId(), outcome.response(), outcome.claimResultsByUser());
+            return new GameMessage(MessageType.NPC_INTERACT_OK, outcome.response());
         } catch (IllegalArgumentException | IllegalStateException ex) {
             return error(ex.getMessage());
         }
@@ -813,6 +833,8 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
         }
         party.set("members", members);
 
+        appendStoryEra(party, userId);
+
         playerPartyService.getPendingInvite(userId).ifPresent(inviterId -> {
             party.put("pendingInviteFrom", inviterId);
             sessionService.findSessionByUserId(inviterId).ifPresent(inviterSession ->
@@ -870,6 +892,49 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
                 broadcastPlayerMove(memberSession);
             });
         }
+    }
+
+    private void broadcastPartyDialogue(
+            Long actorUserId,
+            String actorSessionId,
+            ObjectNode response,
+            java.util.Map<Long, QuestService.ClaimResult> claimResultsByUser
+    ) {
+        if (!playerPartyService.isInParty(actorUserId)) {
+            return;
+        }
+        Long leaderId = playerPartyService.getLeaderId(actorUserId);
+        for (Long memberId : playerPartyService.getMemberIds(leaderId)) {
+            if (memberId.equals(actorUserId)) {
+                continue;
+            }
+            sessionService.findSessionByUserId(memberId).ifPresent(memberSession -> {
+                ObjectNode payload = npcService.personalizeForViewer(response, memberId, claimResultsByUser);
+                sendQuiet(memberSession, new GameMessage(MessageType.PARTY_DIALOGUE_SYNC, payload));
+            });
+        }
+    }
+
+    private void appendStoryEra(ObjectNode target, User user) {
+        StoryEra era = StoryEra.fromCode(user.getStoryEra());
+        target.put("playerStoryEra", era.name());
+        target.put("storyEraName", era.getDisplayName());
+        target.put("storyEraYears", era.getYearRange());
+        target.put("effectiveStoryEra", era.name());
+        target.put("effectiveStoryEraName", era.getDisplayName());
+    }
+
+    private void appendStoryEra(ObjectNode target, Long userId) {
+        authService.findUserById(userId).ifPresent(user -> {
+            StoryEra playerEra = StoryEra.fromCode(user.getStoryEra());
+            target.put("playerStoryEra", playerEra.name());
+            target.put("storyEraName", playerEra.getDisplayName());
+            target.put("storyEraYears", playerEra.getYearRange());
+
+            StoryEra effectiveEra = storyContextService.resolveStoryEra(userId);
+            target.put("effectiveStoryEra", effectiveEra.name());
+            target.put("effectiveStoryEraName", effectiveEra.getDisplayName());
+        });
     }
 
     private String resolveBattleId(WebSocketSession session, Long userId) {
@@ -949,6 +1014,17 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
                     break;
                 }
             }
+        }
+
+        if (result.has("_questProgressByMember")) {
+            JsonNode progressByMember = result.get("_questProgressByMember");
+            String memberKey = String.valueOf(userId);
+            if (progressByMember.has(memberKey)) {
+                result.set("questProgress", progressByMember.get(memberKey));
+            } else {
+                result.remove("questProgress");
+            }
+            result.remove("_questProgressByMember");
         }
     }
 

@@ -95,6 +95,9 @@ public class User {
     @Column(nullable = false)
     private int gold = 100;
 
+    @Column(name = "story_era", nullable = false, length = 4)
+    private String storyEra = "E1";
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -299,6 +302,14 @@ public class User {
 
     public void setGold(int gold) {
         this.gold = gold;
+    }
+
+    public String getStoryEra() {
+        return storyEra;
+    }
+
+    public void setStoryEra(String storyEra) {
+        this.storyEra = storyEra;
     }
 
     public int resolveMaxHp() {

@@ -303,6 +303,8 @@ func _on_message_received(type: String, payload: Dictionary) -> void:
 			_handle_party_state_payload(payload)
 		"PARTY_SYNC":
 			_handle_party_sync(payload)
+		"PARTY_DIALOGUE_SYNC":
+			_handle_party_dialogue_sync(payload)
 		"VISIBLE_ENEMY_UPDATE":
 			_handle_visible_enemy_update(payload)
 		"ERROR":
@@ -365,6 +367,7 @@ func _handle_login_ok(payload: Dictionary) -> void:
 	if payload.has("party"):
 		GameState.apply_party_state(payload.get("party", {}))
 	_check_party_invite_prompt()
+	GameState.apply_story_era(payload)
 	_apply_encounter_payload(payload)
 	_load_player_map()
 
@@ -597,6 +600,12 @@ func _on_battle_action_requested(
 	NetworkClient.battle_action(action, target_id, actor_id, skill_id, item_id)
 
 func _handle_npc_interact_ok(payload: Dictionary) -> void:
+	_show_dialogue_payload(payload)
+
+func _handle_party_dialogue_sync(payload: Dictionary) -> void:
+	_show_dialogue_payload(payload)
+
+func _show_dialogue_payload(payload: Dictionary) -> void:
 	if payload.get("finished", false):
 		_on_dialogue_finished(payload)
 		return
@@ -604,11 +613,12 @@ func _handle_npc_interact_ok(payload: Dictionary) -> void:
 	GameState.mode = GameState.Mode.DIALOGUE
 	GameState.dialogue_npc_id = str(payload.get("npcId", ""))
 	GameState.dialogue_node_key = str(payload.get("nodeKey", ""))
+	GameState.party_dialogue_observer = bool(payload.get("observer", false))
 	var npc_name := str(payload.get("npcName", "NPC"))
 	var text := str(payload.get("text", ""))
 	var choices: Array = payload.get("choices", [])
 	dialogue_layer.show()
-	dialogue_panel.show_dialogue(npc_name, text, choices)
+	dialogue_panel.show_dialogue(npc_name, text, choices, GameState.party_dialogue_observer)
 
 func _handle_quest_list_ok(payload: Dictionary) -> void:
 	var quests: Array = payload.get("quests", [])
@@ -616,7 +626,7 @@ func _handle_quest_list_ok(payload: Dictionary) -> void:
 	quest_log_panel.populate(quests)
 
 func _on_dialogue_choice_made(choice_index: int) -> void:
-	if GameState.dialogue_npc_id.is_empty():
+	if GameState.dialogue_npc_id.is_empty() or GameState.party_dialogue_observer:
 		return
 	NetworkClient.dialogue_choice(GameState.dialogue_npc_id, GameState.dialogue_node_key, choice_index)
 
@@ -656,6 +666,9 @@ func _on_shop_panel_closed() -> void:
 	_update_status()
 
 func _try_npc_interact() -> void:
+	if GameState.in_player_party and not GameState.is_party_leader:
+		_log("組隊中請由隊長與 NPC 對話")
+		return
 	var npc := MapRegistry.get_adjacent_npc(GameState.player_map_id, GameState.player_x, GameState.player_y)
 	if npc.is_empty():
 		return
@@ -958,7 +971,10 @@ func _update_status() -> void:
 		party_text = " | 組隊 %d人" % GameState.party_members.size()
 		if not GameState.is_party_leader:
 			party_text += "（跟隨隊長）"
-	status_label.text = "%s | Lv.%d | HP %d/%d | MP %d/%d | 金幣 %d | %s | X: %.0f  Y: %.0f | 模式: %s%s%s" % [
+	var era_text := " | %s" % GameState.effective_story_era_name
+	if GameState.in_player_party and not GameState.is_party_leader:
+		era_text += "（隊長時間線）"
+	status_label.text = "%s | Lv.%d | HP %d/%d | MP %d/%d | 金幣 %d | %s%s | X: %.0f  Y: %.0f | 模式: %s%s%s" % [
 		GameState.player_name,
 		GameState.player_level,
 		GameState.player_current_hp,
@@ -971,7 +987,7 @@ func _update_status() -> void:
 		pos.y,
 		mode_text,
 		GameState.last_message,
-		party_text
+		era_text + party_text
 	]
 
 func _log(text: String) -> void:

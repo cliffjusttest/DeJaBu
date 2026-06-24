@@ -15,6 +15,7 @@ public record AuthResponse(
         Element element,
         CharacterAppearance appearance,
         CharacterStats stats,
+        String storyEra,
         String message
 ) {
 }

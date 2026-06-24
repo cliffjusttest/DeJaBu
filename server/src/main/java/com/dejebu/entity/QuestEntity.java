@@ -39,6 +39,15 @@ public class QuestEntity {
     @Column(name = "giver_npc_id", length = 64)
     private String giverNpcId;
 
+    @Column(name = "required_era", nullable = false, length = 4)
+    private String requiredEra = "E1";
+
+    @Column(name = "prerequisite_quest_id")
+    private Long prerequisiteQuestId;
+
+    @Column(name = "unlocks_era", length = 4)
+    private String unlocksEra;
+
     public Long getId() { return id; }
     public String getName() { return name; }
     public String getDescription() { return description; }
@@ -48,4 +57,7 @@ public class QuestEntity {
     public int getRewardExp() { return rewardExp; }
     public int getRewardSkillPoints() { return rewardSkillPoints; }
     public String getGiverNpcId() { return giverNpcId; }
+    public String getRequiredEra() { return requiredEra; }
+    public Long getPrerequisiteQuestId() { return prerequisiteQuestId; }
+    public String getUnlocksEra() { return unlocksEra; }
 }

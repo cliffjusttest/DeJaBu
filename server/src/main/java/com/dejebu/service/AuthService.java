@@ -93,7 +93,7 @@ public class AuthService {
         user.setHasCharacter(true);
         userRepository.save(user);
 
-        return issueToken(user, "角色創建成功，歡迎來到 DeJaBu");
+        return issueToken(user, "中平元年，黃巾賊起。你以鄉勇之身，踏上了這亂世之路。");
     }
 
     @Transactional(readOnly = true)
@@ -191,6 +191,7 @@ public class AuthService {
                 user.getElement(),
                 user.getAppearance(),
                 user.isHasCharacter() ? CharacterStats.fromUser(user) : null,
+                user.getStoryEra(),
                 message
         );
     }
